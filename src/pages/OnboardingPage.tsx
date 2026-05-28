@@ -7,14 +7,42 @@ import type { Profile } from '@/types'
 import { Camera, ChevronRight } from 'lucide-react'
 
 const INTERESTS = [
-  'Đọc sách', 'Du lịch', 'Âm nhạc', 'Phim ảnh', 'Nấu ăn', 'Thể thao',
-  'Công nghệ', 'Nghệ thuật', 'Yoga', 'Gaming', 'Nhiếp ảnh', 'Viết lách',
-  'Khiêu vũ', 'Thiền', 'Cà phê', 'Thiên nhiên', 'Startup', 'Tình nguyện',
+  // Giải trí
+  'Đọc sách', 'Phim ảnh', 'Âm nhạc', 'Gaming', 'Anime/Manga', 'K-pop',
+  'Podcast', 'Stand-up comedy', 'Board game', 'Karaoke',
+  // Thể thao & Sức khoẻ
+  'Gym', 'Yoga', 'Chạy bộ', 'Bơi lội', 'Đạp xe', 'Cầu lông',
+  'Bóng đá', 'Tennis', 'Hiking', 'Thiền',
+  // Sáng tạo
+  'Nhiếp ảnh', 'Vẽ tranh', 'Viết lách', 'Thiết kế', 'Làm video',
+  'Handmade/DIY', 'Khiêu vũ',
+  // Ẩm thực & Lifestyle
+  'Nấu ăn', 'Cà phê', 'Trà sữa', 'Ăn vặt', 'Wine/Cocktail',
+  'Du lịch', 'Camping', 'Thiên nhiên',
+  // Tri thức
+  'Công nghệ', 'Startup', 'Tâm lý học', 'Triết học', 'Lịch sử',
+  'Khoa học', 'Tài chính', 'Ngoại ngữ',
+  // Xã hội
+  'Tình nguyện', 'Động vật', 'Môi trường', 'Nghệ thuật',
 ]
 
-const MBTI_TYPES = [
-  'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
-  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP',
+const PERSONALITY_TYPES = [
+  { code: 'INTJ', emoji: '🧠', label: 'Chiến lược gia' },
+  { code: 'INTP', emoji: '🔬', label: 'Nhà tư duy' },
+  { code: 'ENTJ', emoji: '👑', label: 'Người lãnh đạo' },
+  { code: 'ENTP', emoji: '💡', label: 'Nhà phát minh' },
+  { code: 'INFJ', emoji: '🌙', label: 'Người cố vấn' },
+  { code: 'INFP', emoji: '🦋', label: 'Người mơ mộng' },
+  { code: 'ENFJ', emoji: '🌟', label: 'Người truyền cảm hứng' },
+  { code: 'ENFP', emoji: '🎭', label: 'Người khám phá' },
+  { code: 'ISTJ', emoji: '📋', label: 'Người đáng tin cậy' },
+  { code: 'ISFJ', emoji: '🛡️', label: 'Người bảo vệ' },
+  { code: 'ESTJ', emoji: '⚡', label: 'Người tổ chức' },
+  { code: 'ESFJ', emoji: '🤝', label: 'Người quan tâm' },
+  { code: 'ISTP', emoji: '🔧', label: 'Thợ thủ công' },
+  { code: 'ISFP', emoji: '🎨', label: 'Nghệ sĩ' },
+  { code: 'ESTP', emoji: '🏄', label: 'Người hành động' },
+  { code: 'ESFP', emoji: '🎉', label: 'Người giải trí' },
 ]
 
 export default function OnboardingPage() {
