@@ -74,23 +74,25 @@ export default function DiscoverPage() {
     <div className="relative flex h-full flex-col items-center justify-center px-4 py-4">
       {/* Match Popup */}
       {matchPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="animate-slide-up rounded-2xl bg-white p-8 text-center shadow-xl">
-            <Heart className="mx-auto mb-4 h-16 w-16 animate-heart-beat text-accent" />
-            <h2 className="text-2xl font-bold text-primary">It's a Match!</h2>
-            <p className="mt-2 text-muted-foreground">Bạn và {matchPopup.full_name} đã thích nhau</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="animate-slide-up rounded-2xl bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-romantic animate-pulse-glow">
+              <Heart className="h-10 w-10 text-white animate-heart-beat" fill="white" />
+            </div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">It's a Match!</h2>
+            <p className="mt-2 text-muted-foreground">Bạn và {matchPopup.full_name} đã thích nhau 💕</p>
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setMatchPopup(null)}
-                className="flex-1 rounded-xl border border-border py-2 text-sm"
+                className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium hover:bg-card transition-colors"
               >
                 Tiếp tục
               </button>
               <button
                 onClick={() => { setMatchPopup(null); window.location.href = '/matches' }}
-                className="flex-1 rounded-xl bg-primary py-2 text-sm text-white"
+                className="flex-1 rounded-xl bg-gradient-romantic py-2.5 text-sm font-medium text-white shadow-md hover:shadow-lg transition-all"
               >
-                Nhắn tin
+                Nhắn tin ngay
               </button>
             </div>
           </div>
@@ -159,21 +161,21 @@ export default function DiscoverPage() {
       <div className="mt-6 flex items-center gap-4">
         <button
           onClick={() => handleSwipe('dislike')}
-          className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-border bg-white shadow-sm transition-transform hover:scale-110"
+          className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-border bg-white shadow-md transition-all hover:scale-110 hover:border-red-300 hover:shadow-lg active:scale-95"
         >
           <X className="h-6 w-6 text-muted-foreground" />
         </button>
         <button
           onClick={() => handleSwipe('super_like')}
-          className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-blue-300 bg-white shadow-sm transition-transform hover:scale-110"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-md transition-all hover:scale-110 hover:shadow-lg active:scale-95"
         >
-          <Star className="h-5 w-5 text-blue-500" />
+          <Star className="h-5 w-5 text-white" fill="white" />
         </button>
         <button
           onClick={() => handleSwipe('like')}
-          className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-accent/30 bg-white shadow-sm transition-transform hover:scale-110"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-romantic shadow-md transition-all hover:scale-110 hover:shadow-lg active:scale-95 animate-pulse-glow"
         >
-          <Heart className="h-6 w-6 text-accent" />
+          <Heart className="h-6 w-6 text-white" fill="white" />
         </button>
       </div>
     </div>

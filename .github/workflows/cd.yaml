@@ -1,0 +1,19 @@
+name: CD - Deploy FE to VPS
+
+on:
+  workflow_run:
+    workflows: ["CI - Build & Push"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest FE image & restart
+        run: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/coduyen-fe:latest
+          cd /root/coduyen
+          docker compose -f docker-compose.vps.yaml up -d frontend
+          docker system prune -f
