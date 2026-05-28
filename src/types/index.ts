@@ -47,6 +47,7 @@ export interface Message {
   sender_id: string
   content: string
   read_at?: string
+  recalled?: boolean
   created_at: string
 }
 

@@ -23,11 +23,11 @@ export default function ChatPage() {
     return null
   }
 
-  // Fetch initial messages
+  // Fetch initial messages (latest 20)
   const { data } = useQuery({
     queryKey: ['messages', matchId],
     queryFn: async () => {
-      const { data } = await api.get(`/messages/${matchId}?limit=50`)
+      const { data } = await api.get(`/messages/${matchId}?limit=20`)
       return (data.messages || []) as Message[]
     },
     enabled: !!matchId && matchId !== 'list',
@@ -38,6 +38,46 @@ export default function ChatPage() {
       setMessages([...data].reverse())
     }
   }, [data])
+
+  // Load older messages on scroll to top
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  async function loadOlderMessages() {
+    if (loadingMore || !hasMore || messages.length === 0) return
+    setLoadingMore(true)
+    const oldestId = messages[0]?.id
+    try {
+      const { data } = await api.get(`/messages/${matchId}?limit=20&before=${oldestId}`)
+      const older = (data.messages || []) as Message[]
+      if (older.length === 0) {
+        setHasMore(false)
+      } else {
+        setMessages((prev) => [...older.reverse(), ...prev])
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
+  function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+    if (e.currentTarget.scrollTop === 0 && hasMore) {
+      loadOlderMessages()
+    }
+  }
+
+  // Recall message
+  async function handleRecall(msgId: string) {
+    try {
+      await api.delete(`/messages/${matchId}/${msgId}`)
+      setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, recalled: true, content: '' } : m))
+    } catch {
+      // ignore
+    }
+  }
 
   // Listen for real-time messages
   useEffect(() => {
@@ -102,24 +142,48 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4" ref={scrollContainerRef} onScroll={handleScroll}>
         <div className="mx-auto max-w-md space-y-3">
+          {loadingMore && (
+            <div className="text-center text-xs text-muted-foreground py-2">Đang tải...</div>
+          )}
+          {!hasMore && messages.length > 0 && (
+            <div className="text-center text-xs text-muted-foreground py-2">Đầu cuộc trò chuyện</div>
+          )}
           {messages.map((msg) => {
             const isMine = msg.sender_id === user?.id
             return (
-              <div key={msg.id} className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
+              <div key={msg.id} className={cn('flex group', isMine ? 'justify-end' : 'justify-start')}>
                 <div
                   className={cn(
-                    'max-w-[75%] rounded-2xl px-4 py-2.5 text-sm',
-                    isMine
-                      ? 'rounded-br-md bg-primary text-white'
-                      : 'rounded-bl-md bg-card text-foreground'
+                    'max-w-[75%] rounded-2xl px-4 py-2.5 text-sm relative',
+                    msg.recalled
+                      ? 'bg-muted text-muted-foreground italic border border-border'
+                      : isMine
+                        ? 'rounded-br-md bg-primary text-white'
+                        : 'rounded-bl-md bg-card text-foreground'
                   )}
                 >
-                  <p>{msg.content}</p>
-                  <p className={cn('mt-1 text-[10px]', isMine ? 'text-white/60' : 'text-muted-foreground')}>
-                    {formatTime(msg.created_at)}
-                  </p>
+                  {msg.recalled ? (
+                    <p className="text-xs">🚫 Tin nhắn đã thu hồi</p>
+                  ) : (
+                    <>
+                      <p>{msg.content}</p>
+                      <p className={cn('mt-1 text-[10px]', isMine ? 'text-white/60' : 'text-muted-foreground')}>
+                        {formatTime(msg.created_at)}
+                      </p>
+                    </>
+                  )}
+                  {/* Recall button - only for own messages, not recalled, within 2 min */}
+                  {isMine && !msg.recalled && !msg.id.startsWith('temp-') && (
+                    <button
+                      onClick={() => handleRecall(msg.id)}
+                      className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-muted-foreground hover:text-destructive"
+                      title="Thu hồi"
+                    >
+                      ↩
+                    </button>
+                  )}
                 </div>
               </div>
             )
