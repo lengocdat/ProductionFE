@@ -14,6 +14,7 @@ import DebatePage from '@/pages/DebatePage'
 import DebateRoomPage from '@/pages/DebateRoomPage'
 import PremiumPage from '@/pages/PremiumPage'
 import VerifyEmailPage from '@/pages/VerifyEmailPage'
+import AdminPage from '@/pages/AdminPage'
 import Layout from '@/components/Layout'
 import type { ReactNode } from 'react'
 
@@ -60,6 +61,7 @@ export default function App() {
                   <Route path="/debate/:roomId" element={<DebateRoomPage />} />
                   <Route path="/premium" element={<PremiumPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/admin" element={<AdminPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/discover" replace />} />
               </Routes>

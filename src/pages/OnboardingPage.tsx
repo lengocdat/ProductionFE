@@ -58,7 +58,7 @@ export default function OnboardingPage() {
     major: '',
     bio: '',
     mbti: '',
-    looking_for: 'both',
+    looking_for: '',
     interests: [] as string[],
     debate_style: '',
     life_philosophy: '',
@@ -172,7 +172,7 @@ export default function OnboardingPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium">Muốn tìm</label>
                 <div className="flex gap-2">
-                  {[{ v: 'male', l: 'Nam' }, { v: 'female', l: 'Nữ' }, { v: 'both', l: 'Cả hai' }].map(({ v, l }) => (
+                  {[{ v: 'male', l: 'Nam' }, { v: 'female', l: 'Nữ' }].map(({ v, l }) => (
                     <button
                       key={v}
                       type="button"
@@ -305,7 +305,7 @@ export default function OnboardingPage() {
             {step < 4 ? (
               <button
                 onClick={() => setStep(step + 1)}
-                disabled={step === 1 && (!form.full_name || !form.gender)}
+                disabled={step === 1 && (!form.full_name || !form.gender || !form.looking_for)}
                 className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 Tiếp <ChevronRight size={16} />
