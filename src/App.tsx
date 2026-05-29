@@ -16,6 +16,7 @@ import PremiumPage from '@/pages/PremiumPage'
 import VerifyEmailPage from '@/pages/VerifyEmailPage'
 import AdminPage from '@/pages/AdminPage'
 import VerifyPendingPage from '@/pages/VerifyPendingPage'
+import LandingPage from '@/pages/LandingPage'
 import Layout from '@/components/Layout'
 import type { ReactNode } from 'react'
 
@@ -54,6 +55,7 @@ export default function App() {
           <AuthProvider>
             <BrowserRouter>
               <Routes>
+                <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
                 <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -69,7 +71,7 @@ export default function App() {
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/admin" element={<AdminPage />} />
                 </Route>
-                <Route path="*" element={<Navigate to="/discover" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </BrowserRouter>
           </AuthProvider>
