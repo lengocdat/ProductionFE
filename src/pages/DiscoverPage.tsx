@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import type { Profile, SwipeResponse } from '@/types'
-import { Heart, X, Star, MapPin, GraduationCap, Sparkles } from 'lucide-react'
+import { Heart, X, MapPin, GraduationCap, Sparkles } from 'lucide-react'
 import { cn, getInitials } from '@/lib/utils'
 
 export default function DiscoverPage() {
@@ -158,18 +158,12 @@ export default function DiscoverPage() {
       </div>
 
       {/* Action Buttons */}
-      <div className="mt-6 flex items-center gap-4">
+      <div className="mt-6 flex items-center gap-6">
         <button
           onClick={() => handleSwipe('dislike')}
           className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-border bg-white shadow-md transition-all hover:scale-110 hover:border-red-300 hover:shadow-lg active:scale-95"
         >
           <X className="h-6 w-6 text-muted-foreground" />
-        </button>
-        <button
-          onClick={() => handleSwipe('super_like')}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-md transition-all hover:scale-110 hover:shadow-lg active:scale-95"
-        >
-          <Star className="h-5 w-5 text-white" fill="white" />
         </button>
         <button
           onClick={() => handleSwipe('like')}
