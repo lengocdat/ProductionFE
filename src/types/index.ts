@@ -2,6 +2,7 @@ export interface User {
   id: string
   email: string
   verified_status: 'pending' | 'verified_student' | 'verified_degree'
+  email_verified: boolean
   is_premium: boolean
   coin_balance: number
   has_profile: boolean

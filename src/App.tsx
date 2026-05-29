@@ -15,6 +15,7 @@ import DebateRoomPage from '@/pages/DebateRoomPage'
 import PremiumPage from '@/pages/PremiumPage'
 import VerifyEmailPage from '@/pages/VerifyEmailPage'
 import AdminPage from '@/pages/AdminPage'
+import VerifyPendingPage from '@/pages/VerifyPendingPage'
 import Layout from '@/components/Layout'
 import type { ReactNode } from 'react'
 
@@ -27,6 +28,10 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation()
   if (isLoading) return <div className="flex h-screen items-center justify-center"><span className="text-muted-foreground">Đang tải...</span></div>
   if (!user) return <Navigate to="/login" replace />
+  // Redirect to verify email page if not verified
+  if (!user.email_verified && location.pathname !== '/verify-pending') {
+    return <Navigate to="/verify-pending" replace />
+  }
   // Redirect to onboarding if no profile (except if already on onboarding page)
   if (!user.has_profile && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />
@@ -52,6 +57,7 @@ export default function App() {
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
                 <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/verify-pending" element={<VerifyPendingPage />} />
                 <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
                 <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                   <Route path="/discover" element={<DiscoverPage />} />
