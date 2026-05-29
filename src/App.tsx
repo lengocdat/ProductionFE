@@ -28,8 +28,8 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation()
   if (isLoading) return <div className="flex h-screen items-center justify-center"><span className="text-muted-foreground">Đang tải...</span></div>
   if (!user) return <Navigate to="/login" replace />
-  // Redirect to verify email page if not verified
-  if (!user.email_verified && location.pathname !== '/verify-pending') {
+  // Redirect to verify email page if not verified (only if backend supports it)
+  if (user.email_verified === false && location.pathname !== '/verify-pending') {
     return <Navigate to="/verify-pending" replace />
   }
   // Redirect to onboarding if no profile (except if already on onboarding page)

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { Mail, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import api from '@/lib/api'
@@ -7,6 +8,8 @@ export default function VerifyPendingPage() {
   const { user, logout, refreshUser } = useAuth()
   const [resending, setResending] = useState(false)
   const [sent, setSent] = useState(false)
+
+  if (!user) return <Navigate to="/login" replace />
 
   async function handleResend() {
     setResending(true)
