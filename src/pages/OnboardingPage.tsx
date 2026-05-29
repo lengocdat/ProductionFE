@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Profile } from '@/types'
-import { Camera, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 const INTERESTS = [
   // Giải trí
@@ -45,11 +45,22 @@ const PERSONALITY_TYPES = [
   { code: 'ESFP', emoji: '🎉', label: 'Người giải trí' },
 ]
 
+const MBTI_TYPES = PERSONALITY_TYPES.map((p) => p.code)
+
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  // Load existing profile for editing
+  const { data: existingProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const { data } = await api.get('/profile')
+      return data.profile as Profile
+    },
+  })
+
   const [form, setForm] = useState({
     full_name: '',
     gender: '',
@@ -64,17 +75,10 @@ export default function OnboardingPage() {
     life_philosophy: '',
   })
 
-  // Load existing profile for editing
-  const { data: existingProfile } = useQuery({
-    queryKey: ['profile'],
-    queryFn: async () => {
-      const { data } = await api.get('/profile')
-      return data.profile as Profile
-    },
-  })
-
+  const profileLoaded = useRef(false)
   useEffect(() => {
-    if (existingProfile) {
+    if (existingProfile && !profileLoaded.current) {
+      profileLoaded.current = true
       setForm({
         full_name: existingProfile.full_name || '',
         gender: existingProfile.gender || '',
@@ -83,7 +87,7 @@ export default function OnboardingPage() {
         major: existingProfile.major || '',
         bio: existingProfile.bio || '',
         mbti: existingProfile.mbti || '',
-        looking_for: existingProfile.looking_for || 'both',
+        looking_for: existingProfile.looking_for || '',
         interests: existingProfile.interests || [],
         debate_style: existingProfile.debate_style || '',
         life_philosophy: existingProfile.life_philosophy || '',
@@ -114,8 +118,9 @@ export default function OnboardingPage() {
       await refreshUser()
       // Small delay to ensure React state is committed before navigation
       setTimeout(() => navigate('/discover'), 50)
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Lỗi tạo hồ sơ')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Lỗi tạo hồ sơ'
+      alert(message)
     } finally {
       setLoading(false)
     }
@@ -251,7 +256,7 @@ export default function OnboardingPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium">MBTI (tuỳ chọn)</label>
                 <div className="grid grid-cols-4 gap-2">
-                  {MBTI_TYPES.map((type) => (
+                  {MBTI_TYPES.map((type: string) => (
                     <button
                       key={type}
                       type="button"
