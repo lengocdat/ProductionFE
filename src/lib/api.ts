@@ -1,55 +1,53 @@
-import axios from 'axios'
-import { toastEvents } from './toast-events'
+'use client'
 
-const api = axios.create({
-  baseURL: '/api/v1',
-  headers: { 'Content-Type': 'application/json' },
-})
+const BASE_URL = '/api/v1'
 
-// Attach access token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+interface FetchOptions extends RequestInit {
+  json?: unknown
+}
+
+export async function apiFetch<T = unknown>(path: string, options: FetchOptions = {}): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   }
-  return config
-})
 
-// Auto-refresh on 401 + global error toast
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-      try {
-        const { data } = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true })
-        localStorage.setItem('access_token', data.access_token)
-        originalRequest.headers.Authorization = `Bearer ${data.access_token}`
-        return api(originalRequest)
-      } catch {
-        localStorage.removeItem('access_token')
-        window.location.href = '/login'
-        return Promise.reject(error)
-      }
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: { ...headers, ...options.headers as Record<string, string> },
+    body: options.json ? JSON.stringify(options.json) : options.body,
+  })
+
+  if (res.status === 401 && token) {
+    // Try refresh
+    const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (refreshRes.ok) {
+      const data = await refreshRes.json()
+      localStorage.setItem('access_token', data.access_token)
+      // Retry original request
+      const retryRes = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers: { ...headers, Authorization: `Bearer ${data.access_token}` },
+        body: options.json ? JSON.stringify(options.json) : options.body,
+      })
+      if (!retryRes.ok) throw new Error(await retryRes.text())
+      return retryRes.json()
+    } else {
+      localStorage.removeItem('access_token')
+      window.location.href = '/login'
+      throw new Error('Unauthorized')
     }
-
-    // Global error toast for non-401 errors
-    if (error.response?.status !== 401) {
-      const message = error.response?.data?.error || error.message || 'Đã xảy ra lỗi'
-      const status = error.response?.status
-
-      if (status === 429) {
-        toastEvents.emit({ title: 'Quá nhiều yêu cầu', description: 'Vui lòng thử lại sau.', variant: 'warning' })
-      } else if (status && status >= 500) {
-        toastEvents.emit({ title: 'Lỗi hệ thống', description: 'Vui lòng thử lại sau.', variant: 'error' })
-      } else if (status && status >= 400 && status !== 404) {
-        toastEvents.emit({ title: 'Lỗi', description: message, variant: 'error' })
-      }
-    }
-
-    return Promise.reject(error)
   }
-)
 
-export default api
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(errData.error || res.statusText)
+  }
+
+  return res.json()
+}
