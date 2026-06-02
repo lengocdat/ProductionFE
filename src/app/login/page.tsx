@@ -13,9 +13,9 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleZaloLogin() {
+  async function handleFacebookLogin() {
     try {
-      const res = await fetch('/api/v1/auth/zalo/url')
+      const res = await fetch('/api/v1/auth/facebook/url')
       const data = await res.json()
       if (data.url) window.location.href = data.url
     } catch {}
@@ -60,11 +60,12 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-1.5">Kết nối đam mê thể thao phong trào</p>
         </div>
 
-        {/* Social Login Buttons */}
+        {/* Social Login */}
+        
         <div className="w-full space-y-3 mb-6">
-          <button onClick={handleZaloLogin} className="w-full flex items-center justify-center gap-3 rounded-xl bg-[#0068FF] py-3 text-sm font-semibold text-white hover:bg-[#0055DD] transition-colors shadow-sm">
-            <ZaloIcon />
-            Đăng nhập bằng Zalo
+          <button onClick={handleFacebookLogin} className="w-full flex items-center justify-center gap-3 rounded-xl bg-[#1877F2] py-3 text-sm font-semibold text-white hover:bg-[#1565C0] transition-colors shadow-sm">
+            <FacebookIcon />
+            Đăng nhập bằng Facebook
           </button>
           <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
             <GoogleIcon />
@@ -72,12 +73,12 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Divider */}
         <div className="w-full flex items-center gap-3 mb-6">
           <div className="flex-1 h-px bg-gray-200" />
           <span className="text-xs text-gray-400 whitespace-nowrap">Hoặc sử dụng Email</span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
+       
 
         {/* Email Form */}
         <form onSubmit={handleSubmit} className="w-full space-y-3">
@@ -144,11 +145,10 @@ export default function LoginPage() {
 }
 
 // --- Custom Icons ---
-function ZaloIcon() {
+function FacebookIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
-      <path d="M24 4C12.954 4 4 12.954 4 24s8.954 20 20 20 20-8.954 20-20S35.046 4 24 4z" fill="white" fillOpacity="0.2"/>
-      <path d="M14 17h9.5l-7 10h4.5l-1.5 5 8-8h-4l6.5-7H21l3-4h-10v4z" fill="white"/>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
     </svg>
   )
 }
