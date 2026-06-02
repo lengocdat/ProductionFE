@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi">
+      <head>
+        <meta name="zalo-platform-site-verification" content="S-wo9fhj5p5-vQytXP8xONZbl4YKasaUCJCn" />
+      </head>
       <body>
         <div className="mx-auto max-w-md min-h-screen shadow-lg bg-gray-50 relative">
           {children}
