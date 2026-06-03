@@ -409,14 +409,19 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
         </span>
       </div>
 
-      {/* Slot Indicator */}
+      {/* Slot Indicator + Price */}
       <div className="mt-3">
         <div className="flex items-center justify-between text-[11px] mb-1">
           <span className={`flex items-center gap-1 font-medium ${isAlmostFull ? 'text-red-600' : 'text-gray-600'}`}>
             <Users size={12} />
             {isAlmostFull ? `⚡ Chỉ còn ${slotsLeft} slot!` : `Còn ${slotsLeft}/${match.max_slots} slot`}
           </span>
-          <span className="text-gray-400">{match.filled_slots}/{match.max_slots}</span>
+          <span className="text-[11px] font-semibold">
+            {(match as any).price_per_slot > 0
+              ? <span className="text-green-600">{((match as any).price_per_slot as number).toLocaleString('vi-VN')}đ/slot</span>
+              : <span className="text-emerald-500">Miễn phí</span>
+            }
+          </span>
         </div>
         <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
           <div className={`h-full rounded-full transition-all duration-500 ${isAlmostFull ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${slotPercent}%` }} />
@@ -449,12 +454,18 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
         >
           <MapPin size={13} className="text-gray-500" /> Xem vị trí
         </a>
-        <button
-          onClick={onJoin}
-          className="flex-1 rounded-xl bg-green-500 py-2.5 text-xs font-bold text-white hover:bg-green-600 active:scale-[0.98] transition-all shadow-sm shadow-green-200"
-        >
-          Tham gia ngay
-        </button>
+        {slotsLeft > 0 ? (
+          <button
+            onClick={onJoin}
+            className="flex-1 rounded-xl bg-green-500 py-2.5 text-xs font-bold text-white hover:bg-green-600 active:scale-[0.98] transition-all shadow-sm shadow-green-200"
+          >
+            Tham gia ngay
+          </button>
+        ) : (
+          <div className="flex-1 rounded-xl bg-gray-200 py-2.5 text-xs font-bold text-gray-500 text-center cursor-not-allowed">
+            Đã đủ người
+          </div>
+        )}
       </div>
     </div>
   )

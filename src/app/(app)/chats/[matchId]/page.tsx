@@ -27,10 +27,12 @@ interface MatchInfo {
   id: number
   host_id: number
   title: string
+  match_date: string
   start_time: string
   end_time: string
   filled_slots: number
   max_slots: number
+  cancellation_window_hours: number
   status: string
 }
 
@@ -226,7 +228,36 @@ export default function ChatRoomPage() {
     } catch {} finally { setActionLoading(null) }
   }
 
+  async function cancelMatch() {
+    // Determine if this is a late cancellation (show penalty warning)
+    let isLate = false
+    if (matchInfo) {
+      const [y, m, d] = matchInfo.match_date?.split('-') || []
+      const [hh, mm] = matchInfo.start_time.slice(0, 5).split(':')
+      const windowHours = matchInfo.cancellation_window_hours || 2
+      if (y && hh) {
+        const matchStart = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm))
+        const deadline = new Date(matchStart.getTime() - windowHours * 60 * 60 * 1000)
+        isLate = new Date() > deadline
+      }
+    }
+
+    const message = isLate
+      ? '⚠️ BẠN ĐANG HỦY TRẬN SÁT GIỜ!\n\n• Điểm uy tín Host sẽ bị trừ 20 điểm\n• Nếu điểm < 50, bạn sẽ bị khóa tạo kèo 7 ngày\n• Tất cả người chơi sẽ được hoàn cọc\n\nBạn có chắc chắn muốn tiếp tục?'
+      : 'Bạn có chắc chắn muốn hủy trận này?\n\nTất cả người chơi đã tham gia sẽ nhận lại cọc.'
+
+    if (!confirm(message)) return
+    try {
+      await apiFetch(`/matches/${matchId}/cancel`, { method: 'POST' })
+      alert(isLate ? 'Đã hủy trận. Điểm uy tín đã bị trừ.' : 'Đã hủy trận thành công.')
+      window.location.href = '/chats'
+    } catch (err: any) {
+      alert(err.message || 'Không thể hủy trận')
+    }
+  }
+
   const isHost = matchInfo?.host_id === myId
+  const isCancelled = matchInfo?.status === 'CANCELLED'
   const pendingRequests = requests.filter((r) => r.status === 'PENDING')
   const acceptedRequests = requests.filter((r) => r.status === 'ACCEPTED')
 
@@ -234,21 +265,35 @@ export default function ChatRoomPage() {
     <div className="flex flex-col h-[calc(100vh-120px)]">
       {/* Match Banner (sticky) */}
       {matchInfo && (
-        <div className="sticky top-0 z-10 border-b bg-white px-4 py-2.5">
+        <div className={`sticky top-0 z-10 border-b px-4 py-2.5 ${isCancelled ? 'bg-red-50' : 'bg-white'}`}>
+          {isCancelled && (
+            <div className="text-center text-xs font-bold text-red-600 mb-1">🚫 TRẬN ĐÃ BỊ HỦY</div>
+          )}
           <div className="flex items-center gap-3">
             <Link href="/chats" className="p-1 rounded-full hover:bg-gray-100 transition-colors">
               <ArrowLeft size={18} />
             </Link>
             <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-sm text-gray-900 truncate">{matchInfo.title}</h2>
+              <h2 className={`font-semibold text-sm truncate ${isCancelled ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{matchInfo.title}</h2>
               <div className="flex items-center gap-3 text-[10px] text-gray-500">
                 <span className="flex items-center gap-0.5"><Clock size={9} /> {matchInfo.start_time.slice(0, 5)} - {matchInfo.end_time.slice(0, 5)}</span>
                 <span className="flex items-center gap-0.5"><Users size={9} /> {matchInfo.filled_slots}/{matchInfo.max_slots} slots</span>
                 <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${
-                  matchInfo.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                }`}>{matchInfo.status}</span>
+                  matchInfo.status === 'OPEN' ? 'bg-green-100 text-green-700'
+                  : matchInfo.status === 'CANCELLED' ? 'bg-red-100 text-red-700'
+                  : 'bg-gray-100 text-gray-500'
+                }`}>{matchInfo.status === 'CANCELLED' ? 'ĐÃ HỦY' : matchInfo.status}</span>
               </div>
             </div>
+            {/* Host: Cancel Match button */}
+            {isHost && !isCancelled && (
+              <button
+                onClick={cancelMatch}
+                className="shrink-0 rounded-lg bg-red-50 border border-red-200 px-2 py-1.5 text-[10px] font-medium text-red-600 hover:bg-red-100 transition-colors"
+              >
+                Hủy trận
+              </button>
+            )}
             {/* WS connection indicator */}
             <div className="shrink-0" title={connected ? 'Kết nối realtime' : 'Đang kết nối lại...'}>
               {connected

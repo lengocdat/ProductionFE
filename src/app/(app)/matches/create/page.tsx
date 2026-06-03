@@ -112,6 +112,8 @@ export default function CreateMatchPage() {
     start_time: '18:00',
     end_time: '20:00',
     max_slots: '4',
+    price_per_slot: '0',
+    cancellation_window_hours: '2',
   })
 
   // Apply template
@@ -230,6 +232,8 @@ export default function CreateMatchPage() {
           start_time: form.start_time,
           end_time: form.end_time,
           max_slots: parseInt(form.max_slots),
+          price_per_slot: parseInt(form.price_per_slot) || 0,
+          cancellation_window_hours: parseInt(form.cancellation_window_hours) || 2,
         },
       })
       router.push('/feed')
@@ -331,10 +335,30 @@ export default function CreateMatchPage() {
           </div>
         </div>
 
-        {/* Max Slots */}
-        <FieldGroup label="Số slot tối đa" required error={errors.max_slots} icon={<Users size={14} className="text-gray-400" />}>
-          <input type="number" name="max_slots" value={form.max_slots} onChange={handleChange} min={2} max={30} required className={inputClass(errors.max_slots)} />
-          <p className="text-[10px] text-gray-400 mt-1">Tổng người chơi cần tìm (2–30)</p>
+        {/* Max Slots + Price */}
+        <div className="grid grid-cols-2 gap-3">
+          <FieldGroup label="Số slot" required error={errors.max_slots} icon={<Users size={14} className="text-gray-400" />}>
+            <input type="number" name="max_slots" value={form.max_slots} onChange={handleChange} min={2} max={30} required className={inputClass(errors.max_slots)} />
+            <p className="text-[10px] text-gray-400 mt-1">Tổng người (2–30)</p>
+          </FieldGroup>
+
+          <FieldGroup label="Phí / slot (VNĐ)" icon={<Users size={14} className="text-gray-400" />}>
+            <input type="number" name="price_per_slot" value={form.price_per_slot} onChange={handleChange} min={0} step={5000} placeholder="0 = Miễn phí" className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400" />
+            <p className="text-[10px] text-gray-400 mt-1">{Number(form.price_per_slot) > 0 ? `${Number(form.price_per_slot).toLocaleString('vi-VN')}đ/người` : 'Miễn phí'}</p>
+          </FieldGroup>
+        </div>
+
+        {/* Cancellation Policy */}
+        <FieldGroup label="Cho phép hủy trước giờ đá" icon={<Clock size={14} className="text-gray-400" />}>
+          <select name="cancellation_window_hours" value={form.cancellation_window_hours} onChange={handleChange} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-green-400 outline-none">
+            <option value="1">1 giờ trước</option>
+            <option value="2">2 giờ trước</option>
+            <option value="3">3 giờ trước</option>
+            <option value="6">6 giờ trước</option>
+            <option value="12">12 giờ trước</option>
+            <option value="24">24 giờ trước (1 ngày)</option>
+          </select>
+          <p className="text-[10px] text-gray-400 mt-1">Quá thời gian này, người chơi sẽ không thể tự hủy</p>
         </FieldGroup>
 
         {/* Address */}

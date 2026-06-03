@@ -91,9 +91,21 @@ export default function CourtOwnerDashboard() {
 
   if (courts.length === 0) {
     return (
-      <div className="px-4 pt-3 pb-4 text-center py-20">
-        <p className="text-4xl mb-2">🏟️</p>
-        <p className="text-gray-500">Bạn chưa có sân nào. Liên hệ admin để đăng ký sân.</p>
+      <div className="px-4 pt-3 pb-4">
+        <h1 className="text-lg font-bold text-gray-900 mb-4">📋 Quản lý sân</h1>
+        <div className="text-center py-12 rounded-2xl bg-white border border-gray-100">
+          <p className="text-4xl mb-3">🏟️</p>
+          <p className="text-base font-medium text-gray-700">Bạn chưa đăng ký sân</p>
+          <p className="text-xs text-gray-500 mt-1 mb-4 px-6">Nếu bạn là chủ sân thể thao và muốn nhận booking online, hãy liên hệ để được hỗ trợ đăng ký.</p>
+          <a
+            href="https://m.me/coduyen.net"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl bg-green-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-600 transition-all"
+          >
+            💬 Liên hệ đăng ký sân
+          </a>
+        </div>
       </div>
     )
   }

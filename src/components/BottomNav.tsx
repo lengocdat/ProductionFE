@@ -9,8 +9,8 @@ const navItems = [
   { href: '/feed', icon: MapPin, label: 'Khám phá' },
   { href: '/courts', icon: CalendarCheck, label: 'Đặt sân' },
   { href: '/matches/create', icon: PlusCircle, label: 'Tạo trận' },
-  { href: '/chats', icon: MessageSquare, label: 'Tin nhắn', badge: true },
   { href: '/marketplace', icon: ShoppingBag, label: 'Chợ đồ' },
+  { href: '/chats', icon: MessageSquare, label: 'Tin nhắn', badge: true },
 ]
 
 interface Props {
