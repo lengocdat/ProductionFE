@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import TopHeader from '@/components/TopHeader'
 import BottomNav from '@/components/BottomNav'
+import { Toaster } from '@/components/ui/sonner'
 import { apiFetch } from '@/lib/api'
 
 interface User {
@@ -20,6 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     const token = localStorage.getItem('access_token')
@@ -37,6 +39,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false))
   }, [router])
 
+  // Poll unread count every 30s
+  useEffect(() => {
+    if (!user) return
+    function fetchUnread() {
+      apiFetch<{ unread_count: number }>('/messages/unread-count')
+        .then((d) => setUnreadCount(d.unread_count || 0))
+        .catch(() => {})
+    }
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 30000)
+    return () => clearInterval(interval)
+  }, [user])
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -53,7 +68,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="pb-20 min-h-[calc(100vh-120px)]">
         {children}
       </main>
-      <BottomNav />
+      <BottomNav unreadCount={unreadCount} />
+      <Toaster position="top-center" richColors />
     </>
   )
 }

@@ -52,7 +52,7 @@ export default function ProfilePage() {
       <div className="mt-4 grid grid-cols-4 gap-2">
         <StatCard icon={<Star size={16} className="text-yellow-500" />} value={avgStars} label="Đánh giá" />
         <StatCard icon={<Shield size={16} className="text-red-400" />} value={String(user.negative_reports)} label="Phiếu xấu" />
-        <StatCard icon={<AlertTriangle size={16} className="text-orange-500" />} value={String(user.no_show_count)} label="Bùng kèo" />
+        <StatCard icon={<AlertTriangle size={16} className="text-orange-500" />} value={String(user.no_show_count || 0)} label="Bùng kèo" />
         <StatCard icon={<Calendar size={16} className="text-green-500" />} value={new Date(user.created_at).toLocaleDateString('vi-VN')} label="Tham gia" />
       </div>
 

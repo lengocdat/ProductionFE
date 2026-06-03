@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, Users, Loader2, CheckCircle2, Navigation, Zap } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
 
 // --- Quick Templates ---
 interface Template {
@@ -205,7 +207,7 @@ export default function CreateMatchPage() {
     if (!form.match_date) e.match_date = 'Vui lòng chọn ngày'
     if (form.start_time && form.end_time && form.start_time >= form.end_time) e.end_time = 'Giờ kết thúc phải sau giờ bắt đầu'
     const maxSlots = parseInt(form.max_slots)
-    if (!maxSlots || maxSlots < 2 || maxSlots > 30) e.max_slots = 'Số slot phải từ 2 đến 30'
+    if (!maxSlots || maxSlots < 1 || maxSlots > 30) e.max_slots = 'Số slot phải từ 1 đến 30'
     if (!form.latitude || !form.longitude) e.location = 'Vui lòng dán link Google Maps hoặc bấm nút GPS để lấy vị trí'
     if (!form.skill_level) e.skill_level = 'Vui lòng chọn trình độ'
     setErrors(e)
@@ -236,9 +238,11 @@ export default function CreateMatchPage() {
           cancellation_window_hours: parseInt(form.cancellation_window_hours) || 2,
         },
       })
+      toast.success('Tạo trận thành công! 🎉')
       router.push('/feed')
     } catch (err: any) {
       setSubmitError(err.message || 'Có lỗi xảy ra')
+      toast.error(err.message || 'Có lỗi xảy ra')
     } finally {
       setLoading(false)
     }
@@ -296,20 +300,38 @@ export default function CreateMatchPage() {
         {/* Sport Type + Skill Level (2 columns) */}
         <div className="grid grid-cols-2 gap-3">
           <FieldGroup label="Môn thể thao" required>
-            <select name="sport_type" value={form.sport_type} onChange={handleChange} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-green-400 outline-none">
-              <option value="BADMINTON">🏸 Cầu lông</option>
-              <option value="FOOTBALL">⚽ Bóng đá</option>
-              <option value="BASKETBALL">🏀 Bóng rổ</option>
-              <option value="VOLLEYBALL">🏐 Bóng chuyền</option>
-              <option value="TABLE_TENNIS">🏓 Bóng bàn</option>
-              <option value="TENNIS">🎾 Tennis</option>
-              <option value="PICKLEBALL">🏓 Pickleball</option>
-              <option value="RUNNING">🏃 Chạy bộ</option>
-            </select>
+            <Select value={form.sport_type} onValueChange={(v: string) => { setForm((f) => ({ ...f, sport_type: v })); setSelectedTemplate(null) }}>
+              <SelectTrigger className="w-full rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BADMINTON">🏸 Cầu lông</SelectItem>
+                <SelectItem value="RUNNING">🏃 Chạy bộ</SelectItem>
+                <SelectItem value="PICKLEBALL">🏓 Pickleball</SelectItem>
+                <SelectItem value="FOOTBALL">⚽ Bóng đá</SelectItem>
+                <SelectItem value="TENNIS">🎾 Tennis</SelectItem>
+                <SelectItem value="TABLE_TENNIS">🏓 Bóng bàn</SelectItem>
+                <SelectItem value="BASKETBALL">🏀 Bóng rổ</SelectItem>
+                <SelectItem value="VOLLEYBALL">🏐 Bóng chuyền</SelectItem>
+              </SelectContent>
+            </Select>
           </FieldGroup>
 
           <FieldGroup label="Yêu cầu trình độ" required error={errors.skill_level}>
-            <SkillLevelPicker value={form.skill_level} onChange={(v) => { setForm((f) => ({ ...f, skill_level: v })); setSelectedTemplate(null); setErrors((e) => ({ ...e, skill_level: undefined })) }} />
+            <Select value={form.skill_level} onValueChange={(v: string) => { setForm((f) => ({ ...f, skill_level: v })); setSelectedTemplate(null); setErrors((e) => ({ ...e, skill_level: undefined })) }}>
+              <SelectTrigger className="w-full rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BEGINNER">🟢 Yếu / Mới chơi</SelectItem>
+                <SelectItem value="LOWER_INTERMEDIATE">🟡 TB Yếu</SelectItem>
+                <SelectItem value="INTERMEDIATE">🟡 Trung bình</SelectItem>
+                <SelectItem value="UPPER_INTERMEDIATE">🔵 TB+</SelectItem>
+                <SelectItem value="ADVANCED">🟠 Khá</SelectItem>
+                <SelectItem value="SEMI_PRO">🔴 Bán chuyên</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-gray-400 mt-1">{SKILL_LABELS[form.skill_level] || ''}</p>
           </FieldGroup>
         </div>
 
@@ -338,8 +360,8 @@ export default function CreateMatchPage() {
         {/* Max Slots + Price */}
         <div className="grid grid-cols-2 gap-3">
           <FieldGroup label="Số slot" required error={errors.max_slots} icon={<Users size={14} className="text-gray-400" />}>
-            <input type="number" name="max_slots" value={form.max_slots} onChange={handleChange} min={2} max={30} required className={inputClass(errors.max_slots)} />
-            <p className="text-[10px] text-gray-400 mt-1">Tổng người (2–30)</p>
+            <input type="number" name="max_slots" value={form.max_slots} onChange={handleChange} min={1} max={30} required className={inputClass(errors.max_slots)} />
+            <p className="text-[10px] text-gray-400 mt-1">Cần tìm thêm (1–30)</p>
           </FieldGroup>
 
           <FieldGroup label="Phí / slot (VNĐ)" icon={<Users size={14} className="text-gray-400" />}>
@@ -350,14 +372,19 @@ export default function CreateMatchPage() {
 
         {/* Cancellation Policy */}
         <FieldGroup label="Cho phép hủy trước giờ đá" icon={<Clock size={14} className="text-gray-400" />}>
-          <select name="cancellation_window_hours" value={form.cancellation_window_hours} onChange={handleChange} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-green-400 outline-none">
-            <option value="1">1 giờ trước</option>
-            <option value="2">2 giờ trước</option>
-            <option value="3">3 giờ trước</option>
-            <option value="6">6 giờ trước</option>
-            <option value="12">12 giờ trước</option>
-            <option value="24">24 giờ trước (1 ngày)</option>
-          </select>
+          <Select value={form.cancellation_window_hours} onValueChange={(v: string) => setForm((f) => ({ ...f, cancellation_window_hours: v }))}>
+            <SelectTrigger className="w-full rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 giờ trước</SelectItem>
+              <SelectItem value="2">2 giờ trước</SelectItem>
+              <SelectItem value="3">3 giờ trước</SelectItem>
+              <SelectItem value="6">6 giờ trước</SelectItem>
+              <SelectItem value="12">12 giờ trước</SelectItem>
+              <SelectItem value="24">24 giờ trước (1 ngày)</SelectItem>
+            </SelectContent>
+          </Select>
           <p className="text-[10px] text-gray-400 mt-1">Quá thời gian này, người chơi sẽ không thể tự hủy</p>
         </FieldGroup>
 
@@ -454,100 +481,4 @@ function FieldGroup({ label, required, error, icon, children }: {
 
 function inputClass(error?: string) {
   return `w-full rounded-xl border px-4 py-2.5 text-sm outline-none focus:border-green-400 focus:ring-1 focus:ring-green-100 transition-colors ${error ? 'border-red-300 bg-red-50' : 'border-gray-200'}`
-}
-
-// --- Skill Level Picker with descriptions ---
-const SKILL_OPTIONS = [
-  {
-    value: 'BEGINNER',
-    emoji: '🟢',
-    label: 'Yếu / Mới',
-    desc: 'Mới chơi 0-6 tháng, chưa biết kỹ thuật, cầm vợt cơ bản',
-    border: 'border-green-300 bg-green-50',
-  },
-  {
-    value: 'LOWER_INTERMEDIATE',
-    emoji: '🟡',
-    label: 'TB Yếu',
-    desc: 'Chơi 6-12 tháng, biết giao cầu, đánh phải/trái cơ bản nhưng chưa ổn định',
-    border: 'border-yellow-300 bg-yellow-50',
-  },
-  {
-    value: 'INTERMEDIATE',
-    emoji: '🟡',
-    label: 'Trung bình',
-    desc: 'Chơi 1-2 năm, giao lưu thoải mái, biết smash/drop nhưng chưa mạnh',
-    border: 'border-amber-300 bg-amber-50',
-  },
-  {
-    value: 'UPPER_INTERMEDIATE',
-    emoji: '🔵',
-    label: 'TB+',
-    desc: 'Chơi 2-3 năm, có học kỹ thuật, footwork tốt, đánh được đôi chiến thuật',
-    border: 'border-blue-300 bg-blue-50',
-  },
-  {
-    value: 'ADVANCED',
-    emoji: '🟠',
-    label: 'Khá',
-    desc: 'Chơi 3-5 năm, kỹ thuật tốt, smash mạnh, đọc game giỏi, từng thi đấu CLB',
-    border: 'border-orange-300 bg-orange-50',
-  },
-  {
-    value: 'SEMI_PRO',
-    emoji: '🔴',
-    label: 'Bán chuyên',
-    desc: 'Chơi 5+ năm, tập luyện bài bản, từng thi đấu giải tỉnh/thành, trình rất cao',
-    border: 'border-red-300 bg-red-50',
-  },
-]
-
-function SkillLevelPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [expanded, setExpanded] = useState(false)
-  const selected = SKILL_OPTIONS.find((o) => o.value === value)
-
-  return (
-    <div className="space-y-1.5">
-      {/* Selected display + toggle */}
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-left hover:border-gray-300 transition-colors"
-      >
-        <span>{selected ? `${selected.emoji} ${selected.label}` : 'Chọn trình độ'}</span>
-        <span className="text-gray-400 text-xs">{expanded ? '▲' : '▼'}</span>
-      </button>
-
-      {/* Expanded options */}
-      {expanded && (
-        <div className="space-y-1.5 rounded-xl border border-gray-200 bg-gray-50 p-2">
-          {SKILL_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => { onChange(opt.value); setExpanded(false) }}
-              className={`w-full text-left rounded-lg px-3 py-2 transition-all ${
-                value === opt.value
-                  ? `${opt.border} border shadow-sm`
-                  : 'border border-transparent hover:bg-white hover:border-gray-200'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">{opt.emoji}</span>
-                <span className="text-sm font-medium text-gray-800">{opt.label}</span>
-              </div>
-              <p className="text-[10px] text-gray-500 mt-0.5 ml-6 leading-relaxed">{opt.desc}</p>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Always show selected description */}
-      {selected && !expanded && (
-        <p className="text-[10px] text-gray-500 ml-1 flex items-center gap-1">
-          💡 {selected.desc}
-        </p>
-      )}
-    </div>
-  )
 }

@@ -333,8 +333,16 @@ export default function FeedPage() {
               <h3 className="text-base font-bold text-gray-900">Cảnh báo trình độ</h3>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed mb-4">
-              Trận này yêu cầu trình độ <strong className="text-orange-700">{SKILL_LABEL[mismatchWarning.skill_level || 'INTERMEDIATE']}</strong>,
-              trong khi trình độ hiện tại của bạn là <strong className="text-blue-700">{SKILL_LABEL[userSkill]}</strong>.
+              Trận này yêu cầu trình độ <strong className="text-orange-700">{
+                SKILL_BASED_SPORTS.includes(mismatchWarning.sport_type)
+                  ? SKILL_LABEL_RACKET[mismatchWarning.skill_level || 'INTERMEDIATE']
+                  : (INTENSITY_LABEL[mismatchWarning.skill_level || 'INTERMEDIATE'] || SKILL_LABEL[mismatchWarning.skill_level || 'INTERMEDIATE'])
+              }</strong>,
+              trong khi trình độ hiện tại của bạn là <strong className="text-blue-700">{
+                SKILL_BASED_SPORTS.includes(mismatchWarning.sport_type)
+                  ? SKILL_LABEL_RACKET[userSkill]
+                  : (INTENSITY_LABEL[userSkill] || SKILL_LABEL[userSkill])
+              }</strong>.
               <br /><br />
               Bạn có chắc chắn muốn xin tham gia không?
             </p>
@@ -384,6 +392,11 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
             <h3 className="font-semibold text-gray-900 text-[15px] leading-snug truncate">{match.title}</h3>
           </div>
           <p className="text-[11px] text-gray-500 mt-0.5 truncate">{match.address}</p>
+          {(match as any).court_name && (
+            <p className="text-[10px] text-blue-600 mt-0.5 flex items-center gap-1 truncate">
+              🏟️ {(match as any).court_name}{(match as any).court_number ? ` · Sân ${(match as any).court_number}` : ''}
+            </p>
+          )}
         </div>
         {/* Distance Tag */}
         <span className={`flex-shrink-0 rounded-lg border px-2 py-1 text-xs font-bold ${distColor}`}>
