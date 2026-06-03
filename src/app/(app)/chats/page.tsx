@@ -59,7 +59,7 @@ export default function ChatsPage() {
               </div>
               <p className="text-[11px] text-gray-400 mt-1 truncate">{r.auto_message}</p>
               {r.status === 'ACCEPTED' && (
-                <Link href={`/matches/${r.match_id}`} className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-green-50 border border-green-200 py-2 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors">
+                <Link href={`/matches/${r.match_id}?tab=chat`} className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-green-50 border border-green-200 py-2 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors">
                   <MessageSquare size={13} /> Nhắn tin với nhóm
                 </Link>
               )}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban } from 'lucide-react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
@@ -52,9 +52,15 @@ export default function MatchDetailPage() {
   const params = useParams()
   const matchId = Number(params.id)
   const [match, setMatch] = useState<MatchInfo | null>(null)
+  const searchParams = useSearchParams()
   const [isHost, setIsHost] = useState(false)
   const [myId, setMyId] = useState(0)
-  const [activeTab, setActiveTab] = useState<'info' | 'manage' | 'chat'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'manage' | 'chat'>(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'chat') return 'chat'
+    if (tab === 'manage') return 'manage'
+    return 'info'
+  })
   const [requests, setRequests] = useState<JoinReq[]>([])
   const [loading, setLoading] = useState(true)
 
