@@ -287,15 +287,14 @@ export default function FeedPage() {
               </div>
             </>
           )}
-            {skillFilters.length > 0 && (
-              <button
-                onClick={() => setSkillFilters([])}
-                className="rounded-full px-2 py-1 text-[10px] text-gray-400 hover:text-gray-600"
-              >
-                ✕ Bỏ lọc
-              </button>
-            )}
-          </div>
+          {skillFilters.length > 0 && (
+            <button
+              onClick={() => setSkillFilters([])}
+              className="rounded-full px-2 py-1 text-[10px] text-gray-400 hover:text-gray-600"
+            >
+              ✕ Bỏ lọc
+            </button>
+          )}
         </div>
       </div>
 
