@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MapPin, PlusCircle, MessageSquare, User, CalendarCheck } from 'lucide-react'
+import { MapPin, PlusCircle, MessageSquare, ShoppingBag, CalendarCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -10,7 +10,7 @@ const navItems = [
   { href: '/courts', icon: CalendarCheck, label: 'Đặt sân' },
   { href: '/matches/create', icon: PlusCircle, label: 'Tạo trận' },
   { href: '/chats', icon: MessageSquare, label: 'Tin nhắn', badge: true },
-  { href: '/profile', icon: User, label: 'Cá nhân' },
+  { href: '/marketplace', icon: ShoppingBag, label: 'Chợ đồ' },
 ]
 
 interface Props {
