@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import JoinModal from '@/components/JoinModal'
+import WeeklyCalendarStrip from '@/components/WeeklyCalendarStrip'
 
 // --- Types ---
 interface Host {
@@ -47,21 +48,27 @@ const SPORTS = [
 
 const SKILL_LEVELS = [
   { value: 'BEGINNER', label: 'Yếu', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'INTERMEDIATE', label: 'Trung bình', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'LOWER_INTERMEDIATE', label: 'TB-', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  { value: 'INTERMEDIATE', label: 'TB', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'UPPER_INTERMEDIATE', label: 'TB+', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
   { value: 'ADVANCED', label: 'Khá', color: 'bg-orange-50 text-orange-700 border-orange-200' },
   { value: 'SEMI_PRO', label: 'Bán chuyên', color: 'bg-red-50 text-red-700 border-red-200' },
 ]
 
 const SKILL_BADGE_STYLES: Record<string, string> = {
   'BEGINNER': 'bg-gray-100 text-gray-600',
+  'LOWER_INTERMEDIATE': 'bg-teal-50 text-teal-700',
   'INTERMEDIATE': 'bg-blue-50 text-blue-700',
+  'UPPER_INTERMEDIATE': 'bg-indigo-50 text-indigo-700',
   'ADVANCED': 'bg-orange-50 text-orange-700',
   'SEMI_PRO': 'bg-red-50 text-red-700',
 }
 
 const SKILL_LABEL: Record<string, string> = {
   'BEGINNER': 'Yếu',
+  'LOWER_INTERMEDIATE': 'TB Yếu',
   'INTERMEDIATE': 'Trung bình',
+  'UPPER_INTERMEDIATE': 'TB+',
   'ADVANCED': 'Khá',
   'SEMI_PRO': 'Bán chuyên',
 }
@@ -75,12 +82,12 @@ const SPORT_ICON: Record<string, string> = {
 const FALLBACK_COORDS = { lat: 10.762622, lng: 106.660172 }
 
 // Skill ranking for mismatch detection
-const SKILL_RANK: Record<string, number> = { 'BEGINNER': 1, 'INTERMEDIATE': 2, 'ADVANCED': 3, 'SEMI_PRO': 4 }
+const SKILL_RANK: Record<string, number> = { 'BEGINNER': 1, 'LOWER_INTERMEDIATE': 2, 'INTERMEDIATE': 3, 'UPPER_INTERMEDIATE': 4, 'ADVANCED': 5, 'SEMI_PRO': 6 }
 
 export default function FeedPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [geoStatus, setGeoStatus] = useState<'loading' | 'granted' | 'denied'>('loading')
-  const [dateFilter, setDateFilter] = useState<'today' | 'tomorrow'>('today')
+  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split('T')[0])
   const [sportFilter, setSportFilter] = useState('BADMINTON')
   const [skillFilters, setSkillFilters] = useState<string[]>([]) // multi-select
   const [matches, setMatches] = useState<SportMatch[]>([])
@@ -105,10 +112,8 @@ export default function FeedPage() {
     )
   }, [])
 
-  const getDateString = useCallback((filter: 'today' | 'tomorrow') => {
-    const d = new Date()
-    if (filter === 'tomorrow') d.setDate(d.getDate() + 1)
-    return d.toISOString().split('T')[0]
+  const getDateString = useCallback((filter: string) => {
+    return filter
   }, [])
 
   // Fetch matches
@@ -177,15 +182,12 @@ export default function FeedPage() {
 
       {/* Sticky Filter Bar */}
       <div className="sticky top-[57px] z-20 bg-gray-50 pb-3 -mx-4 px-4 pt-1 space-y-3">
-        {/* Date Toggle */}
-        <div className="flex gap-2">
-          <button onClick={() => setDateFilter('today')} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 ${dateFilter === 'today' ? 'bg-green-500 text-white shadow-md shadow-green-200' : 'bg-white text-gray-600 border border-gray-200'}`}>
-            Hôm nay
-          </button>
-          <button onClick={() => setDateFilter('tomorrow')} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 ${dateFilter === 'tomorrow' ? 'bg-green-500 text-white shadow-md shadow-green-200' : 'bg-white text-gray-600 border border-gray-200'}`}>
-            Ngày mai
-          </button>
-        </div>
+        {/* Weekly Calendar Strip (7 ngày tới) */}
+        <WeeklyCalendarStrip
+          days={7}
+          selectedDate={dateFilter}
+          onSelectDate={setDateFilter}
+        />
 
         {/* Sport Chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">

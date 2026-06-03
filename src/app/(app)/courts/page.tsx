@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { MapPin, Clock, Star, Phone, Loader2, ChevronRight, Droplets, Car, Lightbulb, Waves } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import MonthlyCalendar from '@/components/MonthlyCalendar'
+import TimeSlotGrid, { TimeSlot } from '@/components/TimeSlotGrid'
 
 // --- Types ---
 interface Court {
@@ -23,11 +25,6 @@ interface Court {
   is_active: boolean
   rating_avg: number
   rating_count: number
-}
-
-interface TimeSlot {
-  time: string
-  available: boolean
 }
 
 // --- Constants ---
@@ -165,18 +162,17 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
   function handleSlotSelect(time: string) {
     if (!selectedSlot) {
       setSelectedSlot(time)
-      // Auto-select 1 hour end
       const h = parseInt(time.split(':')[0]) + 1
       setSelectedEnd(`${String(h).padStart(2, '0')}:00`)
     } else if (selectedSlot === time) {
       setSelectedSlot(null)
       setSelectedEnd(null)
     } else {
-      // Select range
       const startH = parseInt(selectedSlot.split(':')[0])
       const clickH = parseInt(time.split(':')[0])
       if (clickH > startH) {
-        setSelectedEnd(time)
+        const endH = clickH + 1
+        setSelectedEnd(`${String(endH).padStart(2, '0')}:00`)
       } else {
         setSelectedSlot(time)
         const h = parseInt(time.split(':')[0]) + 1
@@ -189,8 +185,7 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
     if (!selectedSlot || !selectedEnd) return
     setBooking(true)
     try {
-      // In production: POST /api/courts/:courtId/book
-      await new Promise((r) => setTimeout(r, 1000)) // simulate API
+      await new Promise((r) => setTimeout(r, 1000))
       setSuccess(true)
     } catch {} finally {
       setBooking(false)
@@ -204,7 +199,7 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white rounded-t-2xl max-h-[85vh] overflow-y-auto">
+      <div className="w-full max-w-md bg-white rounded-t-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between z-10">
           <div>
             <h3 className="font-bold text-gray-900">{court.name}</h3>
@@ -223,56 +218,27 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
           </div>
         ) : (
           <div className="p-5 space-y-4">
-            {/* Date Picker */}
+            {/* Monthly Calendar (book trước 30 ngày) */}
             <div>
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-1.5">
-                <Clock size={14} /> Chọn ngày
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-2">
+                <Clock size={14} className="text-gray-400" /> Chọn ngày (trước 30 ngày)
               </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => onDateChange(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400"
+              <MonthlyCalendar
+                selectedDate={date}
+                onSelectDate={onDateChange}
+                maxFutureDays={30}
               />
             </div>
 
-            {/* Time Slots Grid */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Chọn khung giờ</label>
-              <div className="grid grid-cols-4 gap-2">
-                {slots.map((slot) => {
-                  const isStart = selectedSlot === slot.time
-                  const isInRange = selectedSlot && selectedEnd &&
-                    parseInt(slot.time) >= parseInt(selectedSlot) &&
-                    parseInt(slot.time) < parseInt(selectedEnd)
-
-                  return (
-                    <button
-                      key={slot.time}
-                      disabled={!slot.available}
-                      onClick={() => handleSlotSelect(slot.time)}
-                      className={`rounded-lg py-2 text-xs font-medium transition-all ${
-                        !slot.available
-                          ? 'bg-red-50 text-red-300 cursor-not-allowed line-through'
-                          : isStart
-                          ? 'bg-green-500 text-white shadow-md'
-                          : isInRange
-                          ? 'bg-green-100 text-green-700 border border-green-300'
-                          : 'bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-200'
-                      }`}
-                    >
-                      {slot.time}
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="flex gap-3 mt-2 text-[9px] text-gray-400">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-200" /> Trống</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-200" /> Đã đặt</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /> Đang chọn</span>
-              </div>
-            </div>
+            {/* Time Slots Grid - grouped by period */}
+            <TimeSlotGrid
+              slots={slots}
+              selectedStart={selectedSlot}
+              selectedEnd={selectedEnd}
+              onSlotSelect={handleSlotSelect}
+              title={`Khung giờ ngày ${date.split('-').reverse().join('/')}`}
+              showPeriods={true}
+            />
 
             {/* Summary */}
             {selectedSlot && selectedEnd && hours > 0 && (

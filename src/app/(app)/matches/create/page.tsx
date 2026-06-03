@@ -29,7 +29,9 @@ const FALLBACK_TEMPLATES: Template[] = [
 
 const SKILL_LABELS: Record<string, string> = {
   'BEGINNER': '🟢 Yếu / Mới chơi',
+  'LOWER_INTERMEDIATE': '🟡 TB Yếu',
   'INTERMEDIATE': '🟡 Trung bình',
+  'UPPER_INTERMEDIATE': '🔵 TB+',
   'ADVANCED': '🟠 Khá',
   'SEMI_PRO': '🔴 Bán chuyên',
 }
@@ -154,6 +156,7 @@ export default function CreateMatchPage() {
         json: {
           title: form.title.trim(),
           sport_type: form.sport_type,
+          skill_level: form.skill_level,
           address: form.address.trim(),
           latitude: parseFloat(form.latitude),
           longitude: parseFloat(form.longitude),
@@ -164,7 +167,7 @@ export default function CreateMatchPage() {
           max_slots: parseInt(form.max_slots),
         },
       })
-      router.push('/chats')
+      router.push('/feed')
     } catch (err: any) {
       setSubmitError(err.message || 'Có lỗi xảy ra')
     } finally {
@@ -239,7 +242,9 @@ export default function CreateMatchPage() {
           <FieldGroup label="Yêu cầu trình độ" required error={errors.skill_level}>
             <select name="skill_level" value={form.skill_level} onChange={handleChange} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-green-400 outline-none">
               <option value="BEGINNER">🟢 Yếu / Mới</option>
+              <option value="LOWER_INTERMEDIATE">🟡 TB Yếu</option>
               <option value="INTERMEDIATE">🟡 Trung bình</option>
+              <option value="UPPER_INTERMEDIATE">🔵 TB+</option>
               <option value="ADVANCED">🟠 Khá</option>
               <option value="SEMI_PRO">🔴 Bán chuyên</option>
             </select>
