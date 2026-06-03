@@ -10,7 +10,10 @@ export default function CourtOwnerDashboard() {
   const [courts, setCourts] = useState<Court[]>([])
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null)
   const [bookings, setBookings] = useState<CourtBooking[]>([])
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   const [loading, setLoading] = useState(true)
   const [scheduleLoading, setScheduleLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<number | null>(null)

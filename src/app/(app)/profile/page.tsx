@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Star, AlertTriangle, Calendar, Shield, LogOut } from 'lucide-react'
+import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 
 interface User { id: number; username: string; email: string; role: string; tier: string; negative_reports: number; created_at: string }
@@ -55,6 +55,14 @@ export default function ProfilePage() {
         <StatCard icon={<Calendar size={16} className="text-green-500" />} value={new Date(user.created_at).toLocaleDateString('vi-VN')} label="Tham gia" />
       </div>
 
+      {/* Quick Menu */}
+      <div className="mt-4 rounded-2xl bg-white shadow-sm overflow-hidden divide-y divide-gray-100">
+        <MenuLink href="/profile/achievements" icon={<Trophy size={18} className="text-amber-500" />} label="Thành tựu & Huy hiệu" desc="Xem tiến trình và badge đã đạt" />
+        <MenuLink href="/marketplace" icon={<ShoppingBag size={18} className="text-green-500" />} label="Chợ đồ thể thao" desc="Mua bán đồ cũ, tìm deals" />
+        <MenuLink href="/profile/premium" icon={<Crown size={18} className="text-yellow-500" />} label="Nâng cấp Premium" desc="Radar tự động, không quảng cáo" premium />
+        <MenuLink href="/dashboard/courts" icon={<LayoutDashboard size={18} className="text-blue-500" />} label="Quản lý sân (Chủ sân)" desc="Dashboard booking & lịch sân" />
+      </div>
+
       {ratings.length > 0 && (
         <div className="mt-4">
           <h3 className="font-semibold text-gray-800 text-sm mb-2">Đánh giá gần đây</h3>
@@ -88,5 +96,23 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string
       <span className="mt-1 text-sm font-bold text-gray-900">{value}</span>
       <span className="text-[9px] text-gray-500">{label}</span>
     </div>
+  )
+}
+
+function MenuLink({ href, icon, label, desc, premium }: { href: string; icon: React.ReactNode; label: string; desc: string; premium?: boolean }) {
+  return (
+    <a href={href} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+      <div className="shrink-0">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-medium text-gray-900">{label}</span>
+          {premium && (
+            <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-1.5 py-px text-[8px] font-bold text-white">PRO</span>
+          )}
+        </div>
+        <p className="text-[10px] text-gray-500 truncate">{desc}</p>
+      </div>
+      <ChevronRight size={16} className="text-gray-300 shrink-0" />
+    </a>
   )
 }

@@ -125,7 +125,10 @@ const SKILL_RANK: Record<string, number> = { 'BEGINNER': 1, 'LOWER_INTERMEDIATE'
 export default function FeedPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [geoStatus, setGeoStatus] = useState<'loading' | 'granted' | 'denied'>('loading')
-  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split('T')[0])
+  const [dateFilter, setDateFilter] = useState<string>(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   const [sportFilter, setSportFilter] = useState('BADMINTON')
   const [skillFilters, setSkillFilters] = useState<string[]>([]) // multi-select
   const [matches, setMatches] = useState<SportMatch[]>([])

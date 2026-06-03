@@ -108,7 +108,7 @@ export default function CreateMatchPage() {
     latitude: '',
     longitude: '',
     google_maps_url: '',
-    match_date: new Date().toISOString().split('T')[0],
+    match_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
     start_time: '18:00',
     end_time: '20:00',
     max_slots: '4',
