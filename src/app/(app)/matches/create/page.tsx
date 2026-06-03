@@ -204,7 +204,7 @@ export default function CreateMatchPage() {
     if (form.start_time && form.end_time && form.start_time >= form.end_time) e.end_time = 'Giờ kết thúc phải sau giờ bắt đầu'
     const maxSlots = parseInt(form.max_slots)
     if (!maxSlots || maxSlots < 2 || maxSlots > 30) e.max_slots = 'Số slot phải từ 2 đến 30'
-    if (!form.latitude || !form.longitude) e.location = 'Vui lòng lấy tọa độ bằng GPS hoặc nhập thủ công'
+    if (!form.latitude || !form.longitude) e.location = 'Vui lòng dán link Google Maps hoặc bấm nút GPS để lấy vị trí'
     if (!form.skill_level) e.skill_level = 'Vui lòng chọn trình độ'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -342,60 +342,57 @@ export default function CreateMatchPage() {
           <textarea name="address" value={form.address} onChange={handleChange} required rows={2} placeholder="VD: Sân cầu lông ABC, 123 Nguyễn Văn Linh, Q7" className={`w-full rounded-xl border px-4 py-2.5 text-sm resize-none outline-none focus:border-green-400 focus:ring-1 focus:ring-green-100 ${errors.address ? 'border-red-300 bg-red-50' : 'border-gray-200'}`} />
         </FieldGroup>
 
-        {/* Geolocation */}
+        {/* Vị trí sân */}
         <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-              <MapPin size={14} className="text-green-500" /> Tọa độ sân <span className="text-red-400">*</span>
-            </label>
+          <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+            <MapPin size={14} className="text-green-500" /> Vị trí sân <span className="text-red-400">*</span>
+          </label>
+
+          {/* Option 1: Google Maps link (PRIMARY — easiest for user) */}
+          <div>
+            <input
+              name="google_maps_url"
+              value={form.google_maps_url}
+              onChange={handleMapsUrlChange}
+              placeholder="Dán link Google Maps hoặc tọa độ: 10.7321, 106.7019"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400"
+            />
+            {form.latitude && form.longitude && (
+              <p className="text-[10px] text-green-600 mt-1.5 flex items-center gap-1">
+                ✅ Tọa độ: {form.latitude}, {form.longitude}
+              </p>
+            )}
+          </div>
+
+          {/* Option 2: GPS button */}
+          <div className="relative flex items-center gap-2">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-[9px] text-gray-400 px-2">hoặc</span>
+            <div className="flex-1 h-px bg-gray-200" />
           </div>
 
           <button
             type="button"
             onClick={handleGetLocation}
             disabled={geoLoading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 py-3 text-sm font-medium text-green-700 hover:bg-green-50 hover:border-green-400 disabled:opacity-50 transition-all"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 py-2.5 text-sm font-medium text-green-700 hover:bg-green-50 hover:border-green-400 disabled:opacity-50 transition-all"
           >
             {geoLoading ? (
               <><Loader2 size={16} className="animate-spin" /> Đang lấy vị trí...</>
             ) : geoSuccess ? (
-              <><CheckCircle2 size={16} className="text-green-600" /> Đã lấy tọa độ thành công!</>
+              <><CheckCircle2 size={16} className="text-green-600" /> Đã lấy tọa độ GPS!</>
             ) : (
-              <><Navigation size={16} /> 📍 Lấy vị trí hiện tại của tôi tại sân</>
+              <><Navigation size={16} /> 📍 Lấy vị trí GPS hiện tại</>
             )}
           </button>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-gray-500 uppercase font-medium">Latitude</label>
-              <input name="latitude" value={form.latitude} onChange={handleChange} placeholder="10.7321" className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 outline-none focus:bg-white focus:border-green-400" />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-500 uppercase font-medium">Longitude</label>
-              <input name="longitude" value={form.longitude} onChange={handleChange} placeholder="106.7019" className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 outline-none focus:bg-white focus:border-green-400" />
-            </div>
-          </div>
-
           {errors.location && <p className="text-[11px] text-red-500 flex items-center gap-1">⚠️ {errors.location}</p>}
-          <p className="text-[10px] text-gray-400 leading-relaxed">💡 Cách 1: Đứng tại sân → bấm nút GPS. Cách 2: Dán link Google Maps ở ô bên dưới → tọa độ tự động điền.</p>
-        </div>
+          <p className="text-[10px] text-gray-400 leading-relaxed">💡 Mở Google Maps → tìm sân → bấm chia sẻ → copy link → dán vào ô trên.</p>
 
-        {/* Google Maps URL — Auto-extract tọa độ */}
-        <FieldGroup label="Link Google Maps (tự lấy tọa độ)" icon={<MapPin size={14} className="text-gray-400" />}>
-          <input
-            name="google_maps_url"
-            value={form.google_maps_url}
-            onChange={handleMapsUrlChange}
-            placeholder="Dán link Google Maps hoặc tọa độ: 10.7321, 106.7019"
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400"
-          />
-          {form.latitude && form.longitude && form.google_maps_url && (
-            <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
-              ✅ Đã tự động lấy tọa độ: {form.latitude}, {form.longitude}
-            </p>
-          )}
-          <p className="text-[10px] text-gray-400 mt-1">Dán link từ Google Maps → tọa độ sẽ được tự động điền bên trên</p>
-        </FieldGroup>
+          {/* Hidden lat/lng inputs (auto-filled, not required to manually type) */}
+          <input type="hidden" name="latitude" value={form.latitude} />
+          <input type="hidden" name="longitude" value={form.longitude} />
+        </div>
 
         {/* Submit */}
         {submitError && <div className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 text-center">{submitError}</div>}
