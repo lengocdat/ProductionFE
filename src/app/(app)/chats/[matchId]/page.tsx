@@ -8,6 +8,7 @@ import Link from 'next/link'
 
 interface Message {
   id: number
+  match_id?: number
   sender_id: number
   receiver_id: number
   content: string
@@ -64,7 +65,7 @@ function useWebSocket(matchId: number, myId: number, onMessage: (msg: Message) =
         if (data.type === 'new_message' && data.payload) {
           const msg = data.payload as Message
           // Only process messages for this match
-          if (msg.match_id === matchId || (msg as any).match_id === matchId) {
+          if (msg.match_id === matchId) {
             onMessage(msg)
           }
         }
@@ -241,7 +242,7 @@ export default function ChatRoomPage() {
             <div className="flex-1 min-w-0">
               <h2 className="font-semibold text-sm text-gray-900 truncate">{matchInfo.title}</h2>
               <div className="flex items-center gap-3 text-[10px] text-gray-500">
-                <span className="flex items-center gap-0.5"><Clock size={9} /> {matchInfo.start_time} - {matchInfo.end_time}</span>
+                <span className="flex items-center gap-0.5"><Clock size={9} /> {matchInfo.start_time.slice(0, 5)} - {matchInfo.end_time.slice(0, 5)}</span>
                 <span className="flex items-center gap-0.5"><Users size={9} /> {matchInfo.filled_slots}/{matchInfo.max_slots} slots</span>
                 <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${
                   matchInfo.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'

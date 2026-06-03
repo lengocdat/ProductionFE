@@ -2,30 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { MapPin, Clock, Star, Phone, Loader2, ChevronRight, Droplets, Car, Lightbulb, Waves } from 'lucide-react'
-import { apiFetch } from '@/lib/api'
+import { getCourts, getCourtAvailability, createBooking, Court, TimeSlot, CourtAvailability } from '@/lib/court-api'
 import MonthlyCalendar from '@/components/MonthlyCalendar'
-import TimeSlotGrid, { TimeSlot } from '@/components/TimeSlotGrid'
-
-// --- Types ---
-interface Court {
-  id: number
-  owner_id: number
-  name: string
-  description: string
-  sport_type: string
-  address: string
-  latitude: number
-  longitude: number
-  phone_number: string
-  price_per_hour: number
-  amenities: string[]
-  operating_hours_start: string
-  operating_hours_end: string
-  total_courts: number
-  is_active: boolean
-  rating_avg: number
-  rating_count: number
-}
+import TimeSlotGrid from '@/components/TimeSlotGrid'
 
 // --- Constants ---
 const AMENITY_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
@@ -37,20 +16,20 @@ const AMENITY_ICONS: Record<string, { icon: React.ReactNode; label: string }> = 
 
 function formatVND(price: number) { return price.toLocaleString('vi-VN') + 'đ' }
 
-// --- MOCK DATA ---
-const MOCK_COURTS: Court[] = [
-  { id: 1, owner_id: 10, name: 'Sân cầu lông Phú Nhuận Star', description: 'Sân đạt chuẩn thi đấu, mặt sân PU cao cấp. Có 4 sân, đèn LED sáng rõ.', sport_type: 'BADMINTON', address: '123 Phan Xích Long, Phú Nhuận, TP.HCM', latitude: 10.7985, longitude: 106.6822, phone_number: '0909123456', price_per_hour: 120000, amenities: ['parking', 'shower', 'lighting', 'water'], operating_hours_start: '06:00', operating_hours_end: '22:00', total_courts: 4, is_active: true, rating_avg: 4.7, rating_count: 89 },
-  { id: 2, owner_id: 10, name: 'Nhà thi đấu Quận 7 Sport', description: 'Sân rộng rãi, thoáng mát. Phù hợp giao lưu và tập luyện hàng ngày.', sport_type: 'BADMINTON', address: '456 Nguyễn Thị Thập, Quận 7, TP.HCM', latitude: 10.7380, longitude: 106.7215, phone_number: '0912345678', price_per_hour: 100000, amenities: ['parking', 'lighting'], operating_hours_start: '05:30', operating_hours_end: '22:30', total_courts: 6, is_active: true, rating_avg: 4.3, rating_count: 52 },
-  { id: 3, owner_id: 10, name: 'Sân bóng đá mini Tân Bình FC', description: 'Sân cỏ nhân tạo 5 người, có mái che, chơi được cả trời mưa.', sport_type: 'FOOTBALL', address: '789 Cộng Hòa, Tân Bình, TP.HCM', latitude: 10.8012, longitude: 106.6530, phone_number: '0933456789', price_per_hour: 350000, amenities: ['parking', 'water', 'lighting'], operating_hours_start: '06:00', operating_hours_end: '23:00', total_courts: 2, is_active: true, rating_avg: 4.5, rating_count: 34 },
-]
-
 export default function CourtsPage() {
-  const [courts, setCourts] = useState<Court[]>(MOCK_COURTS)
+  const [courts, setCourts] = useState<Court[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [sportFilter, setSportFilter] = useState('')
 
-  const filteredCourts = courts.filter((c) => !sportFilter || c.sport_type === sportFilter)
+  useEffect(() => {
+    setLoading(true)
+    getCourts(sportFilter || undefined)
+      .then((data) => setCourts(data.courts || []))
+      .catch(() => setCourts([]))
+      .finally(() => setLoading(false))
+  }, [sportFilter])
 
   return (
     <div className="px-4 pt-3 pb-4">
@@ -73,11 +52,23 @@ export default function CourtsPage() {
       </div>
 
       {/* Court List */}
-      <div className="space-y-3">
-        {filteredCourts.map((court) => (
-          <CourtCard key={court.id} court={court} onBook={() => setSelectedCourt(court)} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex flex-col items-center py-16">
+          <Loader2 size={28} className="text-green-500 animate-spin mb-2" />
+          <p className="text-sm text-gray-400">Đang tải danh sách sân...</p>
+        </div>
+      ) : courts.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-4xl mb-2">🏟️</p>
+          <p className="text-base text-gray-500">Chưa có sân nào</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {courts.map((court) => (
+            <CourtCard key={court.id} court={court} onBook={() => setSelectedCourt(court)} />
+          ))}
+        </div>
+      )}
 
       {/* Booking Modal */}
       {selectedCourt && (
@@ -92,7 +83,6 @@ function CourtCard({ court, onBook }: { court: Court; onBook: () => void }) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex gap-3">
-        {/* Placeholder image */}
         <div className="flex-shrink-0 w-20 h-20 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center text-3xl">
           {court.sport_type === 'FOOTBALL' ? '⚽' : court.sport_type === 'BASKETBALL' ? '🏀' : '🏸'}
         </div>
@@ -101,20 +91,18 @@ function CourtCard({ court, onBook }: { court: Court; onBook: () => void }) {
           <p className="text-[11px] text-gray-500 truncate mt-0.5 flex items-center gap-1">
             <MapPin size={10} /> {court.address}
           </p>
-          {/* Rating */}
           <div className="flex items-center gap-1.5 mt-1">
             <Star size={11} className="text-yellow-400 fill-yellow-400" />
             <span className="text-xs font-medium text-gray-700">{court.rating_avg}</span>
             <span className="text-[10px] text-gray-400">({court.rating_count})</span>
           </div>
-          {/* Price */}
           <p className="text-sm font-bold text-green-600 mt-1">{formatVND(court.price_per_hour)}<span className="text-[10px] font-normal text-gray-400">/giờ</span></p>
         </div>
       </div>
 
       {/* Amenities */}
       <div className="flex gap-2 mt-2.5 flex-wrap">
-        {court.amenities.slice(0, 4).map((a) => {
+        {(court.amenities || []).slice(0, 4).map((a) => {
           const info = AMENITY_ICONS[a]
           return info ? (
             <span key={a} className="flex items-center gap-0.5 rounded-md bg-gray-50 px-1.5 py-0.5 text-[9px] text-gray-600">
@@ -124,7 +112,6 @@ function CourtCard({ court, onBook }: { court: Court; onBook: () => void }) {
         })}
       </div>
 
-      {/* Book button */}
       <button
         onClick={onBook}
         className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-xl bg-green-500 py-2.5 text-xs font-bold text-white hover:bg-green-600 transition-all"
@@ -138,26 +125,33 @@ function CourtCard({ court, onBook }: { court: Court; onBook: () => void }) {
 // --- Booking Modal ---
 function BookingModal({ court, date, onDateChange, onClose }: { court: Court; date: string; onDateChange: (d: string) => void; onClose: () => void }) {
   const [slots, setSlots] = useState<TimeSlot[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [selectedEnd, setSelectedEnd] = useState<string | null>(null)
+  const [selectedCourtNum, setSelectedCourtNum] = useState(1)
   const [booking, setBooking] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
 
-  // Generate time slots based on operating hours
+  // Fetch availability when date or court changes
   useEffect(() => {
-    const startH = parseInt(court.operating_hours_start.split(':')[0])
-    const endH = parseInt(court.operating_hours_end.split(':')[0])
-    const generated: TimeSlot[] = []
-    for (let h = startH; h < endH; h++) {
-      const time = `${String(h).padStart(2, '0')}:00`
-      // Mock: some slots randomly unavailable
-      const available = Math.random() > 0.3
-      generated.push({ time, available })
-    }
-    setSlots(generated)
+    setSlotsLoading(true)
     setSelectedSlot(null)
     setSelectedEnd(null)
-  }, [court, date])
+    setError('')
+    getCourtAvailability(court.id, date)
+      .then((data) => {
+        // Filter slots for the selected court_number
+        setSlots(data.slots || [])
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setSlotsLoading(false))
+  }, [court.id, date])
+
+  // Filter slots for selected court_number
+  const courtSlots = slots
+    .filter((s) => s.court_number === selectedCourtNum)
+    .map((s) => ({ time: s.time, available: s.available }))
 
   function handleSlotSelect(time: string) {
     if (!selectedSlot) {
@@ -184,10 +178,18 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
   async function handleBook() {
     if (!selectedSlot || !selectedEnd) return
     setBooking(true)
+    setError('')
     try {
-      await new Promise((r) => setTimeout(r, 1000))
+      await createBooking(court.id, {
+        booking_date: date,
+        start_time: selectedSlot,
+        end_time: selectedEnd,
+        court_number: selectedCourtNum,
+      })
       setSuccess(true)
-    } catch {} finally {
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra')
+    } finally {
       setBooking(false)
     }
   }
@@ -212,13 +214,14 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
           <div className="p-8 text-center">
             <p className="text-4xl mb-3">✅</p>
             <h4 className="text-lg font-bold text-gray-900">Đặt sân thành công!</h4>
-            <p className="text-sm text-gray-500 mt-1">{court.name} · {date} · {selectedSlot} - {selectedEnd}</p>
+            <p className="text-sm text-gray-500 mt-1">{court.name} · Sân {selectedCourtNum} · {date} · {selectedSlot} - {selectedEnd}</p>
             <p className="text-sm font-semibold text-green-600 mt-2">{formatVND(totalPrice)}</p>
+            <p className="text-xs text-gray-400 mt-2">Chờ chủ sân xác nhận booking</p>
             <button onClick={onClose} className="mt-4 rounded-xl bg-green-500 px-6 py-2.5 text-sm font-semibold text-white">Xong</button>
           </div>
         ) : (
           <div className="p-5 space-y-4">
-            {/* Monthly Calendar (book trước 30 ngày) */}
+            {/* Monthly Calendar */}
             <div>
               <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5 mb-2">
                 <Clock size={14} className="text-gray-400" /> Chọn ngày (trước 30 ngày)
@@ -230,21 +233,57 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
               />
             </div>
 
-            {/* Time Slots Grid - grouped by period */}
-            <TimeSlotGrid
-              slots={slots}
-              selectedStart={selectedSlot}
-              selectedEnd={selectedEnd}
-              onSlotSelect={handleSlotSelect}
-              title={`Khung giờ ngày ${date.split('-').reverse().join('/')}`}
-              showPeriods={true}
-            />
+            {/* Court Number Selector */}
+            {court.total_courts > 1 && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">Chọn sân</label>
+                <div className="flex gap-2">
+                  {Array.from({ length: court.total_courts }, (_, i) => i + 1).map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => { setSelectedCourtNum(num); setSelectedSlot(null); setSelectedEnd(null) }}
+                      className={`rounded-lg px-3 py-2 text-xs font-medium border transition-all ${
+                        selectedCourtNum === num
+                          ? 'bg-green-500 text-white border-green-500'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      Sân {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Time Slots */}
+            {slotsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 size={20} className="text-green-500 animate-spin" />
+                <span className="text-sm text-gray-400 ml-2">Đang tải lịch...</span>
+              </div>
+            ) : (
+              <TimeSlotGrid
+                slots={courtSlots}
+                selectedStart={selectedSlot}
+                selectedEnd={selectedEnd}
+                onSlotSelect={handleSlotSelect}
+                title={`Khung giờ ngày ${date.split('-').reverse().join('/')} · Sân ${selectedCourtNum}`}
+                showPeriods={true}
+              />
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700 text-center">
+                ⚠️ {error}
+              </div>
+            )}
 
             {/* Summary */}
             {selectedSlot && selectedEnd && hours > 0 && (
               <div className="rounded-xl bg-green-50 border border-green-200 p-3">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-700">{selectedSlot} → {selectedEnd} ({hours}h)</span>
+                  <span className="text-gray-700">Sân {selectedCourtNum} · {selectedSlot} → {selectedEnd} ({hours}h)</span>
                   <span className="font-bold text-green-700">{formatVND(totalPrice)}</span>
                 </div>
               </div>

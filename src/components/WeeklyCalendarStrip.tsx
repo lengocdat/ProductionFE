@@ -39,6 +39,9 @@ export default function WeeklyCalendarStrip({
   }, [days]);
 
   const todayKey = formatDateKey(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowKey = formatDateKey(tomorrowDate);
 
   return (
     <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
@@ -46,17 +49,22 @@ export default function WeeklyCalendarStrip({
         const key = formatDateKey(date);
         const isSelected = key === selectedDate;
         const isToday = key === todayKey;
+        const isTomorrow = key === tomorrowKey;
         const count = dateCounts?.[key] ?? 0;
         const dayOfWeek = DAY_NAMES_VI[date.getDay()];
         const dayNum = date.getDate();
         const month = date.getMonth() + 1;
+
+        // Show "Hôm nay" / "Ngày mai" for first two days
+        const topLabel = isToday ? 'Hôm nay' : isTomorrow ? 'Ngày mai' : dayOfWeek;
 
         return (
           <button
             key={key}
             onClick={() => onSelectDate(key)}
             className={clsx(
-              'flex-shrink-0 flex flex-col items-center rounded-2xl px-3 py-2 min-w-[52px] transition-all duration-200 border',
+              'flex-shrink-0 flex flex-col items-center rounded-2xl px-3 py-2 transition-all duration-200 border',
+              isToday || isTomorrow ? 'min-w-[62px]' : 'min-w-[52px]',
               isSelected
                 ? 'bg-green-500 text-white border-green-500 shadow-md shadow-green-200'
                 : isToday
@@ -64,8 +72,8 @@ export default function WeeklyCalendarStrip({
                   : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
             )}
           >
-            <span className={clsx('text-[10px] font-medium', isSelected ? 'text-green-100' : 'text-gray-400')}>
-              {dayOfWeek}
+            <span className={clsx('text-[10px] font-medium', isSelected ? 'text-green-100' : isToday ? 'text-green-600' : 'text-gray-400')}>
+              {topLabel}
             </span>
             <span className={clsx('text-lg font-bold leading-tight', isSelected ? 'text-white' : '')}>
               {dayNum}

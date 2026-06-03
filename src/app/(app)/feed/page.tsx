@@ -38,12 +38,13 @@ interface SportMatch {
 // --- Constants ---
 const SPORTS = [
   { value: 'BADMINTON', label: 'Cầu lông', icon: '🏸' },
+  { value: 'RUNNING', label: 'Chạy bộ', icon: '🏃' },
+  { value: 'PICKLEBALL', label: 'Pickleball', icon: '🏓' },
   { value: 'FOOTBALL', label: 'Bóng đá', icon: '⚽' },
+  { value: 'TENNIS', label: 'Tennis', icon: '🎾' },
+  { value: 'TABLE_TENNIS', label: 'Bóng bàn', icon: '🏓' },
   { value: 'BASKETBALL', label: 'Bóng rổ', icon: '🏀' },
   { value: 'VOLLEYBALL', label: 'Bóng chuyền', icon: '🏐' },
-  { value: 'TABLE_TENNIS', label: 'Bóng bàn', icon: '🏓' },
-  { value: 'TENNIS', label: 'Tennis', icon: '🎾' },
-  { value: 'RUNNING', label: 'Chạy bộ', icon: '🏃' },
 ]
 
 const SKILL_LEVELS = [
@@ -56,7 +57,7 @@ const SKILL_LEVELS = [
 ]
 
 const SKILL_BADGE_STYLES: Record<string, string> = {
-  'BEGINNER': 'bg-gray-100 text-gray-600',
+  'BEGINNER': 'bg-green-50 text-green-700',
   'LOWER_INTERMEDIATE': 'bg-teal-50 text-teal-700',
   'INTERMEDIATE': 'bg-blue-50 text-blue-700',
   'UPPER_INTERMEDIATE': 'bg-indigo-50 text-indigo-700',
@@ -64,7 +65,18 @@ const SKILL_BADGE_STYLES: Record<string, string> = {
   'SEMI_PRO': 'bg-red-50 text-red-700',
 }
 
+// Smart label: shows skill for racket sports, intensity for team sports
 const SKILL_LABEL: Record<string, string> = {
+  'BEGINNER': 'Vui vẻ',
+  'LOWER_INTERMEDIATE': 'TB Yếu',
+  'INTERMEDIATE': 'Nghiêm túc',
+  'UPPER_INTERMEDIATE': 'TB+',
+  'ADVANCED': 'Thi đấu',
+  'SEMI_PRO': 'Bán chuyên',
+}
+
+// Detailed label for racket sports (shown on cards when sport is skill-based)
+const SKILL_LABEL_RACKET: Record<string, string> = {
   'BEGINNER': 'Yếu',
   'LOWER_INTERMEDIATE': 'TB Yếu',
   'INTERMEDIATE': 'Trung bình',
@@ -73,13 +85,20 @@ const SKILL_LABEL: Record<string, string> = {
   'SEMI_PRO': 'Bán chuyên',
 }
 
+// Intensity labels for team sports
+const INTENSITY_LABEL: Record<string, string> = {
+  'BEGINNER': '😊 Vui vẻ',
+  'INTERMEDIATE': '💪 Nghiêm túc',
+  'ADVANCED': '🔥 Thi đấu',
+}
+
 const SKILL_DESC: Record<string, string> = {
-  'BEGINNER': 'Mới chơi 0-6 tháng, cầm vợt cơ bản',
-  'LOWER_INTERMEDIATE': 'Chơi 6-12 tháng, biết giao cầu, đánh phải/trái cơ bản',
-  'INTERMEDIATE': 'Chơi 1-2 năm, giao lưu thoải mái, biết smash/drop',
-  'UPPER_INTERMEDIATE': 'Chơi 2-3 năm, có học kỹ thuật, footwork tốt',
-  'ADVANCED': 'Chơi 3-5 năm, smash mạnh, đọc game giỏi, thi đấu CLB',
-  'SEMI_PRO': 'Chơi 5+ năm, tập bài bản, thi đấu giải tỉnh/thành',
+  'BEGINNER': 'Giao lưu nhẹ nhàng / Mới chơi',
+  'LOWER_INTERMEDIATE': 'Chơi 6-12 tháng, biết cơ bản',
+  'INTERMEDIATE': 'Chơi có chiến thuật / 1-2 năm',
+  'UPPER_INTERMEDIATE': '2-3 năm, có kỹ thuật tốt',
+  'ADVANCED': 'Cạnh tranh cao / 3-5 năm, thi đấu CLB',
+  'SEMI_PRO': '5+ năm, thi đấu giải tỉnh/thành',
 }
 
 const SPORT_ICON: Record<string, string> = {
@@ -87,6 +106,16 @@ const SPORT_ICON: Record<string, string> = {
   'VOLLEYBALL': '🏐', 'TABLE_TENNIS': '🏓', 'TENNIS': '🎾',
   'RUNNING': '🏃', 'PICKLEBALL': '🏓',
 }
+
+// Sports that use skill-level filter (racket/individual sports)
+const SKILL_BASED_SPORTS = ['BADMINTON', 'TABLE_TENNIS', 'TENNIS', 'PICKLEBALL']
+
+// Sports that use intensity filter (team sports / cardio)
+const INTENSITY_LEVELS = [
+  { value: 'BEGINNER', label: '😊 Vui vẻ', color: 'bg-green-50 text-green-700 border-green-200', desc: 'Giao lưu nhẹ nhàng, ai cũng chơi được' },
+  { value: 'INTERMEDIATE', label: '💪 Nghiêm túc', color: 'bg-blue-50 text-blue-700 border-blue-200', desc: 'Chơi đàng hoàng, có chiến thuật' },
+  { value: 'ADVANCED', label: '🔥 Thi đấu', color: 'bg-red-50 text-red-700 border-red-200', desc: 'Cạnh tranh cao, cần có kinh nghiệm' },
+]
 
 const FALLBACK_COORDS = { lat: 10.762622, lng: 106.660172 }
 
@@ -203,7 +232,7 @@ export default function FeedPage() {
           {SPORTS.map((sport) => (
             <button
               key={sport.value}
-              onClick={() => setSportFilter(sport.value)}
+              onClick={() => { setSportFilter(sport.value); setSkillFilters([]) }}
               className={`flex-shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
                 sportFilter === sport.value
                   ? 'bg-green-100 text-green-700 border border-green-300'
@@ -215,24 +244,49 @@ export default function FeedPage() {
           ))}
         </div>
 
-        {/* Skill Level Multi-Select Filter */}
+        {/* Context-aware Level Filter */}
         <div>
-          <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Lọc trình độ</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {SKILL_LEVELS.map((sk) => (
-              <button
-                key={sk.value}
-                onClick={() => toggleSkillFilter(sk.value)}
-                title={sk.desc}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
-                  skillFilters.includes(sk.value)
-                    ? sk.color + ' border-current shadow-sm'
-                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                {sk.label}
-              </button>
-            ))}
+          {SKILL_BASED_SPORTS.includes(sportFilter) ? (
+            <>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Lọc trình độ</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {SKILL_LEVELS.map((sk) => (
+                  <button
+                    key={sk.value}
+                    onClick={() => toggleSkillFilter(sk.value)}
+                    title={sk.desc}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
+                      skillFilters.includes(sk.value)
+                        ? sk.color + ' border-current shadow-sm'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {sk.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Cường độ</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {INTENSITY_LEVELS.map((lv) => (
+                  <button
+                    key={lv.value}
+                    onClick={() => toggleSkillFilter(lv.value)}
+                    title={lv.desc}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
+                      skillFilters.includes(lv.value)
+                        ? lv.color + ' border-current shadow-sm'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {lv.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
             {skillFilters.length > 0 && (
               <button
                 onClick={() => setSkillFilters([])}
@@ -339,14 +393,17 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
       <div className="flex items-center gap-2 mt-2">
         <div className="flex items-center gap-1 text-xs text-gray-600">
           <Clock size={11} className="text-gray-400" />
-          <span>{match.start_time} - {match.end_time}</span>
+          <span>{match.start_time.slice(0, 5)} - {match.end_time.slice(0, 5)}</span>
         </div>
         {/* Skill Badge */}
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${SKILL_BADGE_STYLES[skillLevel]}`}
           title={SKILL_DESC[skillLevel] || ''}
         >
-          {SKILL_LABEL[skillLevel]}
+          {SKILL_BASED_SPORTS.includes(match.sport_type)
+            ? (SKILL_LABEL_RACKET[skillLevel] || skillLevel)
+            : (INTENSITY_LABEL[skillLevel] || SKILL_LABEL[skillLevel] || skillLevel)
+          }
         </span>
       </div>
 
