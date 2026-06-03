@@ -47,12 +47,12 @@ const SPORTS = [
 ]
 
 const SKILL_LEVELS = [
-  { value: 'BEGINNER', label: 'Yếu', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'LOWER_INTERMEDIATE', label: 'TB-', color: 'bg-teal-50 text-teal-700 border-teal-200' },
-  { value: 'INTERMEDIATE', label: 'TB', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { value: 'UPPER_INTERMEDIATE', label: 'TB+', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  { value: 'ADVANCED', label: 'Khá', color: 'bg-orange-50 text-orange-700 border-orange-200' },
-  { value: 'SEMI_PRO', label: 'Bán chuyên', color: 'bg-red-50 text-red-700 border-red-200' },
+  { value: 'BEGINNER', label: 'Yếu', color: 'bg-gray-100 text-gray-600 border-gray-200', desc: 'Mới chơi 0-6 tháng' },
+  { value: 'LOWER_INTERMEDIATE', label: 'TB-', color: 'bg-teal-50 text-teal-700 border-teal-200', desc: 'Chơi 6-12 tháng, cơ bản' },
+  { value: 'INTERMEDIATE', label: 'TB', color: 'bg-blue-50 text-blue-700 border-blue-200', desc: 'Chơi 1-2 năm, giao lưu OK' },
+  { value: 'UPPER_INTERMEDIATE', label: 'TB+', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', desc: '2-3 năm, có kỹ thuật' },
+  { value: 'ADVANCED', label: 'Khá', color: 'bg-orange-50 text-orange-700 border-orange-200', desc: '3-5 năm, thi đấu CLB' },
+  { value: 'SEMI_PRO', label: 'Bán chuyên', color: 'bg-red-50 text-red-700 border-red-200', desc: '5+ năm, giải tỉnh/thành' },
 ]
 
 const SKILL_BADGE_STYLES: Record<string, string> = {
@@ -71,6 +71,15 @@ const SKILL_LABEL: Record<string, string> = {
   'UPPER_INTERMEDIATE': 'TB+',
   'ADVANCED': 'Khá',
   'SEMI_PRO': 'Bán chuyên',
+}
+
+const SKILL_DESC: Record<string, string> = {
+  'BEGINNER': 'Mới chơi 0-6 tháng, cầm vợt cơ bản',
+  'LOWER_INTERMEDIATE': 'Chơi 6-12 tháng, biết giao cầu, đánh phải/trái cơ bản',
+  'INTERMEDIATE': 'Chơi 1-2 năm, giao lưu thoải mái, biết smash/drop',
+  'UPPER_INTERMEDIATE': 'Chơi 2-3 năm, có học kỹ thuật, footwork tốt',
+  'ADVANCED': 'Chơi 3-5 năm, smash mạnh, đọc game giỏi, thi đấu CLB',
+  'SEMI_PRO': 'Chơi 5+ năm, tập bài bản, thi đấu giải tỉnh/thành',
 }
 
 const SPORT_ICON: Record<string, string> = {
@@ -214,6 +223,7 @@ export default function FeedPage() {
               <button
                 key={sk.value}
                 onClick={() => toggleSkillFilter(sk.value)}
+                title={sk.desc}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
                   skillFilters.includes(sk.value)
                     ? sk.color + ' border-current shadow-sm'
@@ -332,7 +342,10 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
           <span>{match.start_time} - {match.end_time}</span>
         </div>
         {/* Skill Badge */}
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${SKILL_BADGE_STYLES[skillLevel]}`}>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${SKILL_BADGE_STYLES[skillLevel]}`}
+          title={SKILL_DESC[skillLevel] || ''}
+        >
           {SKILL_LABEL[skillLevel]}
         </span>
       </div>

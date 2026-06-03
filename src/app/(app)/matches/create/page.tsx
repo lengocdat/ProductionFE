@@ -36,6 +36,50 @@ const SKILL_LABELS: Record<string, string> = {
   'SEMI_PRO': '🔴 Bán chuyên',
 }
 
+/**
+ * Extract lat/lng from various Google Maps URL formats:
+ * - https://www.google.com/maps/place/.../@10.7321,106.7019,17z/...
+ * - https://www.google.com/maps?q=10.7321,106.7019
+ * - https://www.google.com/maps/search/?api=1&query=10.7321,106.7019
+ * - https://maps.google.com/?ll=10.7321,106.7019
+ * - Plain coords pasted: "10.7321, 106.7019"
+ */
+function extractCoordsFromMapsUrl(input: string): { lat: string; lng: string } | null {
+  const trimmed = input.trim()
+
+  // Pattern 1: Direct coords "10.7321, 106.7019" or "10.7321,106.7019"
+  const directMatch = trimmed.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/)
+  if (directMatch) {
+    return { lat: directMatch[1], lng: directMatch[2] }
+  }
+
+  // Pattern 2: /@lat,lng in URL path
+  const atMatch = trimmed.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (atMatch) {
+    return { lat: atMatch[1], lng: atMatch[2] }
+  }
+
+  // Pattern 3: ?q=lat,lng or &query=lat,lng or &ll=lat,lng
+  const queryMatch = trimmed.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (queryMatch) {
+    return { lat: queryMatch[1], lng: queryMatch[2] }
+  }
+
+  // Pattern 4: /place/lat,lng
+  const placeMatch = trimmed.match(/\/place\/(-?\d+\.\d+),(-?\d+\.\d+)/)
+  if (placeMatch) {
+    return { lat: placeMatch[1], lng: placeMatch[2] }
+  }
+
+  // Pattern 5: data=...!3d<lat>!4d<lng> (Google Maps share links)
+  const dataMatch = trimmed.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
+  if (dataMatch) {
+    return { lat: dataMatch[1], lng: dataMatch[2] }
+  }
+
+  return null
+}
+
 interface FormErrors {
   title?: string
   address?: string
@@ -94,6 +138,27 @@ export default function CreateMatchPage() {
     // Deselect template if user modifies form manually
     if (['title', 'sport_type', 'skill_level', 'max_slots'].includes(name)) {
       setSelectedTemplate(null)
+    }
+  }
+
+  // Auto-extract lat/lng from Google Maps URL
+  function handleMapsUrlChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+    setForm((f) => ({ ...f, google_maps_url: value }))
+    setErrors((prev) => ({ ...prev, location: undefined }))
+
+    if (!value.trim()) return
+
+    const coords = extractCoordsFromMapsUrl(value)
+    if (coords) {
+      setForm((f) => ({
+        ...f,
+        google_maps_url: value,
+        latitude: coords.lat,
+        longitude: coords.lng,
+      }))
+      setGeoSuccess(true)
+      setTimeout(() => setGeoSuccess(false), 3000)
     }
   }
 
@@ -240,14 +305,7 @@ export default function CreateMatchPage() {
           </FieldGroup>
 
           <FieldGroup label="Yêu cầu trình độ" required error={errors.skill_level}>
-            <select name="skill_level" value={form.skill_level} onChange={handleChange} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-green-400 outline-none">
-              <option value="BEGINNER">🟢 Yếu / Mới</option>
-              <option value="LOWER_INTERMEDIATE">🟡 TB Yếu</option>
-              <option value="INTERMEDIATE">🟡 Trung bình</option>
-              <option value="UPPER_INTERMEDIATE">🔵 TB+</option>
-              <option value="ADVANCED">🟠 Khá</option>
-              <option value="SEMI_PRO">🔴 Bán chuyên</option>
-            </select>
+            <SkillLevelPicker value={form.skill_level} onChange={(v) => { setForm((f) => ({ ...f, skill_level: v })); setSelectedTemplate(null); setErrors((e) => ({ ...e, skill_level: undefined })) }} />
           </FieldGroup>
         </div>
 
@@ -319,12 +377,24 @@ export default function CreateMatchPage() {
           </div>
 
           {errors.location && <p className="text-[11px] text-red-500 flex items-center gap-1">⚠️ {errors.location}</p>}
-          <p className="text-[10px] text-gray-400 leading-relaxed">💡 Đứng tại sân → bấm nút. Hoặc mở Google Maps → nhấn giữ vào sân → copy tọa độ.</p>
+          <p className="text-[10px] text-gray-400 leading-relaxed">💡 Cách 1: Đứng tại sân → bấm nút GPS. Cách 2: Dán link Google Maps ở ô bên dưới → tọa độ tự động điền.</p>
         </div>
 
-        {/* Google Maps URL */}
-        <FieldGroup label="Link Google Maps" icon={<MapPin size={14} className="text-gray-400" />}>
-          <input name="google_maps_url" value={form.google_maps_url} onChange={handleChange} placeholder="https://maps.google.com/... (tùy chọn)" className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400" />
+        {/* Google Maps URL — Auto-extract tọa độ */}
+        <FieldGroup label="Link Google Maps (tự lấy tọa độ)" icon={<MapPin size={14} className="text-gray-400" />}>
+          <input
+            name="google_maps_url"
+            value={form.google_maps_url}
+            onChange={handleMapsUrlChange}
+            placeholder="Dán link Google Maps hoặc tọa độ: 10.7321, 106.7019"
+            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400"
+          />
+          {form.latitude && form.longitude && form.google_maps_url && (
+            <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
+              ✅ Đã tự động lấy tọa độ: {form.latitude}, {form.longitude}
+            </p>
+          )}
+          <p className="text-[10px] text-gray-400 mt-1">Dán link từ Google Maps → tọa độ sẽ được tự động điền bên trên</p>
         </FieldGroup>
 
         {/* Submit */}
@@ -363,4 +433,100 @@ function FieldGroup({ label, required, error, icon, children }: {
 
 function inputClass(error?: string) {
   return `w-full rounded-xl border px-4 py-2.5 text-sm outline-none focus:border-green-400 focus:ring-1 focus:ring-green-100 transition-colors ${error ? 'border-red-300 bg-red-50' : 'border-gray-200'}`
+}
+
+// --- Skill Level Picker with descriptions ---
+const SKILL_OPTIONS = [
+  {
+    value: 'BEGINNER',
+    emoji: '🟢',
+    label: 'Yếu / Mới',
+    desc: 'Mới chơi 0-6 tháng, chưa biết kỹ thuật, cầm vợt cơ bản',
+    border: 'border-green-300 bg-green-50',
+  },
+  {
+    value: 'LOWER_INTERMEDIATE',
+    emoji: '🟡',
+    label: 'TB Yếu',
+    desc: 'Chơi 6-12 tháng, biết giao cầu, đánh phải/trái cơ bản nhưng chưa ổn định',
+    border: 'border-yellow-300 bg-yellow-50',
+  },
+  {
+    value: 'INTERMEDIATE',
+    emoji: '🟡',
+    label: 'Trung bình',
+    desc: 'Chơi 1-2 năm, giao lưu thoải mái, biết smash/drop nhưng chưa mạnh',
+    border: 'border-amber-300 bg-amber-50',
+  },
+  {
+    value: 'UPPER_INTERMEDIATE',
+    emoji: '🔵',
+    label: 'TB+',
+    desc: 'Chơi 2-3 năm, có học kỹ thuật, footwork tốt, đánh được đôi chiến thuật',
+    border: 'border-blue-300 bg-blue-50',
+  },
+  {
+    value: 'ADVANCED',
+    emoji: '🟠',
+    label: 'Khá',
+    desc: 'Chơi 3-5 năm, kỹ thuật tốt, smash mạnh, đọc game giỏi, từng thi đấu CLB',
+    border: 'border-orange-300 bg-orange-50',
+  },
+  {
+    value: 'SEMI_PRO',
+    emoji: '🔴',
+    label: 'Bán chuyên',
+    desc: 'Chơi 5+ năm, tập luyện bài bản, từng thi đấu giải tỉnh/thành, trình rất cao',
+    border: 'border-red-300 bg-red-50',
+  },
+]
+
+function SkillLevelPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [expanded, setExpanded] = useState(false)
+  const selected = SKILL_OPTIONS.find((o) => o.value === value)
+
+  return (
+    <div className="space-y-1.5">
+      {/* Selected display + toggle */}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-left hover:border-gray-300 transition-colors"
+      >
+        <span>{selected ? `${selected.emoji} ${selected.label}` : 'Chọn trình độ'}</span>
+        <span className="text-gray-400 text-xs">{expanded ? '▲' : '▼'}</span>
+      </button>
+
+      {/* Expanded options */}
+      {expanded && (
+        <div className="space-y-1.5 rounded-xl border border-gray-200 bg-gray-50 p-2">
+          {SKILL_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setExpanded(false) }}
+              className={`w-full text-left rounded-lg px-3 py-2 transition-all ${
+                value === opt.value
+                  ? `${opt.border} border shadow-sm`
+                  : 'border border-transparent hover:bg-white hover:border-gray-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">{opt.emoji}</span>
+                <span className="text-sm font-medium text-gray-800">{opt.label}</span>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-0.5 ml-6 leading-relaxed">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Always show selected description */}
+      {selected && !expanded && (
+        <p className="text-[10px] text-gray-500 ml-1 flex items-center gap-1">
+          💡 {selected.desc}
+        </p>
+      )}
+    </div>
+  )
 }
