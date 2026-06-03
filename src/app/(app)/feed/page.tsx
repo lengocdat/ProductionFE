@@ -191,9 +191,9 @@ export default function FeedPage() {
 
       {/* Sticky Filter Bar */}
       <div className="sticky top-[57px] z-20 bg-gray-50 pb-3 -mx-4 px-4 pt-1 space-y-3">
-        {/* Weekly Calendar Strip (7 ngày tới) */}
+        {/* Calendar Strip (30 ngày tới) */}
         <WeeklyCalendarStrip
-          days={7}
+          days={30}
           selectedDate={dateFilter}
           onSelectDate={setDateFilter}
         />

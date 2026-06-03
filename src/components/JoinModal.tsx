@@ -43,8 +43,8 @@ export default function JoinModal({ match, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-t-2xl bg-white p-5 animate-slide-up">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold">Xác nhận tham gia</h3>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100">

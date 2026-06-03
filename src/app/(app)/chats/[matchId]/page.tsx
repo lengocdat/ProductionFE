@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { Send, ArrowLeft, CheckCircle, XCircle, Shield, UserMinus, Clock, Users } from 'lucide-react'
+import { Send, ArrowLeft, CheckCircle, XCircle, Shield, UserMinus, Clock, Users, Wifi, WifiOff } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import Link from 'next/link'
 
@@ -33,6 +33,101 @@ interface MatchInfo {
   status: string
 }
 
+// --- WebSocket Hook ---
+function useWebSocket(matchId: number, myId: number, onMessage: (msg: Message) => void) {
+  const wsRef = useRef<WebSocket | null>(null)
+  const [connected, setConnected] = useState(false)
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>()
+  const reconnectAttempt = useRef(0)
+
+  const connect = useCallback(() => {
+    if (!myId) return
+
+    const token = localStorage.getItem('access_token')
+    if (!token) return
+
+    // Determine WS URL from current location
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/v1/ws?token=${token}`
+
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      setConnected(true)
+      reconnectAttempt.current = 0
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'new_message' && data.payload) {
+          const msg = data.payload as Message
+          // Only process messages for this match
+          if (msg.match_id === matchId || (msg as any).match_id === matchId) {
+            onMessage(msg)
+          }
+        }
+      } catch {}
+    }
+
+    ws.onclose = () => {
+      setConnected(false)
+      wsRef.current = null
+      // Exponential backoff reconnect (max 30s)
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempt.current), 30000)
+      reconnectAttempt.current++
+      reconnectTimer.current = setTimeout(connect, delay)
+    }
+
+    ws.onerror = () => {
+      ws.close()
+    }
+  }, [myId, matchId, onMessage])
+
+  useEffect(() => {
+    connect()
+    return () => {
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+      if (wsRef.current) {
+        wsRef.current.onclose = null // Prevent reconnect on unmount
+        wsRef.current.close()
+      }
+    }
+  }, [connect])
+
+  const sendMessage = useCallback((content: string, receiverId: number) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return false
+    wsRef.current.send(JSON.stringify({
+      type: 'message',
+      match_id: matchId,
+      receiver_id: receiverId,
+      content,
+    }))
+    return true
+  }, [matchId])
+
+  const sendTyping = useCallback((receiverId: number) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+    wsRef.current.send(JSON.stringify({
+      type: 'typing',
+      match_id: matchId,
+      receiver_id: receiverId,
+    }))
+  }, [matchId])
+
+  const sendRead = useCallback((receiverId: number) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+    wsRef.current.send(JSON.stringify({
+      type: 'read',
+      match_id: matchId,
+      receiver_id: receiverId,
+    }))
+  }, [matchId])
+
+  return { connected, sendMessage, sendTyping, sendRead }
+}
+
 export default function ChatRoomPage() {
   const params = useParams()
   const matchId = Number(params.matchId)
@@ -45,14 +140,29 @@ export default function ChatRoomPage() {
   const [actionLoading, setActionLoading] = useState<number | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
+  // Handle incoming WS message — append to messages if not duplicate
+  const handleWsMessage = useCallback((msg: Message) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev
+      return [...prev, msg]
+    })
+  }, [])
+
+  const { connected, sendMessage: wsSend } = useWebSocket(matchId, myId, handleWsMessage)
+
   useEffect(() => {
     apiFetch<{ user: { id: number } }>('/auth/me').then((d) => setMyId(d.user.id))
     apiFetch<{ match: MatchInfo }>(`/matches/${matchId}`).then((d) => setMatchInfo(d.match)).catch(() => {})
     loadMessages()
     loadRequests()
-    const interval = setInterval(loadMessages, 3000)
-    return () => clearInterval(interval)
   }, [matchId])
+
+  // Fallback polling only when WebSocket is disconnected (every 10s instead of 3s)
+  useEffect(() => {
+    if (connected) return
+    const interval = setInterval(loadMessages, 10000)
+    return () => clearInterval(interval)
+  }, [connected, matchId])
 
   function loadMessages() {
     apiFetch<{ messages: Message[] }>(`/messages/${matchId}`)
@@ -68,14 +178,25 @@ export default function ChatRoomPage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  async function sendMessage() {
+  async function sendChatMessage() {
     if (!text.trim() || sending) return
     setSending(true)
-    try {
-      await apiFetch(`/messages/${matchId}`, { method: 'POST', json: { receiver_id: 0, content: text.trim() } })
-      setText('')
-      loadMessages()
-    } catch {} finally { setSending(false) }
+    const content = text.trim()
+    setText('')
+
+    // Try WebSocket first
+    const sentViaWs = wsSend(content, 0)
+
+    if (!sentViaWs) {
+      // Fallback to REST API
+      try {
+        await apiFetch(`/messages/${matchId}`, { method: 'POST', json: { receiver_id: 0, content } })
+        loadMessages()
+      } catch {
+        setText(content) // Restore text on failure
+      }
+    }
+    setSending(false)
   }
 
   async function acceptRequest(reqId: number) {
@@ -127,6 +248,13 @@ export default function ChatRoomPage() {
                 }`}>{matchInfo.status}</span>
               </div>
             </div>
+            {/* WS connection indicator */}
+            <div className="shrink-0" title={connected ? 'Kết nối realtime' : 'Đang kết nối lại...'}>
+              {connected
+                ? <Wifi size={14} className="text-green-500" />
+                : <WifiOff size={14} className="text-gray-400 animate-pulse" />
+              }
+            </div>
           </div>
         </div>
       )}
@@ -139,7 +267,6 @@ export default function ChatRoomPage() {
           </p>
           {pendingRequests.map((req) => (
             <div key={req.id} className="rounded-xl bg-white border border-amber-100 p-3 shadow-sm">
-              {/* Auto-generated message styled as a card */}
               <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 mb-2.5">
                 <p className="text-[10px] text-blue-600 font-medium mb-0.5">📝 Tin nhắn tự giới thiệu:</p>
                 <p className="text-xs text-blue-800 leading-relaxed">{req.auto_message}</p>
@@ -154,7 +281,7 @@ export default function ChatRoomPage() {
                     disabled={actionLoading === req.id}
                     className="flex items-center gap-1 rounded-lg bg-green-500 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-green-600 disabled:opacity-50 transition-all"
                   >
-                    <CheckCircle size={12} /> Chấp nhận vào nhóm
+                    <CheckCircle size={12} /> Chấp nhận
                   </button>
                   <button
                     onClick={() => rejectRequest(req.id)}
@@ -248,12 +375,12 @@ export default function ChatRoomPage() {
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
             placeholder="Nhập tin nhắn..."
             className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400 transition-colors"
           />
           <button
-            onClick={sendMessage}
+            onClick={sendChatMessage}
             disabled={!text.trim() || sending}
             className="rounded-xl bg-green-500 px-4 py-2.5 text-white hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
           >
