@@ -115,6 +115,9 @@ export default function CreateMatchPage() {
     end_time: '20:00',
     max_slots: '4',
     price_per_slot: '0',
+    bank_name: '',
+    bank_account_number: '',
+    bank_account_holder: '',
     cancellation_window_hours: '2',
   })
 
@@ -235,6 +238,9 @@ export default function CreateMatchPage() {
           end_time: form.end_time,
           max_slots: parseInt(form.max_slots),
           price_per_slot: parseInt(form.price_per_slot) || 0,
+          bank_name: form.bank_name || undefined,
+          bank_account_number: form.bank_account_number || undefined,
+          bank_account_holder: form.bank_account_holder || undefined,
           cancellation_window_hours: parseInt(form.cancellation_window_hours) || 2,
         },
       })
@@ -369,6 +375,59 @@ export default function CreateMatchPage() {
             <p className="text-[10px] text-gray-400 mt-1">{Number(form.price_per_slot) > 0 ? `${Number(form.price_per_slot).toLocaleString('vi-VN')}đ/người` : 'Miễn phí'}</p>
           </FieldGroup>
         </div>
+
+        {/* Bank Info (shown when price > 0) */}
+        {Number(form.price_per_slot) > 0 && (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">🏦 Thông tin nhận cọc</p>
+              <button
+                type="button"
+                onClick={() => {
+                  // Fetch saved bank from user profile and auto-fill
+                  apiFetch<{ user: any }>('/auth/me').then((d) => {
+                    const u = d.user
+                    if (u.bank_name || u.bank_account_number) {
+                      setForm((f) => ({
+                        ...f,
+                        bank_name: u.bank_name || f.bank_name,
+                        bank_account_number: u.bank_account_number || f.bank_account_number,
+                        bank_account_holder: u.bank_account_holder || f.bank_account_holder,
+                      }))
+                      toast.success('Đã điền STK từ hồ sơ')
+                    } else {
+                      toast.info('Chưa có STK lưu trong hồ sơ. Nhập lần đầu ở đây.')
+                    }
+                  }).catch(() => {})
+                }}
+                className="text-[10px] text-blue-600 font-medium bg-blue-100 rounded-lg px-2 py-1 hover:bg-blue-200 transition-colors"
+              >
+                📋 Dùng STK đã lưu
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <label className="text-[10px] text-blue-600 font-medium">Ngân hàng (mã viết tắt)</label>
+                <input name="bank_name" value={form.bank_name} onChange={handleChange} placeholder="VD: VCB, TCB, MB, ACB..." className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400" />
+                <p className="text-[9px] text-blue-500 mt-0.5">VCB, TCB, MB, ACB, BIDV, VPB, TPB, STB...</p>
+              </div>
+              <div>
+                <label className="text-[10px] text-blue-600 font-medium">Số tài khoản</label>
+                <input name="bank_account_number" value={form.bank_account_number} onChange={handleChange} placeholder="0123456789" className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="text-[10px] text-blue-600 font-medium">Tên chủ TK</label>
+                <input name="bank_account_holder" value={form.bank_account_holder} onChange={handleChange} placeholder="NGUYEN VAN A" className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 uppercase" />
+              </div>
+            </div>
+            {/* Warning if bank info differs from saved */}
+            {form.bank_account_number && form.bank_account_number.length > 5 && (
+              <p className="text-[9px] text-amber-600 bg-amber-50 rounded px-2 py-1">
+                ⚠️ Đảm bảo STK chính xác. Nếu khác với lần trước, người chơi có thể chuyển nhầm.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Cancellation Policy */}
         <FieldGroup label="Cho phép hủy trước giờ đá" icon={<Clock size={14} className="text-gray-400" />}>
