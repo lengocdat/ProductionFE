@@ -36,6 +36,8 @@ interface JoinReq {
   auto_message: string
   deposit_amount: number
   deposit_status: string
+  is_deposit_waive_requested: boolean
+  payment_proof_url?: string
   created_at: string
   player?: {
     id: number
@@ -180,6 +182,7 @@ function HostManageTab({ matchId, match, requests, onRefresh }: {
 }) {
   const [actionLoading, setActionLoading] = useState<number | null>(null)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [refundTarget, setRefundTarget] = useState<JoinReq | null>(null)
 
   const pending = requests.filter((r) => r.status === 'PENDING')
   const accepted = requests.filter((r) => r.status === 'ACCEPTED')
@@ -241,12 +244,46 @@ function HostManageTab({ matchId, match, requests, onRefresh }: {
                     </div>
                   </div>
                 </div>
+
+                {/* Deposit status badge */}
+                {req.deposit_amount > 0 && (
+                  <div className="mb-2">
+                    {req.is_deposit_waive_requested ? (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-yellow-100 border border-yellow-200 px-2 py-0.5 text-[9px] font-semibold text-yellow-800">
+                        🏷️ Xin không cọc ({req.deposit_amount.toLocaleString('vi-VN')}đ)
+                      </span>
+                    ) : req.deposit_status === 'PENDING_VERIFICATION' ? (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 border border-blue-200 px-2 py-0.5 text-[9px] font-semibold text-blue-800">
+                        💳 Đã CK, chờ check ({req.deposit_amount.toLocaleString('vi-VN')}đ)
+                      </span>
+                    ) : req.deposit_status === 'PAID' ? (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-green-100 border border-green-200 px-2 py-0.5 text-[9px] font-semibold text-green-800">
+                        ✅ Đã xác nhận cọc ({req.deposit_amount.toLocaleString('vi-VN')}đ)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-red-50 border border-red-200 px-2 py-0.5 text-[9px] font-semibold text-red-700">
+                        ⏳ Chưa CK ({req.deposit_amount.toLocaleString('vi-VN')}đ)
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-xs text-gray-700 mb-1 italic">"{req.auto_message}"</p>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-gray-400">{new Date(req.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
                   <div className="flex gap-1.5">
                     <button onClick={() => handleAccept(req.id)} disabled={actionLoading === req.id} className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 disabled:opacity-50"><CheckCircle size={14} /></button>
-                    <button onClick={() => handleReject(req.id)} disabled={actionLoading === req.id} className="rounded-lg bg-gray-100 p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"><XCircle size={14} /></button>
+                    {(req.deposit_status === 'PENDING_VERIFICATION' || req.deposit_status === 'PAID') ? (
+                      <button
+                        onClick={() => setRefundTarget(req)}
+                        className="rounded-lg bg-orange-100 p-1.5 text-orange-600 hover:bg-orange-200"
+                        title="Hoàn tiền & Từ chối"
+                      >
+                        <XCircle size={14} />
+                      </button>
+                    ) : (
+                      <button onClick={() => handleReject(req.id)} disabled={actionLoading === req.id} className="rounded-lg bg-gray-100 p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"><XCircle size={14} /></button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -306,7 +343,95 @@ function HostManageTab({ matchId, match, requests, onRefresh }: {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Refund & Reject Modal */}
+      {refundTarget && (
+        <RefundRejectModal
+          matchId={matchId}
+          request={refundTarget}
+          onClose={() => setRefundTarget(null)}
+          onSuccess={() => { setRefundTarget(null); onRefresh() }}
+        />
+      )}
     </div>
+  )
+}
+
+// --- Refund & Reject Modal ---
+function RefundRejectModal({ matchId, request, onClose, onSuccess }: {
+  matchId: number; request: JoinReq; onClose: () => void; onSuccess: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [playerBank, setPlayerBank] = useState<{ bank_name?: string; bank_account_number?: string; bank_account_holder?: string } | null>(null)
+
+  // Fetch player bank details
+  useEffect(() => {
+    // In production, fetch player profile with bank info
+    // For now, show what we have from the player object
+    setPlayerBank({
+      bank_name: (request.player as any)?.bank_name || 'Chưa cung cấp',
+      bank_account_number: (request.player as any)?.bank_account_number || 'Chưa cung cấp',
+      bank_account_holder: (request.player as any)?.bank_account_holder || request.player?.username || '',
+    })
+  }, [request])
+
+  async function handleRefundAndReject() {
+    setLoading(true)
+    try {
+      // In real app, host would upload screenshot. For MVP, we accept confirmation.
+      await apiFetch(`/matches/${matchId}/requests/${request.id}/refund-reject`, {
+        method: 'POST',
+        json: { refund_proof_url: 'confirmed_by_host' },
+      })
+      toast.success('Đã hoàn tiền và từ chối thành công')
+      onSuccess()
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const refundAmount = request.deposit_amount
+  const vietqrUrl = playerBank?.bank_name && playerBank.bank_account_number !== 'Chưa cung cấp'
+    ? `https://img.vietqr.io/image/${playerBank.bank_name}-${playerBank.bank_account_number}-compact2.png?amount=${refundAmount}&addInfo=${encodeURIComponent(`HOAN COC APP ${request.id}`)}&accountName=${encodeURIComponent(playerBank.bank_account_holder || '')}`
+    : null
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-orange-600">💸 Hoàn tiền & Từ chối</DialogTitle>
+        </DialogHeader>
+
+        <p className="text-sm text-gray-600">
+          Người chơi <strong>{request.player?.username}</strong> đã chuyển khoản <strong>{refundAmount.toLocaleString('vi-VN')}đ</strong>. Để từ chối, bạn cần hoàn tiền trước.
+        </p>
+
+        {/* Player bank details */}
+        <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 space-y-1">
+          <p className="text-[10px] text-blue-600 font-medium">Chuyển hoàn về:</p>
+          <p className="text-sm font-semibold text-blue-900">{playerBank?.bank_account_holder}</p>
+          <p className="text-sm text-blue-800">{playerBank?.bank_name} · {playerBank?.bank_account_number}</p>
+          <p className="text-sm font-bold text-blue-900">{refundAmount.toLocaleString('vi-VN')}đ</p>
+        </div>
+
+        {/* VietQR */}
+        {vietqrUrl && (
+          <div className="text-center">
+            <img src={vietqrUrl} alt="VietQR Refund" className="mx-auto w-44 h-44 rounded-lg border" />
+            <p className="text-[9px] text-gray-400 mt-1">Quét QR để hoàn tiền nhanh</p>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <DialogClose asChild><Button variant="outline">Hủy bỏ</Button></DialogClose>
+          <Button variant="destructive" onClick={handleRefundAndReject} disabled={loading}>
+            {loading ? 'Đang xử lý...' : '✅ Đã hoàn tiền, từ chối slot'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

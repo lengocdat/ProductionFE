@@ -166,6 +166,28 @@ export default function CreateMatchPage() {
       }))
       setGeoSuccess(true)
       setTimeout(() => setGeoSuccess(false), 3000)
+    } else if (value.includes('maps.app.goo.gl') || value.includes('goo.gl/maps')) {
+      // Short link — resolve via backend
+      apiFetch<{ lat?: string; lng?: string; resolved_url?: string }>('/utils/resolve-maps', {
+        method: 'POST',
+        json: { url: value.trim() },
+      }).then((data) => {
+        if (data.lat && data.lng) {
+          setForm((f) => ({
+            ...f,
+            google_maps_url: data.resolved_url || value,
+            latitude: data.lat!,
+            longitude: data.lng!,
+          }))
+          setGeoSuccess(true)
+          setTimeout(() => setGeoSuccess(false), 3000)
+          toast.success('Đã lấy tọa độ từ link Google Maps!')
+        } else {
+          toast.info('Không thể tự động lấy tọa độ. Thử mở link Maps → copy tọa độ → dán trực tiếp.')
+        }
+      }).catch(() => {
+        toast.error('Không thể xử lý link. Thử dán tọa độ trực tiếp: 10.7321, 106.7019')
+      })
     }
   }
 
