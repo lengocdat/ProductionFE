@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Star, Shield, AlertTriangle, Calendar, Award, Trophy, Clock, CheckCircle, XCircle, Ban } from 'lucide-react'
+import { ArrowLeft, Star, Shield, AlertTriangle, Calendar, Award, Trophy, Clock, CheckCircle, XCircle, Ban, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface PublicProfile {
   user: {
@@ -56,6 +57,7 @@ interface MatchInfo {
 }
 
 type Tab = 'badges' | 'ratings' | 'history'
+type FriendshipStatus = 'ACCEPTED' | 'PENDING_FROM_ME' | 'PENDING' | 'NONE' | 'SELF'
 
 export default function PublicProfilePage() {
   const params = useParams()
@@ -64,14 +66,71 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('badges')
+  const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>('NONE')
+  const [friendLoading, setFriendLoading] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 
   useEffect(() => {
     if (!userId) return
-    apiFetch<PublicProfile>(`/users/${userId}/public-profile`)
-      .then(setProfile)
+
+    Promise.all([
+      apiFetch<PublicProfile>(`/users/${userId}/public-profile`),
+      apiFetch<{ user: { id: number } }>('/auth/me')
+        .then(data => data.user.id)
+        .catch(() => null)
+    ])
+      .then(([profileData, currId]) => {
+        setProfile(profileData)
+        setCurrentUserId(currId)
+
+        if (currId && currId !== userId) {
+          return apiFetch<{ status: FriendshipStatus }>(`/friends/${userId}/status`)
+            .then(data => setFriendshipStatus(data.status))
+            .catch(() => {})
+        }
+      })
       .catch(() => router.replace('/feed'))
       .finally(() => setLoading(false))
   }, [userId, router])
+
+  const handleFriendAction = async (action: 'add' | 'cancel' | 'accept' | 'unfriend') => {
+    setFriendLoading(true)
+    try {
+      if (action === 'add') {
+        await apiFetch(`/friends/request/${userId}`, { method: 'POST' })
+        setFriendshipStatus('PENDING_FROM_ME')
+        toast.success('Thêm bạn bè thành công!')
+      } else if (action === 'cancel') {
+        const requests = await apiFetch<{ requests: any[] }>('/friends/requests/pending')
+        const friendshipId = requests.requests.find(r => r.sender_id === userId)?.id
+        if (friendshipId) {
+          await apiFetch(`/friends/${friendshipId}/reject`, { method: 'POST' })
+        }
+        setFriendshipStatus('NONE')
+        toast.success('Đã hủy yêu cầu kết bạn')
+      } else if (action === 'accept') {
+        const requests = await apiFetch<{ requests: any[] }>('/friends/requests/pending')
+        const friendshipId = requests.requests.find(r => r.sender_id === userId)?.id
+        if (friendshipId) {
+          await apiFetch(`/friends/${friendshipId}/accept`, { method: 'POST' })
+          setFriendshipStatus('ACCEPTED')
+          toast.success('Chấp nhận kết bạn!')
+        }
+      } else if (action === 'unfriend') {
+        const friends = await apiFetch<{ friends: any[] }>('/friends')
+        const friendId = friends.friends.find(f => f.id === userId)?.id
+        if (friendId) {
+          await apiFetch(`/friends/${friendId}`, { method: 'DELETE' })
+          setFriendshipStatus('NONE')
+          toast.success('Đã hủy kết bạn')
+        }
+      }
+    } catch (error) {
+      toast.error('Có lỗi xảy ra')
+    } finally {
+      setFriendLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -85,17 +144,15 @@ export default function PublicProfilePage() {
 
   const { user, stats, badges, ratings, match_history } = profile
   const isLowTrust = stats.trust_score < 60
+  const isOwnProfile = currentUserId === userId
 
   return (
     <div className="px-4 py-4 pb-24">
-      {/* Back button */}
       <button onClick={() => router.back()} className="mb-3 flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
         <ArrowLeft size={16} /> Quay lại
       </button>
 
-      {/* Header Card */}
       <div className={`rounded-2xl p-5 shadow-sm text-center ${isLowTrust ? 'bg-red-50 border border-red-200' : 'bg-white'}`}>
-        {/* Avatar with badge frame */}
         <div className="relative mx-auto mb-3 w-fit">
           <div className={`flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold ${
             user.equipped_badge ? 'ring-3 ring-amber-400' : ''
@@ -126,15 +183,54 @@ export default function PublicProfilePage() {
         </div>
         <p className="mt-1 text-[10px] text-gray-400">Tham gia: {new Date(user.created_at).toLocaleDateString('vi-VN')}</p>
 
-        {/* Low Trust Warning */}
         {isLowTrust && (
           <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-red-100 p-2 text-xs text-red-700 font-medium">
             <AlertTriangle size={14} /> Người dùng có điểm uy tín thấp
           </div>
         )}
+
+        {!isOwnProfile && (
+          <div className="mt-4">
+            {friendshipStatus === 'ACCEPTED' && (
+              <button
+                onClick={() => handleFriendAction('unfriend')}
+                disabled={friendLoading}
+                className="w-full rounded-xl bg-green-100 hover:bg-green-200 text-green-700 py-2.5 text-sm font-bold transition disabled:opacity-50"
+              >
+                {friendLoading ? 'Đang xử lý...' : '✓ Bạn bè (Hủy kết bạn)'}
+              </button>
+            )}
+            {friendshipStatus === 'PENDING_FROM_ME' && (
+              <button
+                onClick={() => handleFriendAction('cancel')}
+                disabled={friendLoading}
+                className="w-full rounded-xl border border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 text-sm font-bold transition disabled:opacity-50"
+              >
+                {friendLoading ? 'Đang xử lý...' : '⏳ Hủy yêu cầu'}
+              </button>
+            )}
+            {friendshipStatus === 'PENDING' && (
+              <button
+                onClick={() => handleFriendAction('accept')}
+                disabled={friendLoading}
+                className="w-full rounded-xl bg-green-500 hover:bg-green-600 text-white py-2.5 text-sm font-bold transition disabled:opacity-50"
+              >
+                {friendLoading ? 'Đang xử lý...' : '✓ Chấp nhận kết bạn'}
+              </button>
+            )}
+            {friendshipStatus === 'NONE' && (
+              <button
+                onClick={() => handleFriendAction('add')}
+                disabled={friendLoading}
+                className="w-full rounded-xl bg-green-500 hover:bg-green-600 text-white py-2.5 text-sm font-bold transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {friendLoading ? 'Đang xử lý...' : (<><UserPlus size={16} /> Thêm bạn bè</>)}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Core Stats */}
       <div className="mt-3 grid grid-cols-3 gap-2">
         <StatCard
           icon={<Shield size={16} className={isLowTrust ? 'text-red-500' : 'text-green-500'} />}
@@ -154,14 +250,12 @@ export default function PublicProfilePage() {
         />
       </div>
 
-      {/* Tabs */}
       <div className="mt-4 flex rounded-xl bg-gray-100 p-1">
         <TabButton active={activeTab === 'badges'} onClick={() => setActiveTab('badges')} icon={<Trophy size={14} />} label="Huy hiệu" />
         <TabButton active={activeTab === 'ratings'} onClick={() => setActiveTab('ratings')} icon={<Star size={14} />} label="Đánh giá" />
         <TabButton active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<Clock size={14} />} label="Lịch sử" />
       </div>
 
-      {/* Tab Content */}
       <div className="mt-3">
         {activeTab === 'badges' && <BadgesTab badges={badges} />}
         {activeTab === 'ratings' && <RatingsTab ratings={ratings} stats={stats} />}
@@ -170,8 +264,6 @@ export default function PublicProfilePage() {
     </div>
   )
 }
-
-/* --- Tab Components --- */
 
 function BadgesTab({ badges }: { badges: Badge[] }) {
   if (!badges || badges.length === 0) {
@@ -219,7 +311,6 @@ function BadgesTab({ badges }: { badges: Badge[] }) {
 function RatingsTab({ ratings, stats }: { ratings: RatingInfo[]; stats: PublicProfile['stats'] }) {
   return (
     <div>
-      {/* Rating Summary */}
       <div className="mb-3 rounded-xl bg-white p-4 shadow-sm text-center">
         <div className="flex items-center justify-center gap-2">
           <span className="text-3xl font-bold text-gray-900">
@@ -228,7 +319,6 @@ function RatingsTab({ ratings, stats }: { ratings: RatingInfo[]; stats: PublicPr
           <Star size={24} className="text-yellow-400 fill-yellow-400" />
         </div>
         <p className="text-xs text-gray-500 mt-0.5">{stats.total_ratings} lượt đánh giá</p>
-        {/* Star distribution visual */}
         {stats.avg_rating > 0 && (
           <div className="flex justify-center gap-0.5 mt-2">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -242,7 +332,6 @@ function RatingsTab({ ratings, stats }: { ratings: RatingInfo[]; stats: PublicPr
         )}
       </div>
 
-      {/* Reviews List */}
       {(!ratings || ratings.length === 0) ? (
         <EmptyState text="Chưa có đánh giá nào" />
       ) : (
@@ -292,8 +381,6 @@ function HistoryTab({ matches }: { matches: MatchInfo[] }) {
     </div>
   )
 }
-
-/* --- Utility Components --- */
 
 function StatCard({ icon, value, label, warning }: { icon: React.ReactNode; value: string; label: string; warning?: boolean }) {
   return (

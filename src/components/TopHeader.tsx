@@ -4,26 +4,79 @@ import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { apiFetch } from '@/lib/api'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 
 interface Props {
   username?: string
 }
 
+interface Notification {
+  id: number
+  type: string
+  title: string
+  body: string | null
+  is_read: boolean
+  created_at: string
+}
+
 export default function TopHeader({ username }: Props) {
   const [notifCount, setNotifCount] = useState(0)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  // Format relative time
+  const getRelativeTime = (date: string) => {
+    const now = new Date()
+    const created = new Date(date)
+    const diffMs = now.getTime() - created.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Vừa xong'
+    if (diffMins < 60) return `${diffMins}m`
+    if (diffHours < 24) return `${diffHours}h`
+    if (diffDays < 7) return `${diffDays}d`
+    return created.toLocaleDateString('vi-VN')
+  }
+
+  const fetchNotifications = () => {
+    if (!username) return
+    apiFetch<{ notifications: Notification[] }>('/notifications?limit=5')
+      .then((d) => {
+        setNotifications(d.notifications || [])
+        const unread = (d.notifications || []).filter(n => !n.is_read).length
+        setNotifCount(unread)
+      })
+      .catch(() => {})
+  }
 
   useEffect(() => {
-    if (!username) return
-    apiFetch<{ unread_count: number }>('/notifications/unread-count')
-      .then((d) => setNotifCount(d.unread_count || 0))
-      .catch(() => {})
-    const interval = setInterval(() => {
-      apiFetch<{ unread_count: number }>('/notifications/unread-count')
-        .then((d) => setNotifCount(d.unread_count || 0))
-        .catch(() => {})
-    }, 30000)
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
   }, [username])
+
+  const handleNotificationClick = async (notifId: number) => {
+    try {
+      await apiFetch(`/notifications/${notifId}/read`, { method: 'POST' })
+      setNotifications(notifications.map(n => n.id === notifId ? { ...n, is_read: true } : n))
+      setNotifCount(Math.max(0, notifCount - 1))
+    } catch (e) {}
+  }
+
+  const getNotificationIcon = (type: string) => {
+    if (type.includes('FRIEND')) return '👥'
+    if (type.includes('APPROVED') || type.includes('ACCEPTED')) return '✅'
+    if (type.includes('REFUND')) return '💰'
+    if (type.includes('CANCELLED')) return '❌'
+    return '🔔'
+  }
 
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-100 bg-white/95 backdrop-blur-sm px-4 py-3">
@@ -32,15 +85,70 @@ export default function TopHeader({ username }: Props) {
         <h1 className="text-lg font-bold text-gray-900">CoDuyen</h1>
       </Link>
       <div className="flex items-center gap-2">
-        {/* Notification bell */}
-        <Link href="/notifications" className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
-          <Bell size={20} className="text-gray-600" />
-          {notifCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-              {notifCount > 99 ? '99+' : notifCount}
-            </span>
-          )}
-        </Link>
+        {/* Notification dropdown */}
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <button className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Bell size={20} className="text-gray-600" />
+              {notifCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                  {notifCount > 99 ? '99+' : notifCount}
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+            <div className="p-2">
+              {notifications.length === 0 ? (
+                <div className="py-6 text-center text-sm text-gray-500">
+                  Không có thông báo nào
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {notifications.map((notif) => (
+                    <button
+                      key={notif.id}
+                      onClick={() => handleNotificationClick(notif.id)}
+                      className={`w-full text-left px-2 py-2 rounded-lg transition ${
+                        notif.is_read ? 'hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg flex-shrink-0">
+                          {getNotificationIcon(notif.type)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 line-clamp-2">
+                            {notif.title}
+                          </p>
+                          {notif.body && (
+                            <p className="text-[11px] text-gray-600 line-clamp-2 mt-0.5">
+                              {notif.body}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            {getRelativeTime(notif.created_at)}
+                          </p>
+                        </div>
+                        {!notif.is_read && (
+                          <div className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-500 mt-1.5" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <DropdownMenuSeparator className="my-2" />
+              <Link
+                href="/notifications"
+                className="block w-full text-center py-2 text-xs font-medium text-green-600 hover:text-green-700"
+              >
+                Xem tất cả
+              </Link>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {/* Profile */}
         {username && (
           <Link
