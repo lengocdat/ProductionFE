@@ -298,7 +298,7 @@ function HostManageTab({ matchId, match, requests, onRefresh }: {
             Bạn có chắc chắn muốn hủy trận này?<br /><br />
             • Tất cả người chơi đã duyệt sẽ được hoàn cọc<br />
             • Nếu hủy sát giờ, điểm uy tín Host sẽ bị trừ 20 điểm<br />
-            • Nếu điểm &lt; 50, bạn sẽ bị khóa tạo kèo 7 ngày
+            • Nếu điểm &lt; 50, bạn sẽ bị khóa tạo trận 7 ngày
           </p>
           <DialogFooter className="gap-2 sm:gap-2">
             <DialogClose asChild><Button variant="outline">Quay lại</Button></DialogClose>

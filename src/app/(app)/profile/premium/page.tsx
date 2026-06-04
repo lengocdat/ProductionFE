@@ -4,7 +4,7 @@ import { Crown, Radar, Ban, Star, Zap, Shield, ChevronRight } from 'lucide-react
 import Link from 'next/link'
 
 const PERKS = [
-  { icon: <Radar size={18} className="text-amber-400" />, title: 'Radar Tự Động', desc: 'Nhận thông báo ngay khi có kèo hoặc đồ phù hợp' },
+  { icon: <Radar size={18} className="text-amber-400" />, title: 'Radar Tự Động', desc: 'Nhận thông báo ngay khi có trận hoặc đồ phù hợp' },
   { icon: <Ban size={18} className="text-amber-400" />, title: 'Không Quảng Cáo', desc: 'Trải nghiệm sạch, tập trung vào thể thao' },
   { icon: <Star size={18} className="text-amber-400" />, title: 'Badge Premium', desc: 'Khung avatar vàng + huy hiệu Premium độc quyền' },
   { icon: <Zap size={18} className="text-amber-400" />, title: 'Ưu Tiên Hiển Thị', desc: 'Bài đăng của bạn luôn được ưu tiên lên đầu' },

@@ -52,12 +52,13 @@ export default function ProfilePage() {
       <div className="mt-4 grid grid-cols-4 gap-2">
         <StatCard icon={<Star size={16} className="text-yellow-500" />} value={avgStars} label="Đánh giá" />
         <StatCard icon={<Shield size={16} className="text-red-400" />} value={String(user.negative_reports)} label="Phiếu xấu" />
-        <StatCard icon={<AlertTriangle size={16} className="text-orange-500" />} value={String(user.no_show_count || 0)} label="Bùng kèo" />
+        <StatCard icon={<AlertTriangle size={16} className="text-orange-500" />} value={String(user.no_show_count || 0)} label="Bùng trận" />
         <StatCard icon={<Calendar size={16} className="text-green-500" />} value={new Date(user.created_at).toLocaleDateString('vi-VN')} label="Tham gia" />
       </div>
 
       {/* Quick Menu */}
       <div className="mt-4 rounded-2xl bg-white shadow-sm overflow-hidden divide-y divide-gray-100">
+        <MenuLink href="/my-matches" icon={<Calendar size={18} className="text-green-500" />} label="Trận của tôi" desc="Xem lịch, hủy tham gia, lịch sử" />
         <MenuLink href="/profile/achievements" icon={<Trophy size={18} className="text-amber-500" />} label="Thành tựu & Huy hiệu" desc="Xem tiến trình và badge đã đạt" />
         <MenuLink href="/marketplace" icon={<ShoppingBag size={18} className="text-green-500" />} label="Chợ đồ thể thao" desc="Mua bán đồ cũ, tìm deals" />
         <MenuLink href="/profile/premium" icon={<Crown size={18} className="text-yellow-500" />} label="Nâng cấp Premium" desc="Radar tự động, không quảng cáo" premium />

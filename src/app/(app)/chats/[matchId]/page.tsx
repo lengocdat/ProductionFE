@@ -243,7 +243,7 @@ export default function ChatRoomPage() {
     }
 
     const message = isLate
-      ? '⚠️ BẠN ĐANG HỦY TRẬN SÁT GIỜ!\n\n• Điểm uy tín Host sẽ bị trừ 20 điểm\n• Nếu điểm < 50, bạn sẽ bị khóa tạo kèo 7 ngày\n• Tất cả người chơi sẽ được hoàn cọc\n\nBạn có chắc chắn muốn tiếp tục?'
+      ? '⚠️ BẠN ĐANG HỦY TRẬN SÁT GIỜ!\n\n• Điểm uy tín Host sẽ bị trừ 20 điểm\n• Nếu điểm < 50, bạn sẽ bị khóa tạo trận 7 ngày\n• Tất cả người chơi sẽ được hoàn cọc\n\nBạn có chắc chắn muốn tiếp tục?'
       : 'Bạn có chắc chắn muốn hủy trận này?\n\nTất cả người chơi đã tham gia sẽ nhận lại cọc.'
 
     if (!confirm(message)) return
