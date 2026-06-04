@@ -64,7 +64,7 @@ export default function NotificationsPage() {
           {notifs.map((n) => (
             <Link
               key={n.id}
-              href={n.match_id ? `/matches/${n.match_id}` : '#'}
+              href={n.match_id ? `/matches/${n.match_id}${n.type === 'JOIN_REQUEST' ? '?tab=manage' : '?tab=chat'}` : '#'}
               className={`block rounded-xl p-3.5 border transition-colors ${
                 n.is_read ? 'bg-white border-gray-100' : 'bg-green-50/50 border-green-200'
               }`}

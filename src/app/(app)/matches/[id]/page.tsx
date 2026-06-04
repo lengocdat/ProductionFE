@@ -30,6 +30,7 @@ interface MatchInfo {
 }
 
 interface JoinReq {
+interface JoinReq {
   id: number
   player_id: number
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED'
@@ -37,6 +38,13 @@ interface JoinReq {
   deposit_amount: number
   deposit_status: string
   created_at: string
+  player?: {
+    id: number
+    username: string
+    tier: string
+    no_show_count: number
+    negative_reports: number
+  }
 }
 
 interface Message {
@@ -84,10 +92,11 @@ export default function MatchDetailPage() {
   }
 
   const isCancelled = match.status === 'CANCELLED'
+  const pendingCount = requests.filter((r) => r.status === 'PENDING').length
   const tabs = [
-    { key: 'info' as const, label: 'Thông tin', icon: <MapPin size={14} /> },
-    ...(isHost ? [{ key: 'manage' as const, label: 'Quản lý', icon: <Settings size={14} /> }] : []),
-    { key: 'chat' as const, label: 'Nhắn tin', icon: <MessageSquare size={14} /> },
+    { key: 'info' as const, label: 'Thông tin', icon: <MapPin size={14} />, badge: 0 },
+    ...(isHost ? [{ key: 'manage' as const, label: 'Quản lý', icon: <Settings size={14} />, badge: pendingCount }] : []),
+    { key: 'chat' as const, label: 'Nhắn tin', icon: <MessageSquare size={14} />, badge: 0 },
   ]
 
   return (
@@ -118,13 +127,18 @@ export default function MatchDetailPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-all ${
+              className={`relative flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-all ${
                 activeTab === tab.key
                   ? 'bg-green-100 text-green-700'
                   : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
               {tab.icon} {tab.label}
+              {tab.badge > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -214,9 +228,23 @@ function HostManageTab({ matchId, match, requests, onRefresh }: {
           <div className="space-y-2">
             {pending.map((req) => (
               <div key={req.id} className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
-                <p className="text-xs text-gray-700 mb-1">{req.auto_message}</p>
+                {/* Player info */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-[10px] font-bold text-green-700">
+                    {req.player?.username?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-900">{req.player?.username || `Player #${req.player_id}`}</p>
+                    <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                      <span>{req.player?.tier === 'VERIFIED_HOST' ? '✅ Uy tín' : req.player?.tier === 'REGULAR' ? '👍 Thường' : '🆕 Mới'}</span>
+                      {(req.player?.no_show_count || 0) > 0 && <span className="text-red-500">⚠️ Bùng {req.player?.no_show_count} lần</span>}
+                      {(req.player?.negative_reports || 0) > 2 && <span className="text-red-500">🚩 {req.player?.negative_reports} phiếu xấu</span>}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-700 mb-1 italic">"{req.auto_message}"</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-400">#{req.player_id} · {new Date(req.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
+                  <span className="text-[10px] text-gray-400">{new Date(req.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
                   <div className="flex gap-1.5">
                     <button onClick={() => handleAccept(req.id)} disabled={actionLoading === req.id} className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 disabled:opacity-50"><CheckCircle size={14} /></button>
                     <button onClick={() => handleReject(req.id)} disabled={actionLoading === req.id} className="rounded-lg bg-gray-100 p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"><XCircle size={14} /></button>
@@ -235,7 +263,10 @@ function HostManageTab({ matchId, match, requests, onRefresh }: {
           <div className="flex flex-wrap gap-2">
             {accepted.map((req) => (
               <div key={req.id} className="flex items-center gap-1.5 rounded-full bg-green-50 border border-green-200 px-3 py-1.5">
-                <span className="text-xs text-green-800 font-medium">#{req.player_id}</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-200 text-[9px] font-bold text-green-800">
+                  {req.player?.username?.charAt(0).toUpperCase() || '?'}
+                </span>
+                <span className="text-xs text-green-800 font-medium">{req.player?.username || `#${req.player_id}`}</span>
               </div>
             ))}
           </div>
