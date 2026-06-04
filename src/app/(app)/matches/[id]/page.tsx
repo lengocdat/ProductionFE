@@ -147,7 +147,7 @@ export default function MatchDetailPage() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'info' && <MatchInfoTab match={match} />}
+        {activeTab === 'info' && <MatchInfoTab match={match} requests={requests} />}
         {activeTab === 'manage' && isHost && (
           <HostManageTab matchId={matchId} match={match} requests={requests} onRefresh={loadRequests} />
         )}
@@ -158,8 +158,10 @@ export default function MatchDetailPage() {
 }
 
 // --- Info Tab ---
-function MatchInfoTab({ match }: { match: MatchInfo }) {
+function MatchInfoTab({ match, requests }: { match: MatchInfo; requests: JoinReq[] }) {
   const mapsUrl = match.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
+  const accepted = requests.filter((r) => r.status === 'ACCEPTED')
+
   return (
     <div className="p-4 space-y-3">
       <div className="rounded-xl bg-gray-50 p-4 space-y-2">
@@ -168,6 +170,44 @@ function MatchInfoTab({ match }: { match: MatchInfo }) {
         <p className="text-xs text-gray-500">👥 {match.filled_slots}/{match.max_slots} slots · {match.price_per_slot > 0 ? `${match.price_per_slot.toLocaleString('vi-VN')}đ/slot` : 'Miễn phí'}</p>
         <p className="text-xs text-gray-500">⏳ Cho phép hủy trước {match.cancellation_window_hours}h</p>
       </div>
+
+      {/* Host Trust Info */}
+      {(match as any).host && (
+        <div className="rounded-xl border border-green-100 bg-green-50/50 p-3">
+          <p className="text-[10px] text-green-600 font-medium mb-1.5">🏆 Thông tin Host</p>
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-200 text-xs font-bold text-green-800">
+              {((match as any).host.username || 'H').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-900">{(match as any).host.username}</p>
+              <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                {(match as any).host.host_trust_score > 0 && <span>⭐ Trust: {(match as any).host.host_trust_score}/100</span>}
+                {(match as any).host.completed_matches_count > 0 && <span>✅ {(match as any).host.completed_matches_count} trận</span>}
+                {(match as any).host.tier === 'VERIFIED_HOST' && <span className="text-blue-600">🔵 Uy tín</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Members already joined */}
+      {accepted.length > 0 && (
+        <div className="rounded-xl border border-gray-100 p-3">
+          <p className="text-[10px] text-gray-500 font-medium mb-2">👥 Đã tham gia ({accepted.length}/{match.max_slots})</p>
+          <div className="flex flex-wrap gap-1.5">
+            {accepted.map((req) => (
+              <span key={req.id} className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10px] text-gray-700">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-green-200 text-[8px] font-bold text-green-800">
+                  {req.player?.username?.charAt(0).toUpperCase() || '?'}
+                </span>
+                {req.player?.username || `#${req.player_id}`}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
         className="block w-full text-center rounded-xl border border-gray-200 py-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
         🗺️ Xem vị trí trên Google Maps

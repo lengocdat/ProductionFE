@@ -449,6 +449,14 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
           </div>
           <span className="text-xs font-medium text-gray-700">{match.host.username}</span>
           {match.host.tier === 'VERIFIED_HOST' && <CheckCircle size={13} className="text-blue-500 fill-blue-50" />}
+          {(match.host as any).host_trust_score > 0 && (
+            <span className="rounded-md bg-green-50 border border-green-200 px-1 py-0.5 text-[8px] font-semibold text-green-700">
+              ⭐ {(match.host as any).host_trust_score}/100
+            </span>
+          )}
+          {(match.host as any).completed_matches_count > 0 && (
+            <span className="text-[9px] text-gray-400">{(match.host as any).completed_matches_count} trận</span>
+          )}
           {match.host.negative_reports > 3 && (
             <span className="flex items-center gap-0.5 rounded-md bg-red-50 border border-red-200 px-1.5 py-0.5 text-[9px] font-semibold text-red-700">
               <AlertTriangle size={9} /> Uy tín thấp
