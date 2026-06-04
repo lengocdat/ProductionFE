@@ -205,8 +205,8 @@ function ItemDetailModal({ item, onClose }: { item: MarketItem; onClose: () => v
   const discountPercent = hasDiscount ? Math.round((1 - item.price / item.original_price!) * 100) : 0
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
-      <div className="w-full max-w-md bg-white rounded-t-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl max-h-[90vh] overflow-y-auto shadow-xl">
         {/* Image Slider */}
         <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 aspect-[4/3] flex items-center justify-center">
           <span className="text-6xl opacity-40">

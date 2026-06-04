@@ -203,8 +203,8 @@ function BookingModal({ court, date, onDateChange, onClose }: { court: Court; da
   const totalPrice = hours * court.price_per_hour
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white rounded-t-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between z-10">
           <div>
             <h3 className="font-bold text-gray-900">{court.name}</h3>
