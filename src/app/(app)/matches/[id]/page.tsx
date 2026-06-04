@@ -30,7 +30,6 @@ interface MatchInfo {
 }
 
 interface JoinReq {
-interface JoinReq {
   id: number
   player_id: number
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED'
