@@ -5,3 +5,9 @@
 body {
   background-color: #f3f4f6;
 }
+
+/* Contain Leaflet z-index within its container */
+.leaflet-container {
+  z-index: 0 !important;
+  isolation: isolate;
+}
