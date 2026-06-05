@@ -1,11 +1,17 @@
-'use client'
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog"
+import {
+  X,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  Tag,
+  ShieldCheck,
+} from "lucide-react"
+import { useState } from "react"
 
-import { useState, useEffect } from 'react'
-import { Search, Filter, ShieldCheck, ChevronLeft, ChevronRight, MessageSquare, X, Tag } from 'lucide-react'
-import { apiFetch } from '@/lib/api'
-import Link from 'next/link'
-
-// --- Types ---
 interface MarketItem {
   id: number
   seller_id: number
@@ -54,7 +60,6 @@ function formatVND(price: number): string {
   return price.toLocaleString('vi-VN') + 'đ'
 }
 
-// --- MOCK DATA (replace with real API when backend ready) ---
 const MOCK_ITEMS: MarketItem[] = [
   { id: 1, seller_id: 1, item_name: 'Vợt Yonex Astrox 88D Pro', description: 'Vợt chính hãng, đã thay lưới 1 lần. Cân nặng 83g. Phù hợp lối đánh tấn công mạnh.', category: 'RACKET', sport_type: 'BADMINTON', price: 2500000, original_price: 4200000, condition: 'GOOD', images: ['/placeholder-racket.jpg'], location_address: 'Quận 7, TP.HCM', status: 'ACTIVE', view_count: 45, created_at: '2026-06-01', seller: { id: 1, username: 'host_minh', trusted_seller: true } },
   { id: 2, seller_id: 2, item_name: 'Giày Victor A922 size 42', description: 'Mới mua 2 tuần, đi không vừa size nên bán lại. Còn hộp đầy đủ.', category: 'SHOES', sport_type: 'BADMINTON', price: 800000, original_price: 1200000, condition: 'LIKE_NEW', images: ['/placeholder-shoes.jpg'], location_address: 'Bình Thạnh, TP.HCM', status: 'ACTIVE', view_count: 23, created_at: '2026-06-01', seller: { id: 2, username: 'player_an', trusted_seller: false } },
@@ -64,260 +69,213 @@ const MOCK_ITEMS: MarketItem[] = [
   { id: 6, seller_id: 2, item_name: 'Quấn cán vợt Kumpoo (10 cuộn)', description: 'Quấn cán xịn, bám tay, không trơn. Bán nguyên lốc 10 cuộn.', category: 'ACCESSORY', sport_type: 'BADMINTON', price: 150000, condition: 'NEW', images: ['/placeholder-grip.jpg'], location_address: 'Gò Vấp, TP.HCM', status: 'ACTIVE', view_count: 5, created_at: '2026-05-27', seller: { id: 2, username: 'player_an', trusted_seller: false } },
 ]
 
-export default function MarketplacePage() {
-  const [items, setItems] = useState<MarketItem[]>(MOCK_ITEMS)
-  const [categoryFilter, setCategoryFilter] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedItem, setSelectedItem] = useState<MarketItem | null>(null)
-
-  // In production, fetch from API:
-  // useEffect(() => {
-  //   apiFetch<{ items: MarketItem[] }>(`/market/items?category=${categoryFilter}&q=${searchQuery}`)
-  //     .then((d) => setItems(d.items || []))
-  // }, [categoryFilter, searchQuery])
-
-  const filteredItems = items.filter((item) => {
-    if (categoryFilter && item.category !== categoryFilter) return false
-    if (searchQuery && !item.item_name.toLowerCase().includes(searchQuery.toLowerCase())) return false
-    return true
-  })
-
-  return (
-    <div className="px-4 pt-3 pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-lg font-bold text-gray-900">🛍️ Chợ đồ thể thao</h1>
-        <Link href="/marketplace/sell" className="rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-600">
-          + Đăng bán
-        </Link>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm vợt, giày, phụ kiện..."
-          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-2.5 text-sm outline-none focus:border-green-400"
-        />
-      </div>
-
-      {/* Category Filter */}
-      <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => setCategoryFilter(cat.value)}
-            className={`flex-shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-all ${
-              categoryFilter === cat.value
-                ? 'bg-green-100 text-green-700 border border-green-300'
-                : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            <span>{cat.icon}</span> {cat.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Masonry Grid */}
-      {filteredItems.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-3xl mb-2">📦</p>
-          <p className="text-sm">Không có sản phẩm nào</p>
-        </div>
-      ) : (
-        <div className="columns-2 gap-3 space-y-3">
-          {filteredItems.map((item) => (
-            <ItemCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
-          ))}
-        </div>
-      )}
-
-      {/* Item Detail Modal */}
-      {selectedItem && (
-        <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
-      )}
-    </div>
-  )
-}
-
-// --- Item Card (Masonry) ---
-function ItemCard({ item, onClick }: { item: MarketItem; onClick: () => void }) {
-  const cond = CONDITION_LABELS[item.condition] || CONDITION_LABELS['GOOD']
-  const hasDiscount = item.original_price && item.original_price > item.price
-
-  return (
-    <div
-      onClick={onClick}
-      className="break-inside-avoid rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md cursor-pointer transition-shadow"
-    >
-      {/* Image placeholder */}
-      <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 aspect-square flex items-center justify-center">
-        <span className="text-4xl opacity-50">
-          {item.category === 'RACKET' ? '🏸' : item.category === 'SHOES' ? '👟' : item.category === 'CLOTHING' ? '👕' : item.category === 'BAG' ? '🎒' : '📦'}
-        </span>
-        {/* Condition badge */}
-        <span className={`absolute top-2 left-2 rounded-md px-1.5 py-0.5 text-[9px] font-semibold ${cond.color}`}>
-          {cond.label}
-        </span>
-      </div>
-
-      {/* Info */}
-      <div className="p-3">
-        <h3 className="text-xs font-semibold text-gray-900 line-clamp-2 leading-tight">{item.item_name}</h3>
-
-        {/* Price */}
-        <div className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-sm font-bold text-red-600">{formatVND(item.price)}</span>
-          {hasDiscount && (
-            <span className="text-[10px] text-gray-400 line-through">{formatVND(item.original_price!)}</span>
-          )}
-        </div>
-
-        {/* Seller */}
-        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-50">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[8px] font-bold text-gray-600">
-            {item.seller?.username.charAt(0).toUpperCase()}
-          </div>
-          <span className="text-[10px] text-gray-600 truncate">{item.seller?.username}</span>
-          {item.seller?.trusted_seller && (
-            <span className="group relative">
-              <ShieldCheck size={12} className="text-amber-500 fill-amber-50" />
-              {/* Tooltip */}
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-36 rounded-lg bg-gray-900 px-2 py-1 text-[9px] text-white text-center shadow-lg">
-                Người bán uy tín: Đánh giá &gt;4.5 sao trên 10+ giao dịch
-              </span>
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// --- Item Detail Modal ---
-function ItemDetailModal({ item, onClose }: { item: MarketItem; onClose: () => void }) {
+export function ItemDetailModal({
+  item,
+  open,
+  onClose,
+}: {
+  item: MarketItem | null
+  open: boolean
+  onClose: () => void
+}) {
   const [currentImage, setCurrentImage] = useState(0)
-  const cond = CONDITION_LABELS[item.condition] || CONDITION_LABELS['GOOD']
-  const hasDiscount = item.original_price && item.original_price > item.price
-  const discountPercent = hasDiscount ? Math.round((1 - item.price / item.original_price!) * 100) : 0
+
+  if (!item) return null
+
+  const cond = CONDITION_LABELS[item.condition] || CONDITION_LABELS["GOOD"]
+
+  const hasDiscount =
+    item.original_price && item.original_price > item.price
+
+  const discountPercent = hasDiscount
+    ? Math.round((1 - item.price / item.original_price!) * 100)
+    : 0
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl max-h-[90vh] overflow-y-auto shadow-xl">
-        {/* Image Slider */}
-        <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 aspect-[4/3] flex items-center justify-center">
-          <span className="text-6xl opacity-40">
-            {item.category === 'RACKET' ? '🏸' : item.category === 'SHOES' ? '👟' : '📦'}
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="p-0 w-full max-w-md h-[100dvh] sm:h-auto sm:rounded-2xl overflow-hidden flex flex-col bg-white">
+
+        {/* ================= HERO IMAGE ================= */}
+        <div className="relative aspect-square bg-black flex items-center justify-center">
+          <span className="text-6xl opacity-30">
+            {item.category === "RACKET"
+              ? "🏸"
+              : item.category === "SHOES"
+              ? "👟"
+              : item.category === "CLOTHING"
+              ? "👕"
+              : "📦"}
           </span>
 
-          {/* Close button */}
-          <button onClick={onClose} className="absolute top-3 right-3 rounded-full bg-black/30 p-1.5 text-white backdrop-blur-sm hover:bg-black/50">
-            <X size={18} />
-          </button>
+          {/* top bar */}
+          <div className="absolute top-0 left-0 right-0 p-3 flex justify-between">
+            <button
+              onClick={onClose}
+              className="bg-black/40 text-white px-3 py-1 rounded-full text-xs"
+            >
+              ← Quay lại
+            </button>
 
-          {/* Image navigation (if multiple) */}
-          {item.images.length > 1 && (
+            <div className="bg-black/40 text-white px-2 py-1 rounded-full text-[10px]">
+              {item.images?.length || 1}
+            </div>
+          </div>
+
+          {/* condition badge */}
+          <span
+            className={`absolute top-3 left-3 rounded-lg px-2 py-1 text-[10px] font-semibold ${cond.color}`}
+          >
+            {cond.label}
+          </span>
+
+          {/* nav */}
+          {item.images?.length > 1 && (
             <>
-              <button onClick={() => setCurrentImage((p) => Math.max(0, p - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 shadow">
+              <button
+                onClick={() =>
+                  setCurrentImage((p) => Math.max(0, p - 1))
+                }
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-1.5 rounded-full"
+              >
                 <ChevronLeft size={16} />
               </button>
-              <button onClick={() => setCurrentImage((p) => Math.min(item.images.length - 1, p + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 shadow">
+
+              <button
+                onClick={() =>
+                  setCurrentImage((p) =>
+                    Math.min(item.images.length - 1, p + 1)
+                  )
+                }
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-1.5 rounded-full"
+              >
                 <ChevronRight size={16} />
               </button>
-              {/* Dots */}
+
+              {/* dots */}
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
                 {item.images.map((_, i) => (
-                  <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === currentImage ? 'bg-white' : 'bg-white/50'}`} />
+                  <span
+                    key={i}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      i === currentImage
+                        ? "bg-white"
+                        : "bg-white/40"
+                    }`}
+                  />
                 ))}
               </div>
             </>
           )}
-
-          {/* Condition badge */}
-          <span className={`absolute top-3 left-3 rounded-lg px-2 py-1 text-[10px] font-semibold ${cond.color}`}>
-            {cond.label}
-          </span>
         </div>
 
-        {/* Content */}
-        <div className="p-5">
-          {/* Title */}
-          <h2 className="text-lg font-bold text-gray-900">{item.item_name}</h2>
+        {/* ================= CONTENT ================= */}
+        <div className="flex-1 overflow-y-auto pb-24">
 
-          {/* Price */}
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-xl font-bold text-red-600">{formatVND(item.price)}</span>
-            {hasDiscount && (
-              <>
-                <span className="text-sm text-gray-400 line-through">{formatVND(item.original_price!)}</span>
-                <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600">-{discountPercent}%</span>
-              </>
-            )}
+          {/* PRICE + TITLE */}
+          <div className="p-4 border-b">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-red-600">
+                {formatVND(item.price)}
+              </span>
+
+              {hasDiscount && (
+                <>
+                  <span className="text-xs text-gray-400 line-through">
+                    {formatVND(item.original_price!)}
+                  </span>
+
+                  <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded">
+                    -{discountPercent}%
+                  </span>
+                </>
+              )}
+            </div>
+
+            <h1 className="text-sm font-semibold mt-2 leading-snug">
+              {item.item_name}
+            </h1>
           </div>
 
-          {/* Meta */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] text-gray-600 flex items-center gap-1">
-              <Tag size={10} /> {item.category}
-            </span>
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] text-gray-600">
-              📍 {item.location_address}
-            </span>
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] text-gray-600">
-              👁️ {item.view_count} lượt xem
-            </span>
-          </div>
+          {/* META INFO */}
+          <div className="p-4 space-y-2 text-[11px] text-gray-600">
+            <div className="flex justify-between">
+              <span>Danh mục</span>
+              <span className="font-medium">{item.category}</span>
+            </div>
 
-          {/* Description */}
-          <div className="mt-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-1">Mô tả</h4>
-            <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
-          </div>
+            <div className="flex justify-between">
+              <span>Địa điểm</span>
+              <span>{item.location_address}</span>
+            </div>
 
-          {/* Seller Card */}
-          <div className="mt-4 rounded-xl border border-gray-200 p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-sm font-bold text-green-700">
-                {item.seller?.username.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold text-gray-900">{item.seller?.username}</span>
-                  {item.seller?.trusted_seller && (
-                    <span className="group relative">
-                      <ShieldCheck size={14} className="text-amber-500 fill-amber-50" />
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-40 rounded-lg bg-gray-900 px-2 py-1.5 text-[9px] text-white text-center shadow-lg z-10">
-                        🏆 Người bán uy tín<br/>Đánh giá &gt;4.5⭐ trên 10+ giao dịch
-                      </span>
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10px] text-gray-500">
-                  {item.seller?.trusted_seller ? '⭐ Người bán uy tín' : 'Người bán'}
-                </p>
-              </div>
+            <div className="flex justify-between">
+              <span>Lượt xem</span>
+              <span>{item.view_count}</span>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 mt-5">
-            <button
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
-              Đóng
-            </button>
-            <button
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-bold text-white hover:bg-green-600 shadow-sm"
-            >
-              <MessageSquare size={16} /> Chat với người bán
-            </button>
+          {/* DESCRIPTION */}
+          <div className="p-4 border-t">
+            <h4 className="text-sm font-semibold mb-1">
+              Mô tả
+            </h4>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {item.description}
+            </p>
+          </div>
+
+          {/* SELLER */}
+          <div className="p-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700">
+                  {item.seller?.username?.charAt(0)}
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold">
+                      {item.seller?.username}
+                    </span>
+
+                    {item.seller?.trusted_seller && (
+                      <ShieldCheck
+                        size={14}
+                        className="text-amber-500"
+                      />
+                    )}
+                  </div>
+
+                  <p className="text-[10px] text-gray-500">
+                    {item.seller?.trusted_seller
+                      ? "⭐ Uy tín"
+                      : "Người bán"}
+                  </p>
+                </div>
+              </div>
+
+              <button className="text-green-600 text-sm font-medium">
+                Xem shop →
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+
+        {/* ================= STICKY CTA ================= */}
+        <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t flex gap-2 sm:relative">
+          <button
+            onClick={onClose}
+            className="flex-1 border rounded-xl py-3 text-sm"
+          >
+            Đóng
+          </button>
+
+          <button className="flex-1 bg-green-500 text-white rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2">
+            <MessageSquare size={16} />
+            Chat ngay
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

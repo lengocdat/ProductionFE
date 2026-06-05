@@ -130,7 +130,7 @@ export default function TopHeader({ username }: Props) {
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+          <DropdownMenuContent align="end" sideOffset={8} className="w-80 max-h-96 overflow-y-auto rounded-lg bg-white p-2 shadow-lg border border-gray-200">
             <div className="p-2">
               {notifications.length === 0 ? (
                 <div className="py-6 text-center text-sm text-gray-500">
