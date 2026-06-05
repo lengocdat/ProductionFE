@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert, UserCheck } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import JoinModal from '@/components/JoinModal'
 import WeeklyCalendarStrip from '@/components/WeeklyCalendarStrip'
@@ -32,6 +33,7 @@ interface SportMatch {
   filled_slots: number
   status: string
   distance?: number
+  is_friend_host?: boolean
   host?: Host
 }
 
@@ -382,7 +384,12 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
   const sportIcon = SPORT_ICON[match.sport_type] || '🏸'
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className={`rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow ${match.is_friend_host ? 'border-green-200 ring-1 ring-green-100' : 'border-gray-100'}`}>
+      {match.is_friend_host && (
+        <div className="flex items-center gap-1 mb-2 text-[10px] font-semibold text-green-700">
+          <UserCheck size={12} /> Trận của bạn bè
+        </div>
+      )}
       {/* Top row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -443,7 +450,7 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
 
       {/* Host Info */}
       {match.host && (
-        <div className="flex items-center gap-1.5 mt-3">
+        <Link href={`/users/${match.host_id}`} className="flex items-center gap-1.5 mt-3 hover:opacity-80 transition-opacity">
           <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[9px] font-bold text-gray-600">
             {match.host.username.charAt(0).toUpperCase()}
           </div>
@@ -462,7 +469,7 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
               <AlertTriangle size={9} /> Uy tín thấp
             </span>
           )}
-        </div>
+        </Link>
       )}
 
       {/* Action Buttons */}

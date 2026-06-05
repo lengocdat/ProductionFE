@@ -175,7 +175,7 @@ function MatchInfoTab({ match, requests }: { match: MatchInfo; requests: JoinReq
       {(match as any).host && (
         <div className="rounded-xl border border-green-100 bg-green-50/50 p-3">
           <p className="text-[10px] text-green-600 font-medium mb-1.5">🏆 Thông tin Host</p>
-          <div className="flex items-center gap-2">
+          <Link href={`/users/${match.host_id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-200 text-xs font-bold text-green-800">
               {((match as any).host.username || 'H').charAt(0).toUpperCase()}
             </div>
@@ -187,7 +187,7 @@ function MatchInfoTab({ match, requests }: { match: MatchInfo; requests: JoinReq
                 {(match as any).host.tier === 'VERIFIED_HOST' && <span className="text-blue-600">🔵 Uy tín</span>}
               </div>
             </div>
-          </div>
+          </Link>
         </div>
       )}
 

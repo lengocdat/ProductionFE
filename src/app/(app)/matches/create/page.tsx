@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, Users, Loader2, CheckCircle2, Navigation, Zap } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
@@ -82,6 +82,16 @@ function extractCoordsFromMapsUrl(input: string): { lat: string; lng: string } |
   return null
 }
 
+function isGoogleMapsUrl(input: string): boolean {
+  const s = input.toLowerCase().trim()
+  return (
+    s.includes('maps.app.goo.gl') ||
+    s.includes('goo.gl/maps') ||
+    s.includes('google.com/maps') ||
+    s.includes('maps.google.com')
+  )
+}
+
 interface FormErrors {
   title?: string
   address?: string
@@ -96,7 +106,9 @@ export default function CreateMatchPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
+  const [mapsResolving, setMapsResolving] = useState(false)
   const [geoSuccess, setGeoSuccess] = useState(false)
+  const mapsResolveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitError, setSubmitError] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
@@ -148,46 +160,66 @@ export default function CreateMatchPage() {
     }
   }
 
+  function applyCoordsFromMaps(lat: string, lng: string, resolvedUrl?: string, sourceUrl?: string) {
+    setForm((f) => ({
+      ...f,
+      google_maps_url: resolvedUrl || sourceUrl || f.google_maps_url,
+      latitude: lat,
+      longitude: lng,
+    }))
+    setGeoSuccess(true)
+    setTimeout(() => setGeoSuccess(false), 3000)
+  }
+
+  function resolveMapsUrl(url: string) {
+    setMapsResolving(true)
+    apiFetch<{ lat?: string; lng?: string; resolved_url?: string; message?: string }>('/utils/resolve-maps', {
+      method: 'POST',
+      json: { url },
+    })
+      .then((data) => {
+        if (data.lat && data.lng) {
+          applyCoordsFromMaps(data.lat, data.lng, data.resolved_url, url)
+          toast.success('Đã lấy tọa độ từ link Google Maps!')
+        } else {
+          toast.info(data.message || 'Không thể tự động lấy tọa độ. Thử mở link Maps → copy tọa độ → dán trực tiếp.')
+        }
+      })
+      .catch(() => {
+        toast.error('Không thể xử lý link. Thử dán tọa độ trực tiếp: 10.7321, 106.7019')
+      })
+      .finally(() => setMapsResolving(false))
+  }
+
   // Auto-extract lat/lng from Google Maps URL
   function handleMapsUrlChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
     setForm((f) => ({ ...f, google_maps_url: value }))
     setErrors((prev) => ({ ...prev, location: undefined }))
 
+    if (mapsResolveTimer.current) {
+      clearTimeout(mapsResolveTimer.current)
+      mapsResolveTimer.current = null
+    }
+
     if (!value.trim()) return
 
     const coords = extractCoordsFromMapsUrl(value)
     if (coords) {
-      setForm((f) => ({
-        ...f,
-        google_maps_url: value,
-        latitude: coords.lat,
-        longitude: coords.lng,
-      }))
-      setGeoSuccess(true)
-      setTimeout(() => setGeoSuccess(false), 3000)
-    } else if (value.includes('maps.app.goo.gl') || value.includes('goo.gl/maps')) {
-      // Short link — resolve via backend
-      apiFetch<{ lat?: string; lng?: string; resolved_url?: string }>('/utils/resolve-maps', {
-        method: 'POST',
-        json: { url: value.trim() },
-      }).then((data) => {
-        if (data.lat && data.lng) {
-          setForm((f) => ({
-            ...f,
-            google_maps_url: data.resolved_url || value,
-            latitude: data.lat!,
-            longitude: data.lng!,
-          }))
-          setGeoSuccess(true)
-          setTimeout(() => setGeoSuccess(false), 3000)
-          toast.success('Đã lấy tọa độ từ link Google Maps!')
-        } else {
-          toast.info('Không thể tự động lấy tọa độ. Thử mở link Maps → copy tọa độ → dán trực tiếp.')
-        }
-      }).catch(() => {
-        toast.error('Không thể xử lý link. Thử dán tọa độ trực tiếp: 10.7321, 106.7019')
-      })
+      applyCoordsFromMaps(coords.lat, coords.lng, undefined, value)
+      return
+    }
+
+    if (isGoogleMapsUrl(value)) {
+      mapsResolveTimer.current = setTimeout(() => resolveMapsUrl(value.trim()), 400)
+    }
+  }
+
+  function handleMapsUrlBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const value = e.target.value.trim()
+    if (!value || extractCoordsFromMapsUrl(value)) return
+    if (isGoogleMapsUrl(value) && !form.latitude) {
+      resolveMapsUrl(value)
     }
   }
 
@@ -482,13 +514,19 @@ export default function CreateMatchPage() {
 
           {/* Option 1: Google Maps link (PRIMARY — easiest for user) */}
           <div>
-            <input
-              name="google_maps_url"
-              value={form.google_maps_url}
-              onChange={handleMapsUrlChange}
-              placeholder="Dán link Google Maps hoặc tọa độ: 10.7321, 106.7019"
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400"
-            />
+            <div className="relative">
+              <input
+                name="google_maps_url"
+                value={form.google_maps_url}
+                onChange={handleMapsUrlChange}
+                onBlur={handleMapsUrlBlur}
+                placeholder="Dán link Google Maps hoặc tọa độ: 10.7321, 106.7019"
+                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400 pr-10"
+              />
+              {mapsResolving && (
+                <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 animate-spin" />
+              )}
+            </div>
             {form.latitude && form.longitude && (
               <p className="text-[10px] text-green-600 mt-1.5 flex items-center gap-1">
                 ✅ Tọa độ: {form.latitude}, {form.longitude}

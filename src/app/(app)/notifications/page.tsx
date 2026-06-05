@@ -21,6 +21,31 @@ const TYPE_ICONS: Record<string, string> = {
   REJECTED: '❌',
   MATCH_CANCELLED: '🚫',
   MATCH_FINISHED: '✅',
+  FRIEND_MATCH_POSTED: '👥',
+  FRIEND_REQUEST: '🤝',
+}
+
+function parseSenderIdFromBody(body?: string): number | null {
+  if (!body) return null
+  const m = body.match(/sender_id:(\d+)/)
+  return m ? Number(m[1]) : null
+}
+
+function displayNotificationBody(body?: string): string | undefined {
+  if (!body) return undefined
+  const cleaned = body.replace(/\nsender_id:\d+$/, '').trim()
+  return cleaned || undefined
+}
+
+function notificationHref(n: Notification): string {
+  if (n.match_id) {
+    return `/matches/${n.match_id}${n.type === 'JOIN_REQUEST' ? '?tab=manage' : '?tab=chat'}`
+  }
+  if (n.type === 'FRIEND_REQUEST') {
+    const senderId = parseSenderIdFromBody(n.body)
+    return senderId ? `/users/${senderId}` : '/friends'
+  }
+  return '#'
 }
 
 export default function NotificationsPage() {
@@ -64,7 +89,7 @@ export default function NotificationsPage() {
           {notifs.map((n) => (
             <Link
               key={n.id}
-              href={n.match_id ? `/matches/${n.match_id}${n.type === 'JOIN_REQUEST' ? '?tab=manage' : '?tab=chat'}` : '#'}
+              href={notificationHref(n)}
               className={`block rounded-xl p-3.5 border transition-colors ${
                 n.is_read ? 'bg-white border-gray-100' : 'bg-green-50/50 border-green-200'
               }`}
@@ -73,7 +98,9 @@ export default function NotificationsPage() {
                 <span className="text-lg shrink-0">{TYPE_ICONS[n.type] || '🔔'}</span>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-medium ${n.is_read ? 'text-gray-700' : 'text-gray-900'}`}>{n.title}</p>
-                  {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
+                  {displayNotificationBody(n.body) && (
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{displayNotificationBody(n.body)}</p>
+                  )}
                   <p className="text-[10px] text-gray-400 mt-1">
                     {new Date(n.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
                   </p>

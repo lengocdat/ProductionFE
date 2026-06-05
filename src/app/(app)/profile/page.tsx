@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 
 interface User { id: number; username: string; email: string; role: string; tier: string; negative_reports: number; no_show_count: number; created_at: string }
@@ -58,6 +59,8 @@ export default function ProfilePage() {
 
       {/* Quick Menu */}
       <div className="mt-4 rounded-2xl bg-white shadow-sm overflow-hidden divide-y divide-gray-100">
+        <MenuLink href={`/users/${user.id}`} icon={<User size={18} className="text-indigo-500" />} label="Hồ sơ công khai" desc="Xem hồ sơ như người khác thấy" />
+        <MenuLink href="/friends" icon={<Users size={18} className="text-blue-500" />} label="Bạn bè" desc="Danh sách bạn và lời mời kết bạn" />
         <MenuLink href="/my-matches" icon={<Calendar size={18} className="text-green-500" />} label="Trận của tôi" desc="Xem lịch, hủy tham gia, lịch sử" />
         <MenuLink href="/profile/achievements" icon={<Trophy size={18} className="text-amber-500" />} label="Thành tựu & Huy hiệu" desc="Xem tiến trình và badge đã đạt" />
         <MenuLink href="/marketplace" icon={<ShoppingBag size={18} className="text-green-500" />} label="Chợ đồ thể thao" desc="Mua bán đồ cũ, tìm deals" />

@@ -67,6 +67,7 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('badges')
   const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>('NONE')
+  const [friendshipId, setFriendshipId] = useState<number | null>(null)
   const [friendLoading, setFriendLoading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 
@@ -84,8 +85,11 @@ export default function PublicProfilePage() {
         setCurrentUserId(currId)
 
         if (currId && currId !== userId) {
-          return apiFetch<{ status: FriendshipStatus }>(`/friends/${userId}/status`)
-            .then(data => setFriendshipStatus(data.status))
+          return apiFetch<{ status: FriendshipStatus; friendship_id?: number }>(`/friends/${userId}/status`)
+            .then((data) => {
+              setFriendshipStatus(data.status)
+              setFriendshipId(data.friendship_id ?? null)
+            })
             .catch(() => {})
         }
       })
@@ -98,19 +102,18 @@ export default function PublicProfilePage() {
     try {
       if (action === 'add') {
         await apiFetch(`/friends/request/${userId}`, { method: 'POST' })
-        setFriendshipStatus('PENDING_FROM_ME')
-        toast.success('Thêm bạn bè thành công!')
+        const statusRes = await apiFetch<{ status: FriendshipStatus; friendship_id?: number }>(`/friends/${userId}/status`)
+        setFriendshipStatus(statusRes.status)
+        setFriendshipId(statusRes.friendship_id ?? null)
+        toast.success('Đã gửi lời mời kết bạn!')
       } else if (action === 'cancel') {
-        const requests = await apiFetch<{ requests: any[] }>('/friends/requests/pending')
-        const friendshipId = requests.requests.find(r => r.sender_id === userId)?.id
         if (friendshipId) {
           await apiFetch(`/friends/${friendshipId}/reject`, { method: 'POST' })
         }
         setFriendshipStatus('NONE')
+        setFriendshipId(null)
         toast.success('Đã hủy yêu cầu kết bạn')
       } else if (action === 'accept') {
-        const requests = await apiFetch<{ requests: any[] }>('/friends/requests/pending')
-        const friendshipId = requests.requests.find(r => r.sender_id === userId)?.id
         if (friendshipId) {
           await apiFetch(`/friends/${friendshipId}/accept`, { method: 'POST' })
           setFriendshipStatus('ACCEPTED')

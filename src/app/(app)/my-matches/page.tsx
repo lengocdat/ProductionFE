@@ -149,7 +149,14 @@ export default function MyMatchesPage() {
                         {match.court_name && <p className="text-[10px] text-blue-600">🏟️ {match.court_name}{match.court_number ? ` · Sân ${match.court_number}` : ''}</p>}
                         <p className="text-[11px] text-gray-500 flex items-center gap-1"><Clock size={10} /> {match.match_date} · {match.start_time.slice(0, 5)} - {match.end_time.slice(0, 5)}</p>
                         <p className="text-[11px] text-gray-500 flex items-center gap-1"><Users size={10} /> {match.filled_slots}/{match.max_slots} slots {match.price_per_slot > 0 && `· ${match.price_per_slot.toLocaleString('vi-VN')}đ`}</p>
-                        {match.host && <p className="text-[10px] text-gray-400">Host: {match.host.username}</p>}
+                        {match.host && (
+                          <p className="text-[10px] text-gray-400">
+                            Host:{' '}
+                            <Link href={`/users/${match.host.id}`} className="text-green-600 font-medium hover:underline">
+                              {match.host.username}
+                            </Link>
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
