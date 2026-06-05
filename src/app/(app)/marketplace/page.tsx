@@ -1,23 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, ShieldCheck, ChevronLeft, ChevronRight, MessageSquare, X, Tag } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Search, SlidersHorizontal, ShieldCheck, Store, Plus, X, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useRouter } from 'next/navigation'
+import { apiFetch } from '@/lib/api'
+import { clsx } from 'clsx'
 
-// --- Types ---
 interface MarketItem {
   id: number
   seller_id: number
   item_name: string
-  description: string
+  description?: string
   category: string
-  sport_type: string
-  price: number
+  sport_type?: string
+  price_vnd: number
   original_price?: number
   condition: string
-  images: string[]
-  location_address: string
+  image_urls: string[]
+  location_address?: string
   status: string
   view_count: number
   created_at: string
@@ -29,7 +30,6 @@ interface MarketItem {
   }
 }
 
-// --- Constants ---
 const CATEGORIES = [
   { value: '', label: 'Tất cả', icon: '🛍️' },
   { value: 'RACKET', label: 'Vợt', icon: '🏸' },
@@ -42,344 +42,303 @@ const CATEGORIES = [
   { value: 'OTHER', label: 'Khác', icon: '📦' },
 ]
 
-const CONDITION_LABELS: Record<string, { label: string; color: string }> = {
-  'NEW': { label: 'Mới 100%', color: 'bg-green-100 text-green-700' },
-  'LIKE_NEW': { label: 'Như mới 99%', color: 'bg-emerald-50 text-emerald-700' },
-  'GOOD': { label: 'Tốt 90%', color: 'bg-blue-50 text-blue-700' },
-  'FAIR': { label: 'Khá 80%', color: 'bg-yellow-50 text-yellow-700' },
-  'WORN': { label: 'Đã qua sử dụng', color: 'bg-gray-100 text-gray-600' },
+const CAT_ICON: Record<string, string> = {
+  RACKET: '🏸', SHOES: '👟', CLOTHING: '👕', SHUTTLECOCK: '🪶',
+  BALL: '⚽', BAG: '🎒', ACCESSORY: '🧢', OTHER: '📦',
 }
 
-function formatVND(price: number): string {
-  return price.toLocaleString('vi-VN') + 'đ'
+const CONDITION_LABEL: Record<string, { text: string; color: string }> = {
+  NEW:      { text: 'Mới 100%',  color: 'bg-green-500 text-white' },
+  LIKE_NEW: { text: 'Như mới',   color: 'bg-emerald-400 text-white' },
+  GOOD:     { text: 'Tốt 95%',   color: 'bg-blue-500 text-white' },
+  FAIR:     { text: 'Khá 90%',   color: 'bg-yellow-500 text-white' },
+  WORN:     { text: 'Đã dùng',   color: 'bg-gray-500 text-white' },
 }
 
-// --- MOCK DATA (replace with real API when backend ready) ---
-const MOCK_ITEMS: MarketItem[] = [
-  { id: 1, seller_id: 1, item_name: 'Vợt Yonex Astrox 88D Pro', description: 'Vợt chính hãng, đã thay lưới 1 lần. Cân nặng 83g. Phù hợp lối đánh tấn công mạnh.', category: 'RACKET', sport_type: 'BADMINTON', price: 2500000, original_price: 4200000, condition: 'GOOD', images: ['/placeholder-racket.jpg'], location_address: 'Quận 7, TP.HCM', status: 'ACTIVE', view_count: 45, created_at: '2026-06-01', seller: { id: 1, username: 'host_minh', trusted_seller: true } },
-  { id: 2, seller_id: 2, item_name: 'Giày Victor A922 size 42', description: 'Mới mua 2 tuần, đi không vừa size nên bán lại. Còn hộp đầy đủ.', category: 'SHOES', sport_type: 'BADMINTON', price: 800000, original_price: 1200000, condition: 'LIKE_NEW', images: ['/placeholder-shoes.jpg'], location_address: 'Bình Thạnh, TP.HCM', status: 'ACTIVE', view_count: 23, created_at: '2026-06-01', seller: { id: 2, username: 'player_an', trusted_seller: false } },
-  { id: 3, seller_id: 1, item_name: 'Túi vợt Lining 6 ngăn', description: 'Túi đựng 6 vợt, có ngăn giày riêng. Màu đen xanh.', category: 'BAG', sport_type: 'BADMINTON', price: 350000, condition: 'GOOD', images: ['/placeholder-bag.jpg'], location_address: 'Quận 1, TP.HCM', status: 'ACTIVE', view_count: 12, created_at: '2026-05-30', seller: { id: 1, username: 'host_minh', trusted_seller: true } },
-  { id: 4, seller_id: 2, item_name: 'Cầu RSL Classic xài dở (8 quả)', description: 'Hộp 12 quả còn 8, cầu tốt bay ổn định. Bán rẻ cho ai cần tập.', category: 'SHUTTLECOCK', sport_type: 'BADMINTON', price: 120000, condition: 'FAIR', images: ['/placeholder-shuttle.jpg'], location_address: 'Tân Bình, TP.HCM', status: 'ACTIVE', view_count: 8, created_at: '2026-05-29', seller: { id: 2, username: 'player_an', trusted_seller: false } },
-  { id: 5, seller_id: 1, item_name: 'Áo Yonex chính hãng size L', description: 'Áo thi đấu Yonex Japan market. Chất vải thấm hút mồ hôi cực tốt.', category: 'CLOTHING', sport_type: 'BADMINTON', price: 450000, original_price: 900000, condition: 'LIKE_NEW', images: ['/placeholder-shirt.jpg'], location_address: 'Quận 3, TP.HCM', status: 'ACTIVE', view_count: 31, created_at: '2026-05-28', seller: { id: 1, username: 'host_minh', trusted_seller: true } },
-  { id: 6, seller_id: 2, item_name: 'Quấn cán vợt Kumpoo (10 cuộn)', description: 'Quấn cán xịn, bám tay, không trơn. Bán nguyên lốc 10 cuộn.', category: 'ACCESSORY', sport_type: 'BADMINTON', price: 150000, condition: 'NEW', images: ['/placeholder-grip.jpg'], location_address: 'Gò Vấp, TP.HCM', status: 'ACTIVE', view_count: 5, created_at: '2026-05-27', seller: { id: 2, username: 'player_an', trusted_seller: false } },
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Mới nhất' },
+  { value: 'price_asc', label: 'Giá thấp đến cao' },
+  { value: 'price_desc', label: 'Giá cao đến thấp' },
 ]
 
+function fmt(n: number) { return n.toLocaleString('vi-VN') + 'đ' }
+
+function discountPct(price: number, original: number) {
+  return Math.round((1 - price / original) * 100)
+}
+
 export default function MarketplacePage() {
-  const [items] = useState<MarketItem[]>(MOCK_ITEMS)
-  const [categoryFilter, setCategoryFilter] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedItem, setSelectedItem] = useState<MarketItem | null>(null)
+  const router = useRouter()
+  const [items, setItems] = useState<MarketItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [category, setCategory] = useState('')
+  const [sort, setSort] = useState('newest')
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [showSort, setShowSort] = useState(false)
+  const offsetRef = useRef(0)
+  const LIMIT = 20
 
-  // In production, fetch from API:
-  // useEffect(() => {
-  //   apiFetch<{ items: MarketItem[] }>(`/market/items?category=${categoryFilter}&q=${searchQuery}`)
-  //     .then((d) => setItems(d.items || []))
-  // }, [categoryFilter, searchQuery])
+  const buildQuery = useCallback((cat: string, q: string, offset: number) => {
+    const params = new URLSearchParams()
+    if (cat) params.set('category', cat)
+    if (q) params.set('q', q)
+    params.set('limit', String(LIMIT))
+    params.set('offset', String(offset))
+    return `/market/items?${params.toString()}`
+  }, [])
 
-  const filteredItems = items.filter((item) => {
-    if (categoryFilter && item.category !== categoryFilter) return false
-    if (searchQuery && !item.item_name.toLowerCase().includes(searchQuery.toLowerCase())) return false
-    return true
-  })
+  const sortItems = useCallback((list: MarketItem[], s: string) => {
+    return [...list].sort((a, b) => {
+      if (s === 'price_asc') return a.price_vnd - b.price_vnd
+      if (s === 'price_desc') return b.price_vnd - a.price_vnd
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }, [])
+
+  const fetchItems = useCallback(async (cat: string, q: string, reset = true) => {
+    if (reset) { setLoading(true); offsetRef.current = 0 }
+    else setLoadingMore(true)
+
+    try {
+      const res = await apiFetch<{ items: MarketItem[] }>(buildQuery(cat, q, offsetRef.current))
+      const fetched = res.items || []
+      setItems(prev => reset ? fetched : [...prev, ...fetched])
+      setHasMore(fetched.length === LIMIT)
+      offsetRef.current += fetched.length
+    } catch {
+      if (reset) setItems([])
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [buildQuery])
+
+  useEffect(() => { fetchItems(category, search) }, [category, search])
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 500)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  const displayed = sortItems(items, sort)
 
   return (
-    <div className="px-4 pt-3 pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-lg font-bold text-gray-900">🛍️ Chợ đồ thể thao</h1>
-        <Link href="/marketplace/sell" className="rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-600">
-          + Đăng bán
-        </Link>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm vợt, giày, phụ kiện..."
-          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-2.5 text-sm outline-none focus:border-green-400"
-        />
-      </div>
-
-      {/* Category Filter */}
-      <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => setCategoryFilter(cat.value)}
-            className={`flex-shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-all ${
-              categoryFilter === cat.value
-                ? 'bg-green-100 text-green-700 border border-green-300'
-                : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            <span>{cat.icon}</span> {cat.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Masonry Grid */}
-      {filteredItems.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-3xl mb-2">📦</p>
-          <p className="text-sm">Không có sản phẩm nào</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Shopee-style top bar */}
+      <div className="sticky top-0 z-30 bg-orange-500 px-3 py-2 shadow-md">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 rounded-lg bg-white px-3 py-2">
+            <Search size={15} className="text-gray-400 shrink-0" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Tìm vợt, giày, phụ kiện..."
+              className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
+            />
+            {searchInput && (
+              <button onClick={() => { setSearchInput(''); setSearch('') }}>
+                <X size={14} className="text-gray-400" />
+              </button>
+            )}
+          </div>
+          <Link href="/marketplace/my" className="p-2 rounded-lg bg-orange-400 hover:bg-orange-300">
+            <Store size={18} className="text-white" />
+          </Link>
+          <Link href="/marketplace/sell" className="p-2 rounded-lg bg-white">
+            <Plus size={18} className="text-orange-500" />
+          </Link>
         </div>
-      ) : (
-        <div className="columns-2 gap-3 space-y-3">
-          {filteredItems.map((item) => (
-            <ItemCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+      </div>
+
+      {/* Category chips */}
+      <div className="bg-white border-b">
+        <div className="flex gap-1.5 overflow-x-auto py-2.5 px-3 scrollbar-hide">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.value}
+              onClick={() => setCategory(cat.value)}
+              className={clsx(
+                'flex-shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-medium whitespace-nowrap border transition-all',
+                category === cat.value
+                  ? 'bg-orange-500 text-white border-orange-500'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'
+              )}
+            >
+              {cat.icon} {cat.label}
+            </button>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Item Detail Modal */}
-      <ItemDetailModal item={selectedItem} open={!!selectedItem} onClose={() => setSelectedItem(null)} />
+      {/* Sort + count bar */}
+      <div className="flex items-center justify-between px-3 py-2 bg-white border-b">
+        <span className="text-[11px] text-gray-500">
+          {loading ? '...' : `${items.length} sản phẩm`}
+          {search && <span className="text-orange-500"> · "{search}"</span>}
+        </span>
+        <div className="relative">
+          <button
+            onClick={() => setShowSort(v => !v)}
+            className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-[11px] font-medium text-gray-700 bg-white"
+          >
+            <SlidersHorizontal size={12} />
+            {SORT_OPTIONS.find(o => o.value === sort)?.label}
+            <ChevronDown size={12} className={clsx('transition-transform', showSort && 'rotate-180')} />
+          </button>
+          {showSort && (
+            <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl bg-white shadow-lg border border-gray-100 py-1 overflow-hidden">
+              {SORT_OPTIONS.map(o => (
+                <button
+                  key={o.value}
+                  onClick={() => { setSort(o.value); setShowSort(false) }}
+                  className={clsx(
+                    'w-full px-4 py-2.5 text-left text-xs transition-colors',
+                    sort === o.value ? 'bg-orange-50 text-orange-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                  )}
+                >
+                  {o.value === sort && '✓ '}{o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div className="p-2">
+        {loading ? (
+          <div className="grid grid-cols-2 gap-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-xl bg-white overflow-hidden shadow-sm animate-pulse">
+                <div className="aspect-square bg-gray-200" />
+                <div className="p-2.5 space-y-1.5">
+                  <div className="h-3 bg-gray-200 rounded w-3/4" />
+                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                  <div className="h-2.5 bg-gray-100 rounded w-2/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : displayed.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <span className="text-4xl mb-3">📦</span>
+            <p className="text-sm font-medium">Không có sản phẩm nào</p>
+            <p className="text-xs mt-1">Hãy là người đầu tiên đăng bán!</p>
+            <Link href="/marketplace/sell" className="mt-4 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white">
+              Đăng bán ngay
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              {displayed.map(item => (
+                <ItemCard key={item.id} item={item} onClick={() => router.push(`/marketplace/${item.id}`)} />
+              ))}
+            </div>
+
+            {/* Load more */}
+            {hasMore && (
+              <button
+                onClick={() => fetchItems(category, search, false)}
+                disabled={loadingMore}
+                className="mt-4 w-full rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-600 disabled:opacity-50 hover:bg-gray-50 transition"
+              >
+                {loadingMore ? 'Đang tải...' : 'Xem thêm sản phẩm'}
+              </button>
+            )}
+            {!hasMore && items.length > 0 && (
+              <p className="mt-4 text-center text-xs text-gray-400 py-2">— Hết sản phẩm —</p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Floating sell button */}
+      <Link
+        href="/marketplace/sell"
+        className="fixed bottom-20 right-4 z-20 flex items-center gap-2 rounded-full bg-orange-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all"
+      >
+        <Plus size={18} /> Đăng bán
+      </Link>
     </div>
   )
 }
 
-// --- Item Card (Masonry) ---
 function ItemCard({ item, onClick }: { item: MarketItem; onClick: () => void }) {
-  const cond = CONDITION_LABELS[item.condition] || CONDITION_LABELS['GOOD']
-  const hasDiscount = item.original_price && item.original_price > item.price
+  const cond = CONDITION_LABEL[item.condition]
+  const hasDiscount = item.original_price && item.original_price > item.price_vnd
+  const pct = hasDiscount ? discountPct(item.price_vnd, item.original_price!) : 0
+  const isSold = item.status === 'SOLD'
+  const coverImg = item.image_urls?.[0]
 
   return (
     <div
       onClick={onClick}
-      className="break-inside-avoid rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md cursor-pointer transition-shadow"
+      className="relative rounded-xl bg-white overflow-hidden shadow-sm hover:shadow-md cursor-pointer transition-shadow active:scale-[0.98]"
     >
-      {/* Image placeholder */}
-      <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 aspect-square flex items-center justify-center">
-        <span className="text-4xl opacity-50">
-          {item.category === 'RACKET' ? '🏸' : item.category === 'SHOES' ? '👟' : item.category === 'CLOTHING' ? '👕' : item.category === 'BAG' ? '🎒' : '📦'}
-        </span>
+      {/* Image */}
+      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+        {coverImg ? (
+          <img src={coverImg} alt={item.item_name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-4xl opacity-40">{CAT_ICON[item.category] || '📦'}</span>
+          </div>
+        )}
+        {/* Discount badge */}
+        {hasDiscount && !isSold && (
+          <span className="absolute top-1.5 left-1.5 rounded-md bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
+            -{pct}%
+          </span>
+        )}
         {/* Condition badge */}
-        <span className={`absolute top-2 left-2 rounded-md px-1.5 py-0.5 text-[9px] font-semibold ${cond.color}`}>
-          {cond.label}
-        </span>
+        {cond && !isSold && (
+          <span className={clsx('absolute bottom-1.5 left-1.5 rounded px-1.5 py-0.5 text-[8px] font-semibold', cond.color)}>
+            {cond.text}
+          </span>
+        )}
+        {/* Sold overlay */}
+        {isSold && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-700">ĐÃ BÁN</span>
+          </div>
+        )}
       </div>
 
       {/* Info */}
-      <div className="p-3">
-        <h3 className="text-xs font-semibold text-gray-900 line-clamp-2 leading-tight">{item.item_name}</h3>
-
-        {/* Price */}
-        <div className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-sm font-bold text-red-600">{formatVND(item.price)}</span>
+      <div className="p-2.5">
+        <h3 className="text-[12px] font-medium text-gray-900 line-clamp-2 leading-tight mb-1.5">
+          {item.item_name}
+        </h3>
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-bold text-red-500">{fmt(item.price_vnd)}</span>
           {hasDiscount && (
-            <span className="text-[10px] text-gray-400 line-through">{formatVND(item.original_price!)}</span>
+            <span className="text-[10px] text-gray-400 line-through">{fmt(item.original_price!)}</span>
           )}
         </div>
-
-        {/* Seller */}
-        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-50">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[8px] font-bold text-gray-600">
-            {item.seller?.username.charAt(0).toUpperCase()}
+        {/* Seller + location */}
+        <div className="flex items-center justify-between mt-1.5">
+          <div className="flex items-center gap-1">
+            <div className="h-4 w-4 rounded-full bg-orange-100 flex items-center justify-center text-[8px] font-bold text-orange-600 overflow-hidden">
+              {item.seller?.avatar_url
+                ? <img src={item.seller.avatar_url} className="w-full h-full object-cover" alt="" />
+                : item.seller?.username?.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-[10px] text-gray-500 truncate max-w-[65px]">{item.seller?.username}</span>
+            {item.seller?.trusted_seller && <ShieldCheck size={10} className="text-amber-500 shrink-0" />}
           </div>
-          <span className="text-[10px] text-gray-600 truncate">{item.seller?.username}</span>
-          {item.seller?.trusted_seller && (
-            <span className="group relative">
-              <ShieldCheck size={12} className="text-amber-500 fill-amber-50" />
-              {/* Tooltip */}
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-36 rounded-lg bg-gray-900 px-2 py-1 text-[9px] text-white text-center shadow-lg">
-                Người bán uy tín: Đánh giá &gt;4.5 sao trên 10+ giao dịch
-              </span>
+          {item.location_address && (
+            <span className="text-[9px] text-gray-400 truncate max-w-[55px]">
+              {item.location_address.split(',').pop()?.trim()}
             </span>
           )}
         </div>
       </div>
     </div>
-  )
-}
-
-// --- Item Detail Modal ---
-function ItemDetailModal({
-  item,
-  open,
-  onClose,
-}: {
-  item: MarketItem | null
-  open: boolean
-  onClose: () => void
-}) {
-  const [currentImage, setCurrentImage] = useState(0)
-
-  if (!item) return null
-
-  const cond = CONDITION_LABELS[item.condition] || CONDITION_LABELS["GOOD"]
-  const hasDiscount =
-    item.original_price && item.original_price > item.price
-  const discountPercent = hasDiscount
-    ? Math.round((1 - item.price / item.original_price!) * 100)
-    : 0
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent showCloseButton={false} className="max-w-md max-h-[90vh] p-0 overflow-y-auto rounded-2xl">
-        {/* HEADER IMAGE SECTION */}
-        <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-          <span className="text-6xl opacity-40">
-            {item.category === "RACKET"
-              ? "🏸"
-              : item.category === "SHOES"
-              ? "👟"
-              : "📦"}
-          </span>
-
-          {/* Close button (Radix already has ESC + overlay close) */}
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 rounded-full bg-black/30 p-1.5 text-white hover:bg-black/50"
-          >
-            <X size={18} />
-          </button>
-
-          {/* Condition badge */}
-          <span
-            className={`absolute top-3 left-3 rounded-lg px-2 py-1 text-[10px] font-semibold ${cond.color}`}
-          >
-            {cond.label}
-          </span>
-
-          {/* Gallery nav */}
-          {item.images?.length > 1 && (
-            <>
-              <button
-                onClick={() =>
-                  setCurrentImage((p) => Math.max(0, p - 1))
-                }
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 shadow"
-              >
-                <ChevronLeft size={16} />
-              </button>
-
-              <button
-                onClick={() =>
-                  setCurrentImage((p) =>
-                    Math.min(item.images.length - 1, p + 1)
-                  )
-                }
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 shadow"
-              >
-                <ChevronRight size={16} />
-              </button>
-
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
-                {item.images.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      i === currentImage
-                        ? "bg-white"
-                        : "bg-white/50"
-                    }`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* BODY */}
-        <div className="p-5">
-          <DialogHeader className="space-y-2">
-            <DialogTitle className="text-lg font-bold">
-              {item.item_name}
-            </DialogTitle>
-
-            {/* PRICE */}
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-red-600">
-                {formatVND(item.price)}
-              </span>
-
-              {hasDiscount && (
-                <>
-                  <span className="text-sm text-gray-400 line-through">
-                    {formatVND(item.original_price!)}
-                  </span>
-
-                  <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600">
-                    -{discountPercent}%
-                  </span>
-                </>
-              )}
-            </div>
-          </DialogHeader>
-
-          {/* META */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] flex items-center gap-1">
-              <Tag size={10} />
-              {item.category}
-            </span>
-
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px]">
-              📍 {item.location_address}
-            </span>
-
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px]">
-              👁️ {item.view_count}
-            </span>
-          </div>
-
-          {/* DESCRIPTION */}
-          <div className="mt-4">
-            <h4 className="text-sm font-semibold mb-1">Mô tả</h4>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {item.description}
-            </p>
-          </div>
-
-          {/* SELLER */}
-          <div className="mt-4 flex items-center justify-between rounded-xl border p-3">
-            <div className="flex items-center gap-2.5">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700">
-                {item.seller?.username?.charAt(0)}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold">
-                    {item.seller?.username}
-                  </span>
-
-                  {item.seller?.trusted_seller && (
-                    <ShieldCheck
-                      size={14}
-                      className="text-amber-500"
-                    />
-                  )}
-                </div>
-
-                <p className="text-[10px] text-gray-500">
-                  {item.seller?.trusted_seller
-                    ? "⭐ Uy tín"
-                    : "Người bán"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ACTIONS */}
-          <div className="flex gap-2 mt-5">
-            <button
-              onClick={onClose}
-              className="flex-1 rounded-xl border py-3 text-sm"
-            >
-              Đóng
-            </button>
-
-            <button className="flex-1 rounded-xl bg-green-500 py-3 text-sm font-bold text-white flex items-center justify-center gap-2">
-              <MessageSquare size={16} />
-              Chat
-            </button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }

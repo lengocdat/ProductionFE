@@ -5,6 +5,7 @@ import { Users, UserPlus, Loader2, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
+import EquippedBadge from '@/components/EquippedBadge'
 
 interface Friend {
   id: number
@@ -12,6 +13,8 @@ interface Friend {
   avatar_url: string
   trust_tier: string
   is_premium: boolean
+  equipped_badge_name: string
+  equipped_badge_icon: string
 }
 
 interface PendingRequest {
@@ -19,6 +22,8 @@ interface PendingRequest {
   sender_id: number
   sender_username: string
   sender_avatar_url: string
+  equipped_badge_name: string
+  equipped_badge_icon: string
   created_at: string
 }
 
@@ -138,10 +143,20 @@ export default function FriendsPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{f.username}</p>
-                    <p className="text-[10px] text-gray-400">
-                      {f.is_premium ? '⭐ Premium' : f.trust_tier === 'VERIFIED_HOST' ? '✅ Uy tín' : 'Thành viên'}
-                    </p>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{f.username}</p>
+                      {f.is_premium && (
+                        <span className="shrink-0 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-1.5 py-px text-[8px] font-bold text-white">PRO</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[10px] text-gray-400">
+                        {f.trust_tier === 'VERIFIED_HOST' ? '✅ Uy tín' : f.trust_tier === 'REGULAR' ? '👍 Thường xuyên' : '🆕 Mới'}
+                      </p>
+                      {f.equipped_badge_icon && (
+                        <EquippedBadge iconUrl={f.equipped_badge_icon} name={f.equipped_badge_name} size="xs" />
+                      )}
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -162,15 +177,25 @@ export default function FriendsPage() {
               {requests.map((req) => (
                 <div key={req.id} className="rounded-xl border border-gray-100 bg-white p-3">
                   <Link href={`/users/${req.sender_id}`} className="flex items-center gap-3 mb-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 overflow-hidden">
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 overflow-hidden">
                       {req.sender_avatar_url ? (
                         <img src={req.sender_avatar_url} alt="" className="h-10 w-10 object-cover" />
                       ) : (
                         req.sender_username.charAt(0).toUpperCase()
                       )}
+                      {req.equipped_badge_icon && (
+                        <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-sm border border-amber-200">
+                          <img src={req.equipped_badge_icon} alt={req.equipped_badge_name} className="w-3.5 h-3.5" />
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{req.sender_username}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-gray-900">{req.sender_username}</p>
+                        {req.equipped_badge_name && !req.equipped_badge_icon && (
+                          <EquippedBadge iconUrl="" name={req.equipped_badge_name} size="xs" showName />
+                        )}
+                      </div>
                       <p className="text-[10px] text-gray-400">
                         {new Date(req.created_at).toLocaleString('vi-VN', {
                           day: '2-digit',

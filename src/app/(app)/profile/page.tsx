@@ -5,20 +5,34 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import EquippedBadge from '@/components/EquippedBadge'
 
 interface User { id: number; username: string; email: string; role: string; tier: string; negative_reports: number; no_show_count: number; created_at: string }
 interface Rating { id: number; stars: number; is_negative: boolean; review_text: string; created_at: string }
+interface BadgeSummary { equipped_badge_name: string; equipped_badge_icon: string; unlocked: number; total: number }
 
 export default function ProfilePage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [ratings, setRatings] = useState<Rating[]>([])
+  const [badgeSummary, setBadgeSummary] = useState<BadgeSummary | null>(null)
 
   useEffect(() => {
     apiFetch<{ user: User }>('/auth/me').then((d) => {
       setUser(d.user)
       apiFetch<{ ratings: Rating[] }>(`/ratings/${d.user.id}`).then((r) => setRatings(r.ratings || [])).catch(() => {})
     })
+    apiFetch<{ badges: Array<{ name: string; icon_url: string; is_equipped: boolean; is_unlocked: boolean }>; unlocked: number; total: number }>('/badges/my')
+      .then((d) => {
+        const equipped = d.badges.find(b => b.is_equipped)
+        setBadgeSummary({
+          equipped_badge_name: equipped?.name ?? '',
+          equipped_badge_icon: equipped?.icon_url ?? '',
+          unlocked: d.unlocked,
+          total: d.total,
+        })
+      })
+      .catch(() => {})
   }, [])
 
   function logout() {
@@ -33,15 +47,25 @@ export default function ProfilePage() {
   return (
     <div className="px-4 py-5">
       <div className="rounded-2xl bg-white p-5 shadow-sm text-center">
-        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-xl font-bold text-green-600">
+        <div className={`mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-xl font-bold text-green-600 ${badgeSummary?.equipped_badge_icon ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
           {user.username.charAt(0).toUpperCase()}
         </div>
+        {badgeSummary?.equipped_badge_name && (
+          <div className="flex justify-center mb-2">
+            <EquippedBadge iconUrl={badgeSummary.equipped_badge_icon} name={badgeSummary.equipped_badge_name} size="sm" />
+          </div>
+        )}
         <h1 className="text-lg font-bold text-gray-900">{user.username}</h1>
         <p className="text-xs text-gray-500">{user.email}</p>
         <div className="flex justify-center gap-2 mt-2">
           <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-medium text-blue-700">
             {user.tier === 'VERIFIED_HOST' ? '✅ Uy tín' : user.tier === 'REGULAR' ? '👍 Thường xuyên' : '🆕 Mới'}
           </span>
+          {badgeSummary && badgeSummary.total > 0 && (
+            <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-medium text-amber-700">
+              🏆 {badgeSummary.unlocked}/{badgeSummary.total}
+            </span>
+          )}
         </div>
         {user.negative_reports > 3 && (
           <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-red-50 p-2 text-xs text-red-700">

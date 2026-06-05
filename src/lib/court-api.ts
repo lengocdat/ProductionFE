@@ -52,6 +52,8 @@ export interface CourtBooking {
   note?: string
   created_at: string
   booker_name: string
+  court_name?: string
+  court_address?: string
 }
 
 // --- B2C API ---
@@ -67,6 +69,10 @@ export function getCourtByID(id: number) {
 
 export function getCourtAvailability(courtId: number, date: string) {
   return apiFetch<CourtAvailability>(`/courts/${courtId}/availability?date=${date}`)
+}
+
+export function getMyBookings() {
+  return apiFetch<{ bookings: CourtBooking[] }>('/courts/bookings/my')
 }
 
 export function createBooking(courtId: number, payload: {

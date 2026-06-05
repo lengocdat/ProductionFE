@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Star, Shield, AlertTriangle, Calendar, Award, Trophy, Clock, CheckCircle, XCircle, Ban, UserPlus } from 'lucide-react'
+import { ArrowLeft, Star, Shield, AlertTriangle, Award, Trophy, Clock, XCircle, Ban, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
+import EquippedBadge from '@/components/EquippedBadge'
 
 interface PublicProfile {
   user: {
@@ -158,7 +159,7 @@ export default function PublicProfilePage() {
       <div className={`rounded-2xl p-5 shadow-sm text-center ${isLowTrust ? 'bg-red-50 border border-red-200' : 'bg-white'}`}>
         <div className="relative mx-auto mb-3 w-fit">
           <div className={`flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold ${
-            user.equipped_badge ? 'ring-3 ring-amber-400' : ''
+            user.equipped_badge ? 'ring-2 ring-amber-400 ring-offset-2' : ''
           } ${user.avatar_url ? '' : 'bg-green-100 text-green-600'}`}>
             {user.avatar_url ? (
               <img src={user.avatar_url} alt={user.username} className="h-20 w-20 rounded-full object-cover" />
@@ -166,12 +167,16 @@ export default function PublicProfilePage() {
               user.username.charAt(0).toUpperCase()
             )}
           </div>
-          {user.equipped_badge && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-700 whitespace-nowrap">
-              🏆 {user.equipped_badge}
-            </span>
-          )}
         </div>
+        {user.equipped_badge && (
+          <div className="flex justify-center mb-1">
+            <EquippedBadge
+              iconUrl={badges.find(b => b.is_unlocked && b.name === user.equipped_badge)?.icon_url ?? ''}
+              name={user.equipped_badge}
+              size="md"
+            />
+          </div>
+        )}
 
         <h1 className="text-lg font-bold text-gray-900">{user.username}</h1>
         <div className="flex justify-center gap-2 mt-1.5">
@@ -268,45 +273,81 @@ export default function PublicProfilePage() {
   )
 }
 
+const TIER_LABEL: Record<string, string> = { BRONZE: 'Tập Sự', SILVER: 'Chuyên Nghiệp', GOLD: 'Huyền Thoại' }
+const BADGE_GROUP_ORDER = ['hoat_dong', 'bau_so', 'choi_dep', 'thuong_gia', 'premium']
+const BADGE_GROUP_LABEL: Record<string, string> = {
+  hoat_dong: '⚔️ Hoạt động',
+  bau_so: '🏟️ Bầu sô',
+  choi_dep: '⭐ Chơi đẹp',
+  thuong_gia: '🛒 Thương gia',
+  premium: '💎 Premium',
+}
+
 function BadgesTab({ badges }: { badges: Badge[] }) {
   if (!badges || badges.length === 0) {
-    return <EmptyState text="Chưa có huy hiệu nào trong hệ thống" />
+    return <EmptyState text="Chưa có huy hiệu nào" />
   }
 
   const unlocked = badges.filter(b => b.is_unlocked).length
+  const grouped = BADGE_GROUP_ORDER.reduce<Record<string, Badge[]>>((acc, g) => {
+    acc[g] = badges.filter(b => b.badge_group === g)
+    return acc
+  }, {})
 
   return (
-    <div>
-      <div className="mb-3 text-center">
-        <span className="text-sm font-medium text-gray-700">
-          🏆 Đã mở khóa: <span className="font-bold text-green-600">{unlocked}</span> / {badges.length}
-        </span>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xs text-gray-500">Huy hiệu đã mở</span>
+        <span className="text-xs font-bold text-green-600">{unlocked} / {badges.length}</span>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {badges.map((badge) => (
-          <div
-            key={badge.id}
-            className={`rounded-xl p-3 text-center transition ${
-              badge.is_unlocked
-                ? 'bg-white shadow-sm border border-green-100'
-                : 'bg-gray-50 opacity-50 grayscale'
-            }`}
-          >
-            <div className="text-2xl mb-1">
-              {badge.icon_url ? (
-                <img src={badge.icon_url} alt={badge.name} className="mx-auto h-8 w-8" />
-              ) : (
-                getTierEmoji(badge.tier)
-              )}
+      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all"
+          style={{ width: `${badges.length > 0 ? (unlocked / badges.length) * 100 : 0}%` }}
+        />
+      </div>
+
+      {BADGE_GROUP_ORDER.map((groupKey) => {
+        const group = grouped[groupKey]
+        if (!group || group.length === 0) return null
+        const groupUnlocked = group.filter(b => b.is_unlocked).length
+        return (
+          <div key={groupKey}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-600">{BADGE_GROUP_LABEL[groupKey]}</span>
+              <div className="flex gap-1">
+                {group.map(b => (
+                  <span key={b.id} className={`w-2 h-2 rounded-full ${b.is_unlocked ? getTierDot(b.tier) : 'bg-gray-200'}`} />
+                ))}
+              </div>
             </div>
-            <p className="text-xs font-semibold text-gray-800 truncate">{badge.name}</p>
-            <p className="text-[9px] text-gray-500 line-clamp-2 mt-0.5">{badge.description}</p>
-            <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[8px] font-medium ${getTierColor(badge.tier)}`}>
-              {badge.tier}
-            </span>
+            <div className="grid grid-cols-3 gap-2">
+              {group.map((badge) => (
+                <div
+                  key={badge.id}
+                  className={`rounded-xl p-2.5 text-center transition ${
+                    badge.is_unlocked
+                      ? 'bg-white shadow-sm border border-gray-100'
+                      : 'bg-gray-50 opacity-45 grayscale'
+                  }`}
+                >
+                  <div className="flex justify-center mb-1.5">
+                    {badge.icon_url ? (
+                      <img src={badge.icon_url} alt={badge.name} className="h-8 w-8" />
+                    ) : (
+                      <span className="text-xl">{getTierEmoji(badge.tier)}</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] font-semibold text-gray-800 leading-tight line-clamp-2">{badge.name}</p>
+                  <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[8px] font-medium ${getTierColor(badge.tier)}`}>
+                    {TIER_LABEL[badge.tier] || badge.tier}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 }
@@ -444,8 +485,17 @@ function getTierEmoji(tier: string) {
 function getTierColor(tier: string) {
   switch (tier) {
     case 'GOLD': return 'bg-amber-100 text-amber-700'
-    case 'SILVER': return 'bg-gray-200 text-gray-700'
+    case 'SILVER': return 'bg-blue-100 text-blue-700'
     case 'BRONZE': return 'bg-orange-100 text-orange-700'
     default: return 'bg-gray-100 text-gray-600'
+  }
+}
+
+function getTierDot(tier: string) {
+  switch (tier) {
+    case 'GOLD': return 'bg-amber-400'
+    case 'SILVER': return 'bg-blue-400'
+    case 'BRONZE': return 'bg-orange-500'
+    default: return 'bg-gray-400'
   }
 }

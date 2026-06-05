@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="60%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fef9c3" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#fef9c3" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="20" cy="20" r="19" fill="url(#bg)" stroke="#fef08a" stroke-width="1.5"/>
+  <circle cx="20" cy="20" r="12" fill="url(#glow)"/>
+  <!-- Large center star -->
+  <path d="M20 10 L22.4 17 L30 17 L24 21.5 L26.4 28.5 L20 24 L13.6 28.5 L16 21.5 L10 17 L17.6 17 Z" fill="#fef08a" stroke="#fbbf24" stroke-width="0.6"/>
+  <!-- 4 sparkle dots -->
+  <circle cx="20" cy="7" r="1.2" fill="#fef08a"/>
+  <circle cx="20" cy="33" r="1.2" fill="#fef08a"/>
+  <circle cx="7" cy="20" r="1.2" fill="#fef08a"/>
+  <circle cx="33" cy="20" r="1.2" fill="#fef08a"/>
+</svg>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar, Clock, Loader2, Plus, CheckCircle, XCircle, Ban, RefreshCw } from 'lucide-react'
+import { Calendar, Loader2, CheckCircle, XCircle, Ban, RefreshCw, TrendingUp } from 'lucide-react'
+import { toast } from 'sonner'
 import { getOwnerCourts, getCourtSchedule, updateBookingStatus, blockTimeSlot, Court, CourtBooking } from '@/lib/court-api'
 
 function formatVND(price: number) { return price.toLocaleString('vi-VN') + 'đ' }
@@ -49,9 +50,10 @@ export default function CourtOwnerDashboard() {
     setActionLoading(id)
     try {
       await updateBookingStatus(id, 'CONFIRMED')
+      toast.success('Đã xác nhận booking')
       fetchSchedule()
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi duyệt')
+      toast.error(err.message || 'Lỗi khi duyệt')
     } finally {
       setActionLoading(null)
     }
@@ -61,9 +63,10 @@ export default function CourtOwnerDashboard() {
     setActionLoading(id)
     try {
       await updateBookingStatus(id, 'CANCELLED')
+      toast.success('Đã từ chối booking')
       fetchSchedule()
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi từ chối')
+      toast.error(err.message || 'Lỗi khi từ chối')
     } finally {
       setActionLoading(null)
     }
@@ -73,10 +76,11 @@ export default function CourtOwnerDashboard() {
     if (!selectedCourt) return
     try {
       await blockTimeSlot(selectedCourt.id, payload)
+      toast.success('Đã block khung giờ')
       fetchSchedule()
       setShowBlockModal(false)
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi block giờ')
+      toast.error(err.message || 'Lỗi khi block giờ')
     }
   }
 
@@ -242,10 +246,10 @@ export default function CourtOwnerDashboard() {
                   {Array.from({ length: court.total_courts }, (_, courtIdx) => {
                     const courtNum = courtIdx + 1
                     const confirmed = confirmedBookings.find(
-                      (b) => b.court_number === courtNum && parseInt(b.start_time) <= h && parseInt(b.end_time) > h
+                      (b) => b.court_number === courtNum && parseInt(b.start_time.split(':')[0]) <= h && parseInt(b.end_time.split(':')[0]) > h
                     )
                     const pending = pendingBookings.find(
-                      (b) => b.court_number === courtNum && parseInt(b.start_time) <= h && parseInt(b.end_time) > h
+                      (b) => b.court_number === courtNum && parseInt(b.start_time.split(':')[0]) <= h && parseInt(b.end_time.split(':')[0]) > h
                     )
                     const isBooked = !!confirmed
                     const isPending = !!pending
@@ -257,12 +261,12 @@ export default function CourtOwnerDashboard() {
                           isBooked ? 'bg-green-100' : isPending ? 'bg-yellow-50' : 'hover:bg-gray-50'
                         }`}
                       >
-                        {isBooked && parseInt(confirmed.start_time) === h && (
+                        {isBooked && parseInt(confirmed.start_time.split(':')[0]) === h && (
                           <span className="block rounded-md bg-green-500 px-1.5 py-0.5 text-[8px] text-white font-medium truncate">
                             {confirmed.booker_name}
                           </span>
                         )}
-                        {isPending && !isBooked && parseInt(pending.start_time) === h && (
+                        {isPending && !isBooked && parseInt(pending.start_time.split(':')[0]) === h && (
                           <span className="block rounded-md bg-yellow-400 px-1.5 py-0.5 text-[8px] text-yellow-900 font-medium truncate">
                             ⏳ {pending.booker_name}
                           </span>
@@ -288,8 +292,12 @@ export default function CourtOwnerDashboard() {
           <p className="text-[9px] text-yellow-600">Chờ duyệt</p>
         </div>
         <div className="rounded-xl bg-blue-50 p-3 text-center">
-          <p className="text-lg font-bold text-blue-700">{formatVND(confirmedBookings.reduce((s, b) => s + b.total_price, 0))}</p>
-          <p className="text-[9px] text-blue-600">Doanh thu hôm nay</p>
+          <p className="text-sm font-bold text-blue-700 truncate">
+            {formatVND(confirmedBookings.reduce((s, b) => s + b.total_price, 0))}
+          </p>
+          <p className="text-[9px] text-blue-600 flex items-center justify-center gap-0.5">
+            <TrendingUp size={8} /> Doanh thu
+          </p>
         </div>
       </div>
 

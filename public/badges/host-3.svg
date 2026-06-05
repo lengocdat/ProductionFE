@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="60%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </radialGradient>
+  </defs>
+  <circle cx="20" cy="20" r="19" fill="url(#bg)" stroke="#fef08a" stroke-width="1.5"/>
+  <!-- Trophy cup -->
+  <path d="M14 11 L26 11 L25 21 Q25 27 20 27 Q15 27 15 21 Z" fill="none" stroke="#fffbeb" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Trophy handles -->
+  <path d="M14 13 Q10 13 10 17 Q10 21 14 20" fill="none" stroke="#fffbeb" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M26 13 Q30 13 30 17 Q30 21 26 20" fill="none" stroke="#fffbeb" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Base -->
+  <line x1="20" y1="27" x2="20" y2="30" stroke="#fffbeb" stroke-width="2"/>
+  <rect x="15" y="29.5" width="10" height="2.5" rx="1.2" fill="#fde68a"/>
+  <!-- Star in cup -->
+  <path d="M20 14.5 L21 17.5 L24 17.5 L21.5 19.5 L22.5 22.5 L20 20.5 L17.5 22.5 L18.5 19.5 L16 17.5 L19 17.5 Z" fill="#fbbf24"/>
+</svg>
