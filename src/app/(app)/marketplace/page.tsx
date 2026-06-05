@@ -218,7 +218,7 @@ function ItemDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl">
+      <DialogContent showCloseButton={false} className="max-w-md max-h-[90vh] p-0 overflow-y-auto rounded-2xl">
         {/* HEADER IMAGE SECTION */}
         <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
           <span className="text-6xl opacity-40">
