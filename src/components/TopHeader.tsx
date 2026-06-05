@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bell, Users } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { apiFetch } from '@/lib/api'
 import {
   DropdownMenu,
@@ -11,10 +11,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-
-interface Props {
-  username?: string
-}
 
 interface Notification {
   id: number
@@ -24,6 +20,14 @@ interface Notification {
   match_id?: number
   is_read: boolean
   created_at: string
+}
+
+interface Props {
+  username?: string
+  notifications: Notification[]
+  notifCount: number
+  pendingFriends: number
+  onNotificationsChange: (notifications: Notification[], unreadCount: number) => void
 }
 
 function parseSenderIdFromBody(body?: string | null): number | null {
@@ -37,11 +41,8 @@ function displayNotificationBody(body?: string | null): string | null {
   return body.replace(/\nsender_id:\d+$/, '').trim() || null
 }
 
-export default function TopHeader({ username }: Props) {
+export default function TopHeader({ username, notifications, notifCount, pendingFriends, onNotificationsChange }: Props) {
   const router = useRouter()
-  const [notifCount, setNotifCount] = useState(0)
-  const [pendingFriends, setPendingFriends] = useState(0)
-  const [notifications, setNotifications] = useState<Notification[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   // Format relative time
@@ -60,39 +61,11 @@ export default function TopHeader({ username }: Props) {
     return created.toLocaleDateString('vi-VN')
   }
 
-  const fetchNotifications = () => {
-    if (!username) return
-    apiFetch<{ notifications: Notification[] }>('/notifications?limit=5')
-      .then((d) => {
-        setNotifications(d.notifications || [])
-        const unread = (d.notifications || []).filter(n => !n.is_read).length
-        setNotifCount(unread)
-      })
-      .catch(() => {})
-  }
-
-  const fetchPendingFriends = () => {
-    if (!username) return
-    apiFetch<{ requests: unknown[] }>('/friends/requests/pending')
-      .then((d) => setPendingFriends((d.requests || []).length))
-      .catch(() => {})
-  }
-
-  useEffect(() => {
-    fetchNotifications()
-    fetchPendingFriends()
-    const interval = setInterval(() => {
-      fetchNotifications()
-      fetchPendingFriends()
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [username])
-
   const handleNotificationClick = async (notif: Notification) => {
     try {
       await apiFetch(`/notifications/${notif.id}/read`, { method: 'POST' })
-      setNotifications(notifications.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
-      setNotifCount(Math.max(0, notifCount - 1))
+      const updated = notifications.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
+      onNotificationsChange(updated, Math.max(0, notifCount - 1))
       setDropdownOpen(false)
       if (notif.match_id) {
         router.push(`/matches/${notif.match_id}${notif.type === 'JOIN_REQUEST' ? '?tab=manage' : ''}`)
@@ -100,7 +73,7 @@ export default function TopHeader({ username }: Props) {
         const senderId = parseSenderIdFromBody(notif.body)
         router.push(senderId ? `/users/${senderId}` : '/friends')
       }
-    } catch (e) {}
+    } catch {}
   }
 
   const getNotificationIcon = (type: string) => {

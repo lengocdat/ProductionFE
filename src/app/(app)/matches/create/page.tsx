@@ -1,11 +1,15 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, Clock, Users, Loader2, CheckCircle2, Navigation, Zap } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Clock, Users, Loader2, Zap } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+
+// Dynamic import MapPicker (Leaflet requires window/document)
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false })
 
 // --- Quick Templates ---
 interface Template {
@@ -38,60 +42,6 @@ const SKILL_LABELS: Record<string, string> = {
   'SEMI_PRO': '🔴 Bán chuyên',
 }
 
-/**
- * Extract lat/lng from various Google Maps URL formats:
- * - https://www.google.com/maps/place/.../@10.7321,106.7019,17z/...
- * - https://www.google.com/maps?q=10.7321,106.7019
- * - https://www.google.com/maps/search/?api=1&query=10.7321,106.7019
- * - https://maps.google.com/?ll=10.7321,106.7019
- * - Plain coords pasted: "10.7321, 106.7019"
- */
-function extractCoordsFromMapsUrl(input: string): { lat: string; lng: string } | null {
-  const trimmed = input.trim()
-
-  // Pattern 1: Direct coords "10.7321, 106.7019" or "10.7321,106.7019"
-  const directMatch = trimmed.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/)
-  if (directMatch) {
-    return { lat: directMatch[1], lng: directMatch[2] }
-  }
-
-  // Pattern 2: /@lat,lng in URL path
-  const atMatch = trimmed.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
-  if (atMatch) {
-    return { lat: atMatch[1], lng: atMatch[2] }
-  }
-
-  // Pattern 3: ?q=lat,lng or &query=lat,lng or &ll=lat,lng
-  const queryMatch = trimmed.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/)
-  if (queryMatch) {
-    return { lat: queryMatch[1], lng: queryMatch[2] }
-  }
-
-  // Pattern 4: /place/lat,lng
-  const placeMatch = trimmed.match(/\/place\/(-?\d+\.\d+),(-?\d+\.\d+)/)
-  if (placeMatch) {
-    return { lat: placeMatch[1], lng: placeMatch[2] }
-  }
-
-  // Pattern 5: data=...!3d<lat>!4d<lng> (Google Maps share links)
-  const dataMatch = trimmed.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
-  if (dataMatch) {
-    return { lat: dataMatch[1], lng: dataMatch[2] }
-  }
-
-  return null
-}
-
-function isGoogleMapsUrl(input: string): boolean {
-  const s = input.toLowerCase().trim()
-  return (
-    s.includes('maps.app.goo.gl') ||
-    s.includes('goo.gl/maps') ||
-    s.includes('google.com/maps') ||
-    s.includes('maps.google.com')
-  )
-}
-
 interface FormErrors {
   title?: string
   address?: string
@@ -105,10 +55,6 @@ interface FormErrors {
 export default function CreateMatchPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [geoLoading, setGeoLoading] = useState(false)
-  const [mapsResolving, setMapsResolving] = useState(false)
-  const [geoSuccess, setGeoSuccess] = useState(false)
-  const mapsResolveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitError, setSubmitError] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
@@ -121,7 +67,6 @@ export default function CreateMatchPage() {
     address: '',
     latitude: '',
     longitude: '',
-    google_maps_url: '',
     match_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
     start_time: '18:00',
     end_time: '20:00',
@@ -160,104 +105,13 @@ export default function CreateMatchPage() {
     }
   }
 
-  function applyCoordsFromMaps(lat: string, lng: string, resolvedUrl?: string, sourceUrl?: string) {
+  function handleMapSelect(lat: number, lng: number) {
     setForm((f) => ({
       ...f,
-      google_maps_url: resolvedUrl || sourceUrl || f.google_maps_url,
-      latitude: lat,
-      longitude: lng,
+      latitude: lat.toFixed(6),
+      longitude: lng.toFixed(6),
     }))
-    setGeoSuccess(true)
-    setTimeout(() => setGeoSuccess(false), 3000)
-  }
-
-  function resolveMapsUrl(url: string) {
-    setMapsResolving(true)
-    apiFetch<{ lat?: string; lng?: string; resolved_url?: string; message?: string }>('/utils/resolve-maps', {
-      method: 'POST',
-      json: { url },
-    })
-      .then((data) => {
-        if (data.lat && data.lng) {
-          applyCoordsFromMaps(data.lat, data.lng, data.resolved_url, url)
-          toast.success('Đã lấy tọa độ từ link Google Maps!')
-        } else {
-          // Cannot extract coords - show helpful instruction
-          toast.error('Không thể tự động lấy tọa độ từ link này. Vui lòng:', {
-            duration: 8000,
-            description: '1. Mở link Maps trong trình duyệt\n2. Nhấn vào địa điểm trên bản đồ\n3. Copy tọa độ (vd: 10.7762, 106.7004)\n4. Dán vào ô trên',
-          })
-        }
-      })
-      .catch(() => {
-        toast.error('Không thể xử lý link. Thử dán tọa độ trực tiếp: 10.7321, 106.7019')
-      })
-      .finally(() => setMapsResolving(false))
-  }
-
-  // Auto-extract lat/lng from Google Maps URL
-  function handleMapsUrlChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value
-    setForm((f) => ({ ...f, google_maps_url: value }))
-    setErrors((prev) => ({ ...prev, location: undefined }))
-
-    if (mapsResolveTimer.current) {
-      clearTimeout(mapsResolveTimer.current)
-      mapsResolveTimer.current = null
-    }
-
-    if (!value.trim()) return
-
-    const coords = extractCoordsFromMapsUrl(value)
-    if (coords) {
-      applyCoordsFromMaps(coords.lat, coords.lng, undefined, value)
-      return
-    }
-
-    if (isGoogleMapsUrl(value)) {
-      mapsResolveTimer.current = setTimeout(() => resolveMapsUrl(value.trim()), 400)
-    }
-  }
-
-  function handleMapsUrlBlur(e: React.FocusEvent<HTMLInputElement>) {
-    const value = e.target.value.trim()
-    if (!value || extractCoordsFromMapsUrl(value)) return
-    if (isGoogleMapsUrl(value) && !form.latitude) {
-      resolveMapsUrl(value)
-    }
-  }
-
-  function handleGetLocation() {
-    if (!navigator.geolocation) {
-      setErrors((e) => ({ ...e, location: 'Trình duyệt không hỗ trợ GPS' }))
-      return
-    }
-    setGeoLoading(true)
-    setGeoSuccess(false)
     setErrors((e) => ({ ...e, location: undefined }))
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setForm((f) => ({
-          ...f,
-          latitude: pos.coords.latitude.toFixed(6),
-          longitude: pos.coords.longitude.toFixed(6),
-        }))
-        setGeoLoading(false)
-        setGeoSuccess(true)
-        setTimeout(() => setGeoSuccess(false), 3000)
-      },
-      (err) => {
-        setGeoLoading(false)
-        setErrors((e) => ({
-          ...e,
-          location: err.code === 1
-            ? 'Bạn đã từ chối quyền truy cập vị trí. Vui lòng bật GPS.'
-            : 'Không thể lấy vị trí. Hãy nhập thủ công hoặc dán link Google Maps.',
-        }))
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    )
   }
 
   function validate(): boolean {
@@ -290,7 +144,6 @@ export default function CreateMatchPage() {
           address: form.address.trim(),
           latitude: parseFloat(form.latitude),
           longitude: parseFloat(form.longitude),
-          google_maps_url: form.google_maps_url.trim() || undefined,
           match_date: form.match_date,
           start_time: form.start_time,
           end_time: form.end_time,
@@ -510,62 +363,22 @@ export default function CreateMatchPage() {
           <textarea name="address" value={form.address} onChange={handleChange} required rows={2} placeholder="VD: Sân cầu lông ABC, 123 Nguyễn Văn Linh, Q7" className={`w-full rounded-xl border px-4 py-2.5 text-sm resize-none outline-none focus:border-green-400 focus:ring-1 focus:ring-green-100 ${errors.address ? 'border-red-300 bg-red-50' : 'border-gray-200'}`} />
         </FieldGroup>
 
-        {/* Vị trí sân */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+        {/* Vị trí sân - Map Picker */}
+        <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-            <MapPin size={14} className="text-green-500" /> Vị trí sân <span className="text-red-400">*</span>
+            📍 Vị trí sân <span className="text-red-400">*</span>
           </label>
-
-          {/* Option 1: Google Maps link (PRIMARY — easiest for user) */}
-          <div>
-            <div className="relative">
-              <input
-                name="google_maps_url"
-                value={form.google_maps_url}
-                onChange={handleMapsUrlChange}
-                onBlur={handleMapsUrlBlur}
-                placeholder="Dán link Google Maps hoặc tọa độ: 10.7321, 106.7019"
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400 pr-10"
-              />
-              {mapsResolving && (
-                <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 animate-spin" />
-              )}
-            </div>
-            {form.latitude && form.longitude && (
-              <p className="text-[10px] text-green-600 mt-1.5 flex items-center gap-1">
-                ✅ Tọa độ: {form.latitude}, {form.longitude}
-              </p>
-            )}
-          </div>
-
-          {/* Option 2: GPS button */}
-          <div className="relative flex items-center gap-2">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-[9px] text-gray-400 px-2">hoặc</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={geoLoading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 py-2.5 text-sm font-medium text-green-700 hover:bg-green-50 hover:border-green-400 disabled:opacity-50 transition-all"
-          >
-            {geoLoading ? (
-              <><Loader2 size={16} className="animate-spin" /> Đang lấy vị trí...</>
-            ) : geoSuccess ? (
-              <><CheckCircle2 size={16} className="text-green-600" /> Đã lấy tọa độ GPS!</>
-            ) : (
-              <><Navigation size={16} /> 📍 Lấy vị trí GPS hiện tại</>
-            )}
-          </button>
-
+          <MapPicker
+            lat={form.latitude ? parseFloat(form.latitude) : null}
+            lng={form.longitude ? parseFloat(form.longitude) : null}
+            onLocationSelect={handleMapSelect}
+          />
+          {form.latitude && form.longitude && (
+            <p className="text-[10px] text-green-600 flex items-center gap-1">
+              ✅ Tọa độ: {form.latitude}, {form.longitude}
+            </p>
+          )}
           {errors.location && <p className="text-[11px] text-red-500 flex items-center gap-1">⚠️ {errors.location}</p>}
-          <p className="text-[10px] text-gray-400 leading-relaxed">💡 Mở Google Maps → tìm sân → bấm chia sẻ → copy link → dán vào ô trên.</p>
-
-          {/* Hidden lat/lng inputs (auto-filled, not required to manually type) */}
-          <input type="hidden" name="latitude" value={form.latitude} />
-          <input type="hidden" name="longitude" value={form.longitude} />
         </div>
 
         {/* Submit */}

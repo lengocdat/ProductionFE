@@ -25,7 +25,6 @@ interface SportMatch {
   address: string
   latitude: number
   longitude: number
-  google_maps_url?: string
   match_date: string
   start_time: string
   end_time: string
@@ -379,7 +378,7 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
   const distColor = dist < 2 ? 'bg-green-50 text-green-700 border-green-200' :
     dist < 5 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-gray-50 text-gray-600 border-gray-200'
 
-  const mapsUrl = match.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
   const skillLevel = match.skill_level || 'INTERMEDIATE'
   const sportIcon = SPORT_ICON[match.sport_type] || '🏸'
 

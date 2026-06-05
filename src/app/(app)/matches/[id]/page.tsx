@@ -24,7 +24,6 @@ interface MatchInfo {
   price_per_slot: number
   cancellation_window_hours: number
   status: string
-  google_maps_url?: string
   latitude: number
   longitude: number
 }
@@ -52,6 +51,7 @@ interface Message {
   id: number
   match_id?: number
   sender_id: number
+  sender_username?: string
   receiver_id: number
   content: string
   created_at: string
@@ -159,7 +159,7 @@ export default function MatchDetailPage() {
 
 // --- Info Tab ---
 function MatchInfoTab({ match, requests }: { match: MatchInfo; requests: JoinReq[] }) {
-  const mapsUrl = match.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
   const accepted = requests.filter((r) => r.status === 'ACCEPTED')
 
   return (
@@ -548,13 +548,18 @@ function ChatTab({ matchId, myId }: { matchId: number; myId: number }) {
           const isMe = msg.sender_id === myId
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                isMe ? 'bg-green-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
-              }`}>
-                {msg.content}
-                <p className={`text-[9px] mt-1 ${isMe ? 'text-green-100' : 'text-gray-400'}`}>
-                  {new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                </p>
+              <div className={`max-w-[75%] ${isMe ? '' : ''}`}>
+                {!isMe && msg.sender_username && (
+                  <p className="text-[10px] font-medium text-gray-500 mb-0.5 ml-1">{msg.sender_username}</p>
+                )}
+                <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                  isMe ? 'bg-green-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
+                }`}>
+                  {msg.content}
+                  <p className={`text-[9px] mt-1 ${isMe ? 'text-green-100' : 'text-gray-400'}`}>
+                    {new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
               </div>
             </div>
           )
