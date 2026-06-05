@@ -7,7 +7,7 @@ import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingB
 import { apiFetch } from '@/lib/api'
 import EquippedBadge from '@/components/EquippedBadge'
 
-interface User { id: number; username: string; email: string; role: string; tier: string; negative_reports: number; no_show_count: number; created_at: string }
+interface User { id: number; username: string; email: string; role: string; tier: string; skill_level: string; negative_reports: number; no_show_count: number; completed_matches_count: number; is_premium: boolean; premium_expires_at?: string; created_at: string }
 interface Rating { id: number; stars: number; is_negative: boolean; review_text: string; created_at: string }
 interface BadgeSummary { equipped_badge_name: string; equipped_badge_icon: string; unlocked: number; total: number }
 
@@ -46,24 +46,41 @@ export default function ProfilePage() {
 
   return (
     <div className="px-4 py-5">
-      <div className="rounded-2xl bg-white p-5 shadow-sm text-center">
-        <div className={`mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-xl font-bold text-green-600 ${badgeSummary?.equipped_badge_icon ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
-          {user.username.charAt(0).toUpperCase()}
+      <div className={`rounded-2xl bg-white p-5 shadow-sm text-center ${user.is_premium ? 'ring-2 ring-amber-400/60' : ''}`}>
+        <div className="relative mx-auto mb-2 w-16 h-16">
+          <div className={`flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-xl font-bold text-green-600 ${user.is_premium ? 'ring-2 ring-amber-400 ring-offset-2' : badgeSummary?.equipped_badge_icon ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
+            {user.username.charAt(0).toUpperCase()}
+          </div>
+          {user.is_premium && (
+            <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-md">
+              <Crown size={12} className="text-white" />
+            </div>
+          )}
         </div>
         {badgeSummary?.equipped_badge_name && (
           <div className="flex justify-center mb-2">
             <EquippedBadge iconUrl={badgeSummary.equipped_badge_icon} name={badgeSummary.equipped_badge_name} size="sm" />
           </div>
         )}
-        <h1 className="text-lg font-bold text-gray-900">{user.username}</h1>
+        <h1 className="text-lg font-bold text-gray-900 flex items-center justify-center gap-1.5">
+          {user.username}
+          {user.is_premium && (
+            <span className="text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 px-1.5 py-0.5 rounded-full">PRO</span>
+          )}
+        </h1>
         <p className="text-xs text-gray-500">{user.email}</p>
-        <div className="flex justify-center gap-2 mt-2">
+        <div className="flex justify-center flex-wrap gap-1.5 mt-2">
           <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-medium text-blue-700">
             {user.tier === 'VERIFIED_HOST' ? '✅ Uy tín' : user.tier === 'REGULAR' ? '👍 Thường xuyên' : '🆕 Mới'}
           </span>
           {badgeSummary && badgeSummary.total > 0 && (
             <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-medium text-amber-700">
               🏆 {badgeSummary.unlocked}/{badgeSummary.total}
+            </span>
+          )}
+          {user.is_premium && user.premium_expires_at && (
+            <span className="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-medium text-amber-700">
+              👑 HSD {new Date(user.premium_expires_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
             </span>
           )}
         </div>
@@ -88,7 +105,7 @@ export default function ProfilePage() {
         <MenuLink href="/my-matches" icon={<Calendar size={18} className="text-green-500" />} label="Trận của tôi" desc="Xem lịch, hủy tham gia, lịch sử" />
         <MenuLink href="/profile/achievements" icon={<Trophy size={18} className="text-amber-500" />} label="Thành tựu & Huy hiệu" desc="Xem tiến trình và badge đã đạt" />
         <MenuLink href="/marketplace" icon={<ShoppingBag size={18} className="text-green-500" />} label="Chợ đồ thể thao" desc="Mua bán đồ cũ, tìm deals" />
-        <MenuLink href="/profile/premium" icon={<Crown size={18} className="text-yellow-500" />} label="Nâng cấp Premium" desc="Radar tự động, không quảng cáo" premium />
+        <MenuLink href="/profile/premium" icon={<Crown size={18} className="text-yellow-500" />} label={user.is_premium ? 'Premium đang hoạt động' : 'Nâng cấp Premium'} desc={user.is_premium ? 'Radar, ưu tiên hiển thị, crown badge' : 'Radar tự động, ưu tiên hiển thị, badge Crown'} premium={!user.is_premium} active={user.is_premium} />
         <MenuLink href="/dashboard/courts" icon={<LayoutDashboard size={18} className="text-blue-500" />} label="Quản lý sân (Chủ sân)" desc="Dashboard booking & lịch sân" />
       </div>
 
@@ -128,15 +145,18 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string
   )
 }
 
-function MenuLink({ href, icon, label, desc, premium }: { href: string; icon: React.ReactNode; label: string; desc: string; premium?: boolean }) {
+function MenuLink({ href, icon, label, desc, premium, active }: { href: string; icon: React.ReactNode; label: string; desc: string; premium?: boolean; active?: boolean }) {
   return (
-    <a href={href} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+    <a href={href} className={`flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors ${active ? 'bg-amber-50/50' : ''}`}>
       <div className="shrink-0">{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-medium text-gray-900">{label}</span>
           {premium && (
-            <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-1.5 py-px text-[8px] font-bold text-white">PRO</span>
+            <span className="rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-1.5 py-px text-[8px] font-bold text-gray-900">PRO</span>
+          )}
+          {active && (
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-1.5 py-px text-[8px] font-bold text-amber-700">👑 ACTIVE</span>
           )}
         </div>
         <p className="text-[10px] text-gray-500 truncate">{desc}</p>

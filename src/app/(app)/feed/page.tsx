@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert, UserCheck } from 'lucide-react'
+import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert, UserCheck, ArrowUpDown } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import JoinModal from '@/components/JoinModal'
 import WeeklyCalendarStrip from '@/components/WeeklyCalendarStrip'
+import { clsx } from 'clsx'
 
 // --- Types ---
 interface Host {
@@ -132,6 +133,7 @@ export default function FeedPage() {
   })
   const [sportFilter, setSportFilter] = useState('BADMINTON')
   const [skillFilters, setSkillFilters] = useState<string[]>([]) // multi-select
+  const [sortBy, setSortBy] = useState<'distance' | 'time' | 'price' | 'slots'>('distance')
   const [matches, setMatches] = useState<SportMatch[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<SportMatch | null>(null)
@@ -174,10 +176,36 @@ export default function FeedPage() {
       .finally(() => setLoading(false))
   }, [coords, dateFilter, sportFilter, getDateString])
 
-  // Client-side skill filter
-  const filteredMatches = skillFilters.length === 0
-    ? matches
-    : matches.filter((m) => skillFilters.includes(m.skill_level || 'INTERMEDIATE'))
+  // Client-side skill filter + sort
+  const filteredMatches = useMemo(() => {
+    let result = skillFilters.length === 0
+      ? [...matches]
+      : matches.filter((m) => skillFilters.includes(m.skill_level || 'INTERMEDIATE'))
+
+    result.sort((a, b) => {
+      // Friends always first
+      if (a.is_friend_host && !b.is_friend_host) return -1
+      if (!a.is_friend_host && b.is_friend_host) return 1
+
+      switch (sortBy) {
+        case 'time':
+          return (a.start_time || '').localeCompare(b.start_time || '')
+        case 'price': {
+          const pa = (a as any).price_per_slot ?? 0
+          const pb = (b as any).price_per_slot ?? 0
+          return pa - pb
+        }
+        case 'slots': {
+          const sa = a.max_slots - a.filled_slots
+          const sb = b.max_slots - b.filled_slots
+          return sb - sa
+        }
+        default: // distance
+          return (a.distance ?? 99) - (b.distance ?? 99)
+      }
+    })
+    return result
+  }, [matches, skillFilters, sortBy])
 
   // Handle join with skill mismatch check
   function handleJoinClick(match: SportMatch) {
@@ -300,6 +328,32 @@ export default function FeedPage() {
             </button>
           )}
         </div>
+
+        {/* Sort bar */}
+        <div className="flex items-center gap-2 pb-1">
+          <ArrowUpDown size={12} className="text-gray-400 shrink-0" />
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+            {([
+              { value: 'distance', label: 'Gần nhất' },
+              { value: 'time',     label: 'Sớm nhất' },
+              { value: 'price',    label: 'Giá thấp' },
+              { value: 'slots',    label: 'Còn nhiều slot' },
+            ] as const).map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSortBy(opt.value)}
+                className={clsx(
+                  'flex-shrink-0 rounded-full px-3 py-1 text-[11px] font-medium transition-all',
+                  sortBy === opt.value
+                    ? 'bg-green-500 text-white shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-600'
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Match List */}
@@ -372,127 +426,142 @@ export default function FeedPage() {
 function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void }) {
   const slotsLeft = match.max_slots - match.filled_slots
   const slotPercent = (match.filled_slots / match.max_slots) * 100
-  const isAlmostFull = slotsLeft <= 1
+  const isAlmostFull = slotsLeft <= 2
+  const isFull = slotsLeft <= 0
 
   const dist = match.distance ?? 99
-  const distColor = dist < 2 ? 'bg-green-50 text-green-700 border-green-200' :
-    dist < 5 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-gray-50 text-gray-600 border-gray-200'
-
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
   const skillLevel = match.skill_level || 'INTERMEDIATE'
   const sportIcon = SPORT_ICON[match.sport_type] || '🏸'
+  const price = (match as any).price_per_slot as number
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
+
+  const skillLabel = SKILL_BASED_SPORTS.includes(match.sport_type)
+    ? (SKILL_LABEL_RACKET[skillLevel] || skillLevel)
+    : (INTENSITY_LABEL[skillLevel] || SKILL_LABEL[skillLevel] || skillLevel)
 
   return (
-    <div className={`rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow ${match.is_friend_host ? 'border-green-200 ring-1 ring-green-100' : 'border-gray-100'}`}>
+    <div className={`rounded-2xl border bg-white shadow-sm active:scale-[0.99] transition-all ${
+      match.is_friend_host ? 'border-green-200' : 'border-gray-100'
+    }`}>
+      {/* Friend host banner */}
       {match.is_friend_host && (
-        <div className="flex items-center gap-1 mb-2 text-[10px] font-semibold text-green-700">
-          <UserCheck size={12} /> Trận của bạn bè
+        <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-semibold text-green-700">
+          <UserCheck size={11} /> Bạn bè của bạn tổ chức
         </div>
       )}
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          {/* Title with sport icon */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-base">{sportIcon}</span>
-            <h3 className="font-semibold text-gray-900 text-[15px] leading-snug truncate">{match.title}</h3>
+
+      <div className="p-4">
+        {/* Row 1: Sport icon + Title + Distance */}
+        <div className="flex items-start gap-2.5">
+          <span className="text-2xl leading-none mt-0.5 shrink-0">{sportIcon}</span>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{match.title}</h3>
           </div>
-          <p className="text-[11px] text-gray-500 mt-0.5 truncate">{match.address}</p>
-          {(match as any).court_name && (
-            <p className="text-[10px] text-blue-600 mt-0.5 flex items-center gap-1 truncate">
-              🏟️ {(match as any).court_name}{(match as any).court_number ? ` · Sân ${(match as any).court_number}` : ''}
-            </p>
-          )}
-        </div>
-        {/* Distance Tag */}
-        <span className={`flex-shrink-0 rounded-lg border px-2 py-1 text-xs font-bold ${distColor}`}>
-          {dist < 99 ? `${dist.toFixed(1)} km` : '—'}
-        </span>
-      </div>
-
-      {/* Badges row: Time + Skill */}
-      <div className="flex items-center gap-2 mt-2">
-        <div className="flex items-center gap-1 text-xs text-gray-600">
-          <Clock size={11} className="text-gray-400" />
-          <span>{match.start_time.slice(0, 5)} - {match.end_time.slice(0, 5)}</span>
-        </div>
-        {/* Skill Badge */}
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${SKILL_BADGE_STYLES[skillLevel]}`}
-          title={SKILL_DESC[skillLevel] || ''}
-        >
-          {SKILL_BASED_SPORTS.includes(match.sport_type)
-            ? (SKILL_LABEL_RACKET[skillLevel] || skillLevel)
-            : (INTENSITY_LABEL[skillLevel] || SKILL_LABEL[skillLevel] || skillLevel)
-          }
-        </span>
-      </div>
-
-      {/* Slot Indicator + Price */}
-      <div className="mt-3">
-        <div className="flex items-center justify-between text-[11px] mb-1">
-          <span className={`flex items-center gap-1 font-medium ${isAlmostFull ? 'text-red-600' : 'text-gray-600'}`}>
-            <Users size={12} />
-            {isAlmostFull ? `⚡ Chỉ còn ${slotsLeft} slot!` : `Còn ${slotsLeft}/${match.max_slots} slot`}
-          </span>
-          <span className="text-[11px] font-semibold">
-            {(match as any).price_per_slot > 0
-              ? <span className="text-green-600">{((match as any).price_per_slot as number).toLocaleString('vi-VN')}đ/slot</span>
-              : <span className="text-emerald-500">Miễn phí</span>
-            }
+          <span className={`shrink-0 text-xs font-semibold rounded-lg px-2 py-0.5 ${
+            dist < 2 ? 'bg-green-50 text-green-700' :
+            dist < 5 ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {dist < 99 ? `${dist.toFixed(1)} km` : '—'}
           </span>
         </div>
-        <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
-          <div className={`h-full rounded-full transition-all duration-500 ${isAlmostFull ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${slotPercent}%` }} />
+
+        {/* Row 2: Time (primary info) + Skill badge */}
+        <div className="flex items-center gap-2 mt-2">
+          <Clock size={13} className="text-gray-400 shrink-0" />
+          <span className="text-sm font-bold text-gray-900">
+            {match.start_time.slice(0, 5)} – {match.end_time.slice(0, 5)}
+          </span>
+          <span className={`ml-1 text-[11px] font-semibold rounded-full px-2.5 py-0.5 ${SKILL_BADGE_STYLES[skillLevel]}`}
+            title={SKILL_DESC[skillLevel] || ''}>
+            {skillLabel}
+          </span>
         </div>
-      </div>
 
-      {/* Host Info */}
-      {match.host && (
-        <Link href={`/users/${match.host_id}`} className="flex items-center gap-1.5 mt-3 hover:opacity-80 transition-opacity">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[9px] font-bold text-gray-600">
-            {match.host.username.charAt(0).toUpperCase()}
-          </div>
-          <span className="text-xs font-medium text-gray-700">{match.host.username}</span>
-          {match.host.tier === 'VERIFIED_HOST' && <CheckCircle size={13} className="text-blue-500 fill-blue-50" />}
-          {(match.host as any).host_trust_score > 0 && (
-            <span className="rounded-md bg-green-50 border border-green-200 px-1 py-0.5 text-[8px] font-semibold text-green-700">
-              ⭐ {(match.host as any).host_trust_score}/100
-            </span>
-          )}
-          {(match.host as any).completed_matches_count > 0 && (
-            <span className="text-[9px] text-gray-400">{(match.host as any).completed_matches_count} trận</span>
-          )}
-          {match.host.negative_reports > 3 && (
-            <span className="flex items-center gap-0.5 rounded-md bg-red-50 border border-red-200 px-1.5 py-0.5 text-[9px] font-semibold text-red-700">
-              <AlertTriangle size={9} /> Uy tín thấp
-            </span>
-          )}
-        </Link>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
-        <a
-          href={mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-[11px] font-medium text-gray-700 hover:bg-gray-50 transition-all"
-        >
-          <MapPin size={13} className="text-gray-500" /> Xem vị trí
-        </a>
-        {slotsLeft > 0 ? (
-          <button
-            onClick={onJoin}
-            className="flex-1 rounded-xl bg-green-500 py-2.5 text-xs font-bold text-white hover:bg-green-600 active:scale-[0.98] transition-all shadow-sm shadow-green-200"
-          >
-            Tham gia ngay
-          </button>
-        ) : (
-          <div className="flex-1 rounded-xl bg-gray-200 py-2.5 text-xs font-bold text-gray-500 text-center cursor-not-allowed">
-            Đã đủ người
-          </div>
+        {/* Row 3: Address */}
+        <div className="flex items-start gap-1.5 mt-1.5">
+          <MapPin size={12} className="text-gray-400 shrink-0 mt-0.5" />
+          <span className="text-[12px] text-gray-600 leading-snug line-clamp-1">{match.address}</span>
+        </div>
+        {(match as any).court_name && (
+          <p className="text-[11px] text-blue-600 mt-0.5 ml-[18px] truncate">
+            🏟️ {(match as any).court_name}{(match as any).court_number ? ` · Sân ${(match as any).court_number}` : ''}
+          </p>
         )}
+
+        {/* Row 4: Price + Slots — the two main decision drivers */}
+        <div className="flex items-end justify-between mt-3.5">
+          <div>
+            {price > 0
+              ? <>
+                  <span className="text-[17px] font-extrabold text-green-600 leading-none">
+                    {price.toLocaleString('vi-VN')}đ
+                  </span>
+                  <span className="text-[11px] text-gray-400 ml-0.5">/người</span>
+                </>
+              : <span className="text-[17px] font-extrabold text-emerald-500 leading-none">Miễn phí</span>
+            }
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Users size={14} className={isAlmostFull ? 'text-red-500' : 'text-gray-400'} />
+            <span className={`text-sm font-bold ${isAlmostFull ? 'text-red-600' : 'text-gray-700'}`}>
+              {isFull
+                ? 'Đủ người'
+                : isAlmostFull
+                  ? `⚡ Còn ${slotsLeft} slot`
+                  : `Còn ${slotsLeft}/${match.max_slots}`}
+            </span>
+          </div>
+        </div>
+
+        {/* Slot progress bar */}
+        <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden mt-1.5">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-gray-400' : isAlmostFull ? 'bg-red-500' : 'bg-green-500'}`}
+            style={{ width: `${slotPercent}%` }}
+          />
+        </div>
+
+        {/* Host row — secondary info, clean and minimal */}
+        {match.host && (
+          <Link href={`/users/${match.host_id}`} className="flex items-center gap-1.5 mt-2.5 w-fit">
+            <div className="h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] font-bold text-gray-600 shrink-0">
+              {match.host.username.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-[11px] text-gray-500">{match.host.username}</span>
+            {match.host.tier === 'VERIFIED_HOST' && (
+              <CheckCircle size={12} className="text-blue-500" />
+            )}
+            {match.host.negative_reports > 3 && (
+              <span className="flex items-center gap-0.5 text-[10px] font-medium text-red-500">
+                <AlertTriangle size={10} /> Uy tín thấp
+              </span>
+            )}
+          </Link>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+          >
+            <MapPin size={12} /> Bản đồ
+          </a>
+          {!isFull ? (
+            <button
+              onClick={onJoin}
+              className="flex-1 rounded-xl bg-green-500 py-2.5 text-sm font-bold text-white hover:bg-green-600 active:scale-[0.98] transition-all shadow-sm shadow-green-200"
+            >
+              Tham gia ngay
+            </button>
+          ) : (
+            <div className="flex-1 rounded-xl bg-gray-100 py-2.5 text-sm font-semibold text-gray-400 text-center cursor-not-allowed">
+              Đã đủ người
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
