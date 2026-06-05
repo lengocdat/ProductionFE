@@ -182,7 +182,11 @@ export default function CreateMatchPage() {
           applyCoordsFromMaps(data.lat, data.lng, data.resolved_url, url)
           toast.success('Đã lấy tọa độ từ link Google Maps!')
         } else {
-          toast.info(data.message || 'Không thể tự động lấy tọa độ. Thử mở link Maps → copy tọa độ → dán trực tiếp.')
+          // Cannot extract coords - show helpful instruction
+          toast.error('Không thể tự động lấy tọa độ từ link này. Vui lòng:', {
+            duration: 8000,
+            description: '1. Mở link Maps trong trình duyệt\n2. Nhấn vào địa điểm trên bản đồ\n3. Copy tọa độ (vd: 10.7762, 106.7004)\n4. Dán vào ô trên',
+          })
         }
       })
       .catch(() => {

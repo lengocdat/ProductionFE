@@ -23,6 +23,7 @@ const TYPE_ICONS: Record<string, string> = {
   MATCH_FINISHED: '✅',
   FRIEND_MATCH_POSTED: '👥',
   FRIEND_REQUEST: '🤝',
+  FRIEND_ACCEPTED: '✅',
 }
 
 function parseSenderIdFromBody(body?: string): number | null {
@@ -44,6 +45,9 @@ function notificationHref(n: Notification): string {
   if (n.type === 'FRIEND_REQUEST') {
     const senderId = parseSenderIdFromBody(n.body)
     return senderId ? `/users/${senderId}` : '/friends'
+  }
+  if (n.type === 'FRIEND_ACCEPTED') {
+    return '/friends'
   }
   return '#'
 }
