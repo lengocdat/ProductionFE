@@ -1,0 +1,18 @@
+{
+  "name": "CoDuyen – Tìm trận thể thao",
+  "short_name": "CoDuyen",
+  "description": "Tìm trận thể thao gần bạn, kết nối người chơi cùng trình độ tại Việt Nam",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#16a34a",
+  "orientation": "portrait",
+  "lang": "vi",
+  "categories": ["sports", "social", "lifestyle"],
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/og-image.png", "sizes": "1200x630", "type": "image/png", "form_factor": "wide" }
+  ]
+}

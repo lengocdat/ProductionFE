@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Paddle handle -->
+  <rect x="44" y="62" width="12" height="30" rx="6" fill="#c2855a"/>
+  <rect x="46" y="64" width="8" height="26" rx="4" fill="#d4956a"/>
+  <!-- Paddle face -->
+  <ellipse cx="50" cy="46" rx="26" ry="28" fill="#f59e0b"/>
+  <ellipse cx="50" cy="46" rx="24" ry="26" fill="#fbbf24"/>
+  <!-- Paddle holes pattern (3x4 grid) -->
+  <circle cx="42" cy="36" r="3.2" fill="#f59e0b"/>
+  <circle cx="50" cy="36" r="3.2" fill="#f59e0b"/>
+  <circle cx="58" cy="36" r="3.2" fill="#f59e0b"/>
+  <circle cx="42" cy="46" r="3.2" fill="#f59e0b"/>
+  <circle cx="50" cy="46" r="3.2" fill="#f59e0b"/>
+  <circle cx="58" cy="46" r="3.2" fill="#f59e0b"/>
+  <circle cx="42" cy="56" r="3.2" fill="#f59e0b"/>
+  <circle cx="50" cy="56" r="3.2" fill="#f59e0b"/>
+  <circle cx="58" cy="56" r="3.2" fill="#f59e0b"/>
+  <!-- Paddle outline -->
+  <ellipse cx="50" cy="46" rx="26" ry="28" fill="none" stroke="#d97706" stroke-width="2"/>
+  <!-- Ball -->
+  <circle cx="74" cy="22" r="12" fill="#fef08a" stroke="#eab308" stroke-width="1.5"/>
+  <circle cx="70" cy="19" r="2" fill="#eab308" opacity="0.6"/>
+  <circle cx="78" cy="19" r="2" fill="#eab308" opacity="0.6"/>
+  <circle cx="74" cy="26" r="2" fill="#eab308" opacity="0.6"/>
+  <circle cx="67" cy="24" r="2" fill="#eab308" opacity="0.6"/>
+  <circle cx="81" cy="24" r="2" fill="#eab308" opacity="0.6"/>
+</svg>

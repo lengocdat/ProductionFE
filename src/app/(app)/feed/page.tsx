@@ -6,6 +6,7 @@ import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert,
 import { apiFetch } from '@/lib/api'
 import JoinModal from '@/components/JoinModal'
 import WeeklyCalendarStrip from '@/components/WeeklyCalendarStrip'
+import SportIcon from '@/components/SportIcon'
 import { clsx } from 'clsx'
 
 // --- Types ---
@@ -55,7 +56,7 @@ interface AdvancedFilters {
 const SPORTS = [
   { value: 'BADMINTON', label: 'Cầu lông', icon: '🏸' },
   { value: 'RUNNING', label: 'Chạy bộ', icon: '🏃' },
-  { value: 'PICKLEBALL', label: 'Pickleball', icon: '🏓' },
+  { value: 'PICKLEBALL', label: 'Pickleball', icon: '' },
   { value: 'FOOTBALL', label: 'Bóng đá', icon: '⚽' },
   { value: 'TENNIS', label: 'Tennis', icon: '🎾' },
   { value: 'TABLE_TENNIS', label: 'Bóng bàn', icon: '🏓' },
@@ -304,7 +305,7 @@ export default function FeedPage() {
                   : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
               }`}
             >
-              <span>{sport.icon}</span> {sport.label}
+              <SportIcon sport={sport.value} size={15} /> {sport.label}
             </button>
           ))}
         </div>
@@ -387,7 +388,7 @@ export default function FeedPage() {
             ))}
           </div>
           <button
-            onClick={() => isPremium ? setShowAdvFilters(v => !v) : setShowAdvFilters(true)}
+            onClick={() => setShowAdvFilters(v => !v)}
             className={clsx(
               'shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all',
               advFiltersActive
@@ -397,67 +398,52 @@ export default function FeedPage() {
           >
             <SlidersHorizontal size={11} />
             Nâng cao
-            {!isPremium && <Crown size={9} className="text-amber-500" />}
           </button>
         </div>
 
-        {/* Advanced filters panel (premium only) */}
+        {/* Advanced filters panel — open to all users */}
         {showAdvFilters && (
-          <div className={clsx('rounded-2xl border p-4 mb-1', isPremium ? 'bg-white border-indigo-100' : 'bg-amber-50 border-amber-200')}>
-            {!isPremium ? (
-              <div className="text-center py-2">
-                <Crown size={20} className="text-amber-500 mx-auto mb-1" />
-                <p className="text-sm font-bold text-gray-800 mb-0.5">Tính năng Premium</p>
-                <p className="text-xs text-gray-500 mb-3">Lọc chính xác theo khoảng cách, giá, giờ chơi</p>
-                <Link href="/profile/premium" className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 text-xs font-black text-gray-900">
-                  <Crown size={12} /> Nâng cấp Premium
-                </Link>
-                <button onClick={() => setShowAdvFilters(false)} className="block mx-auto mt-2 text-[10px] text-gray-400">Đóng</button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold text-indigo-700">⚙️ Lọc nâng cao (Premium)</span>
-                  <button onClick={() => setShowAdvFilters(false)}><X size={14} className="text-gray-400" /></button>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-gray-500 font-medium">Khoảng cách tối đa (km)</span>
-                    <input type="number" placeholder="VD: 5" value={advFilters.maxDist}
-                      onChange={e => setAdvFilters(f => ({ ...f, maxDist: e.target.value }))}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-gray-500 font-medium">Giá tối đa (VNĐ)</span>
-                    <input type="number" placeholder="VD: 50000" value={advFilters.maxPrice}
-                      onChange={e => setAdvFilters(f => ({ ...f, maxPrice: e.target.value }))}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-gray-500 font-medium">Bắt đầu sau</span>
-                    <input type="time" value={advFilters.startAfter}
-                      onChange={e => setAdvFilters(f => ({ ...f, startAfter: e.target.value }))}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-gray-500 font-medium">Bắt đầu trước</span>
-                    <input type="time" value={advFilters.startBefore}
-                      onChange={e => setAdvFilters(f => ({ ...f, startBefore: e.target.value }))}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
-                  </label>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => { setAdvFilters({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' }); setAdvFiltersActive(false); setShowAdvFilters(false) }}
-                    className="flex-1 rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-500"
-                  >Xoá lọc</button>
-                  <button
-                    onClick={() => { setAdvFiltersActive(true); setShowAdvFilters(false) }}
-                    className="flex-1 rounded-xl bg-indigo-500 py-2 text-xs font-bold text-white"
-                  >Áp dụng</button>
-                </div>
-              </>
-            )}
+          <div className="rounded-2xl border border-indigo-100 bg-white p-4 mb-1">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-indigo-700">⚙️ Lọc nâng cao</span>
+              <button onClick={() => setShowAdvFilters(false)}><X size={14} className="text-gray-400" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <label className="flex flex-col gap-1">
+                <span className="text-gray-500 font-medium">Khoảng cách tối đa (km)</span>
+                <input type="number" placeholder="VD: 5" value={advFilters.maxDist}
+                  onChange={e => setAdvFilters(f => ({ ...f, maxDist: e.target.value }))}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-gray-500 font-medium">Giá tối đa (VNĐ)</span>
+                <input type="number" placeholder="VD: 50000" value={advFilters.maxPrice}
+                  onChange={e => setAdvFilters(f => ({ ...f, maxPrice: e.target.value }))}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-gray-500 font-medium">Bắt đầu sau</span>
+                <input type="time" value={advFilters.startAfter}
+                  onChange={e => setAdvFilters(f => ({ ...f, startAfter: e.target.value }))}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-gray-500 font-medium">Bắt đầu trước</span>
+                <input type="time" value={advFilters.startBefore}
+                  onChange={e => setAdvFilters(f => ({ ...f, startBefore: e.target.value }))}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+              </label>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => { setAdvFilters({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' }); setAdvFiltersActive(false); setShowAdvFilters(false) }}
+                className="flex-1 rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-500"
+              >Xoá lọc</button>
+              <button
+                onClick={() => { setAdvFiltersActive(true); setShowAdvFilters(false) }}
+                className="flex-1 rounded-xl bg-indigo-500 py-2 text-xs font-bold text-white"
+              >Áp dụng</button>
+            </div>
           </div>
         )}
         {advFiltersActive && (
@@ -477,7 +463,7 @@ export default function FeedPage() {
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-4xl mb-2">{SPORT_ICON[sportFilter] || '🏸'}</p>
+          <div className="flex justify-center mb-2"><SportIcon sport={sportFilter} size={48} /></div>
           <p className="text-base text-gray-500">Không có trận nào</p>
           <p className="text-xs text-gray-400 mt-1">Thử đổi bộ lọc hoặc tạo trận mới!</p>
         </div>
@@ -575,7 +561,7 @@ function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch;
 
   const dist = match.distance ?? 99
   const skillLevel = match.skill_level || 'INTERMEDIATE'
-  const sportIcon = SPORT_ICON[match.sport_type] || '🏸'
+  // sportIcon rendered via <SportIcon> component below
   const price = match.price_per_slot ?? 0
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
   const hostPremium = match.host_is_premium ?? false
@@ -614,7 +600,7 @@ function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch;
       <div className="p-4">
         {/* Row 1: Sport icon + Title + Match Score + Distance */}
         <div className="flex items-start gap-2.5">
-          <span className="text-2xl leading-none mt-0.5 shrink-0">{sportIcon}</span>
+          <SportIcon sport={match.sport_type} size={28} className="mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
             <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{match.title}</h3>
           </div>

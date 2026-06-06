@@ -224,7 +224,7 @@ export default function CreateMatchPage() {
               <SelectContent>
                 <SelectItem value="BADMINTON">🏸 Cầu lông</SelectItem>
                 <SelectItem value="RUNNING">🏃 Chạy bộ</SelectItem>
-                <SelectItem value="PICKLEBALL">🏓 Pickleball</SelectItem>
+                <SelectItem value="PICKLEBALL">🥏 Pickleball</SelectItem>
                 <SelectItem value="FOOTBALL">⚽ Bóng đá</SelectItem>
                 <SelectItem value="TENNIS">🎾 Tennis</SelectItem>
                 <SelectItem value="TABLE_TENNIS">🏓 Bóng bàn</SelectItem>

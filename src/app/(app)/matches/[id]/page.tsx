@@ -72,6 +72,7 @@ export default function MatchDetailPage() {
   })
   const [requests, setRequests] = useState<JoinReq[]>([])
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function MatchDetailPage() {
     })
     apiFetch<{ match: MatchInfo; is_host: boolean }>(`/matches/${matchId}`)
       .then((d) => { setMatch(d.match); setIsHost(d.is_host) })
-      .catch(() => {})
+      .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
     loadRequests()
   }, [matchId])
@@ -92,8 +93,21 @@ export default function MatchDetailPage() {
       .catch(() => {})
   }
 
-  if (loading || !match) {
+  if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin h-8 w-8 rounded-full border-2 border-green-500 border-t-transparent" /></div>
+  }
+
+  if (notFound || !match) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 px-6 text-center">
+        <p className="text-4xl">🏸</p>
+        <p className="text-base font-semibold text-gray-800">Không tìm thấy trận</p>
+        <p className="text-sm text-gray-500">Trận đã bị xóa, hủy, hoặc bạn không có quyền truy cập.</p>
+        <Link href="/feed" className="mt-1 rounded-xl bg-green-500 px-5 py-2 text-sm font-semibold text-white hover:bg-green-600">
+          Về trang chính
+        </Link>
+      </div>
+    )
   }
 
   const isCancelled = match.status === 'CANCELLED'
@@ -208,13 +222,15 @@ function MatchInfoTab({ match, requests, isPremium, isHost, matchId }: {
         </div>
       )}
 
-      {/* F4: Participants preview — premium non-host sees who's joining with skill levels */}
+      {/* F4: Participants preview — premium sees names+skill, free sees count+tier hint */}
       {!isHost && (
         <div className="rounded-xl border p-3">
           <p className="text-[10px] text-gray-500 font-medium mb-2">👥 Người đã đăng ký ({match.filled_slots}/{match.max_slots})</p>
-          {isPremium ? (
+          {match.filled_slots === 0 ? (
+            <p className="text-xs text-gray-400">Chưa có ai đăng ký</p>
+          ) : isPremium ? (
             participants.length === 0 ? (
-              <p className="text-xs text-gray-400">Chưa có ai đăng ký</p>
+              <p className="text-xs text-gray-400">Đang tải...</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {participants.map((p) => (
@@ -225,23 +241,29 @@ function MatchInfoTab({ match, requests, isPremium, isHost, matchId }: {
                     </span>
                     <span className="text-[11px] font-medium text-gray-800">{p.username}</span>
                     <span className="text-[9px] text-gray-500">
-                      {p.skill_level === 'BEGINNER' ? 'Yếu' : p.skill_level === 'INTERMEDIATE' ? 'TB' : p.skill_level === 'ADVANCED' ? 'Khá' : p.skill_level === 'SEMI_PRO' ? 'Pro' : p.skill_level?.replace('_', ' ')}
+                      {p.skill_level === 'BEGINNER' ? 'Yếu' : p.skill_level === 'LOWER_INTERMEDIATE' ? 'TB-' : p.skill_level === 'INTERMEDIATE' ? 'TB' : p.skill_level === 'UPPER_INTERMEDIATE' ? 'TB+' : p.skill_level === 'ADVANCED' ? 'Khá' : p.skill_level === 'SEMI_PRO' ? 'Pro' : p.skill_level}
                     </span>
                   </Link>
                 ))}
               </div>
             )
           ) : (
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-1">
-                {Array.from({ length: Math.min(match.filled_slots, 4) }).map((_, i) => (
-                  <div key={i} className="h-6 w-6 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center">
-                    <Lock size={8} className="text-gray-400" />
-                  </div>
-                ))}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(match.filled_slots, 5) }).map((_, i) => {
+                  const colors = ['bg-green-200 text-green-800', 'bg-blue-200 text-blue-800', 'bg-purple-200 text-purple-800', 'bg-orange-200 text-orange-800', 'bg-teal-200 text-teal-800']
+                  return (
+                    <div key={i} className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold ${colors[i % colors.length]} -ml-1 first:ml-0 border-2 border-white`}>
+                      ?
+                    </div>
+                  )
+                })}
+                {match.filled_slots > 5 && (
+                  <span className="text-[10px] text-gray-500 ml-1">+{match.filled_slots - 5} người</span>
+                )}
               </div>
-              <Link href="/profile/premium" className="flex items-center gap-1 text-[11px] text-amber-600 font-semibold">
-                <Crown size={11} /> Premium để xem tên + trình độ
+              <Link href="/profile/premium" className="flex items-center gap-1 text-[11px] text-amber-600 font-medium hover:text-amber-700">
+                <Crown size={10} /> Nâng cấp Premium để xem tên và trình độ
               </Link>
             </div>
           )}

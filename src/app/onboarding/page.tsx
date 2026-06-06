@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronRight, ChevronLeft, Check, Loader2 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { clsx } from 'clsx'
+import SportIcon from '@/components/SportIcon'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ const SPORTS: { key: SportKey; label: string; icon: string }[] = [
   { key: 'BASKETBALL',   label: 'Bóng rổ',     icon: '🏀' },
   { key: 'VOLLEYBALL',   label: 'Bóng chuyền', icon: '🏐' },
   { key: 'RUNNING',      label: 'Chạy bộ',     icon: '🏃' },
-  { key: 'PICKLEBALL',   label: 'Pickleball',  icon: '🥒' },
+  { key: 'PICKLEBALL',   label: 'Pickleball',  icon: '' },
 ]
 
 const DURATION_OPTIONS: { key: DurationKey; label: string; sub: string; score: number }[] = [
@@ -202,7 +203,7 @@ export default function OnboardingPage() {
                       : 'border-gray-800 bg-gray-900 hover:border-gray-700'
                   )}
                 >
-                  <span className="text-2xl shrink-0">{sport.icon}</span>
+                  <SportIcon sport={sport.key} size={26} className="shrink-0" />
                   <div>
                     <p className={clsx('text-sm font-semibold', sports.includes(sport.key) ? 'text-green-400' : 'text-white')}>
                       {sport.label}

@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Trophy, Lock, Check, Sparkles, ChevronLeft, RefreshCw, AlertCircle } from 'lucide-react'
+import { Loader2, Trophy, Lock, Check, Sparkles, ChevronLeft, RefreshCw, AlertCircle, Eye } from 'lucide-react'
 import { clsx } from 'clsx'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
+import SportIcon, { getSportEmoji } from '@/components/SportIcon'
 
 interface BadgeData {
   id: number
@@ -16,6 +17,8 @@ interface BadgeData {
   condition_value: number
   tier: 'BRONZE' | 'SILVER' | 'GOLD'
   badge_group: string
+  sport_type?: string | null
+  is_hidden: boolean
   current_value: number
   is_unlocked: boolean
   is_equipped: boolean
@@ -27,13 +30,26 @@ interface BadgeResponse {
   total: number
 }
 
-const BADGE_GROUPS = [
-  { key: 'all', label: 'Tất cả', icon: '🏆' },
-  { key: 'hoat_dong', label: 'Hoạt động', icon: '⚔️' },
-  { key: 'thuong_gia', label: 'Thương gia', icon: '🛒' },
-  { key: 'bau_so', label: 'Bầu sô', icon: '🏟️' },
-  { key: 'choi_dep', label: 'Chơi đẹp', icon: '⭐' },
-  { key: 'premium', label: 'Premium', icon: '💎' },
+const SPORT_TABS = [
+  { key: 'BADMINTON',    label: 'Cầu Lông',   group: 'sport_badminton' },
+  { key: 'FOOTBALL',     label: 'Bóng Đá',    group: 'sport_football' },
+  { key: 'PICKLEBALL',   label: 'Pickleball', group: 'sport_pickleball' },
+  { key: 'TENNIS',       label: 'Tennis',     group: 'sport_tennis' },
+  { key: 'TABLE_TENNIS', label: 'Bóng Bàn',  group: 'sport_table_tennis' },
+  { key: 'BASKETBALL',   label: 'Bóng Rổ',   group: 'sport_basketball' },
+  { key: 'VOLLEYBALL',   label: 'Bóng Chuyền',group: 'sport_volleyball' },
+  { key: 'RUNNING',      label: 'Chạy Bộ',   group: 'sport_running' },
+]
+
+const GENERAL_TABS = [
+  { key: 'all',       label: 'Tất cả',   emoji: '🏆' },
+  { key: 'hoat_dong', label: 'Hoạt động', emoji: '⚔️' },
+  { key: 'bau_so',    label: 'Bầu sô',   emoji: '🏟️' },
+  { key: 'choi_dep',  label: 'Chơi đẹp', emoji: '⭐' },
+  { key: 'ket_noi',   label: 'Kết nối',  emoji: '🤝' },
+  { key: 'thuong_gia',label: 'Thương gia',emoji: '🛒' },
+  { key: 'premium',   label: 'Premium',  emoji: '💎' },
+  { key: 'bi_an',     label: 'Bí ẩn',    emoji: '🔮' },
 ]
 
 const TIER_CONFIG = {
@@ -43,6 +59,7 @@ const TIER_CONFIG = {
     border: 'border-amber-800/30',
     iconRing: 'border-amber-700 bg-amber-900/30',
     progressBar: 'bg-amber-600',
+    dot: 'bg-amber-500',
   },
   SILVER: {
     label: 'Chuyên Nghiệp',
@@ -50,6 +67,7 @@ const TIER_CONFIG = {
     border: 'border-blue-500/30',
     iconRing: 'border-blue-400 bg-blue-900/30',
     progressBar: 'bg-blue-500',
+    dot: 'bg-blue-400',
   },
   GOLD: {
     label: 'Huyền Thoại',
@@ -57,6 +75,7 @@ const TIER_CONFIG = {
     border: 'border-yellow-500/30',
     iconRing: 'border-yellow-400 bg-yellow-900/20',
     progressBar: 'bg-gradient-to-r from-yellow-500 to-amber-400',
+    dot: 'bg-yellow-400',
   },
 }
 
@@ -72,13 +91,10 @@ function getProgress(badge: BadgeData): number {
 
 function sortBadges(badges: BadgeData[]): BadgeData[] {
   return [...badges].sort((a, b) => {
-    // 1. Equipped first
     if (a.is_equipped && !b.is_equipped) return -1
     if (!a.is_equipped && b.is_equipped) return 1
-    // 2. Unlocked before locked
     if (a.is_unlocked && !b.is_unlocked) return -1
     if (!a.is_unlocked && b.is_unlocked) return 1
-    // 3. Within same unlock status, sort by progress desc
     return getProgress(b) - getProgress(a)
   })
 }
@@ -101,11 +117,43 @@ function LoadingSkeleton() {
   )
 }
 
+function SportProgressCard({ sport, badges }: { sport: typeof SPORT_TABS[0]; badges: BadgeData[] }) {
+  const unlocked = badges.filter(b => b.is_unlocked).length
+  const total = badges.length
+  const pct = total > 0 ? Math.round((unlocked / total) * 100) : 0
+  const tiers = ['BRONZE', 'SILVER', 'GOLD'] as const
+  return (
+    <div className="rounded-xl border border-gray-800/60 bg-slate-900/50 p-3 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-gray-800/80 flex items-center justify-center shrink-0">
+        <SportIcon sport={sport.key} size={22} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-semibold text-white">{sport.label}</span>
+          <span className="text-[10px] text-emerald-400 font-bold">{unlocked}/{total}</span>
+        </div>
+        <div className="flex gap-1 mb-1">
+          {tiers.map((tier) => {
+            const tb = badges.find(b => b.tier === tier)
+            const done = tb?.is_unlocked ?? false
+            return (
+              <div key={tier} className={clsx('h-1.5 flex-1 rounded-full', done ? TIER_CONFIG[tier].dot : 'bg-gray-800')} />
+            )
+          })}
+        </div>
+        <span className="text-[10px] text-gray-500">{pct}% hoàn thành</span>
+      </div>
+    </div>
+  )
+}
+
 export default function AchievementsPage() {
   const [data, setData] = useState<BadgeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeGroup, setActiveGroup] = useState('all')
+  const [activeTab, setActiveTab] = useState('all')
+  const [tabMode, setTabMode] = useState<'general' | 'sport'>('general')
+  const [sportOverview, setSportOverview] = useState(true)
   const [equipLoading, setEquipLoading] = useState<number | null>(null)
 
   const fetchBadges = useCallback(() => {
@@ -137,19 +185,27 @@ export default function AchievementsPage() {
   }
 
   const badges = data?.badges ?? []
-
-  const groupCounts = BADGE_GROUPS.reduce<Record<string, number>>((acc, g) => {
-    acc[g.key] = g.key === 'all' ? badges.length : badges.filter((b) => b.badge_group === g.key).length
-    return acc
-  }, {})
-
-  const filtered = sortBadges(
-    activeGroup === 'all' ? badges : badges.filter((b) => b.badge_group === activeGroup)
-  )
-
   const unlocked = data?.unlocked ?? 0
   const total = data?.total ?? 0
   const overallPct = total > 0 ? Math.round((unlocked / total) * 100) : 0
+
+  const getFiltered = () => {
+    if (tabMode === 'sport') {
+      if (sportOverview) return [] // overview mode shows SportProgressCards instead
+      const sport = SPORT_TABS.find(s => s.key === activeTab)
+      if (!sport) return []
+      return sortBadges(badges.filter(b => b.badge_group === sport.group))
+    }
+    if (activeTab === 'all') return sortBadges(badges)
+    return sortBadges(badges.filter(b => b.badge_group === activeTab))
+  }
+
+  const filtered = getFiltered()
+
+  const sportBadgesMap = SPORT_TABS.reduce<Record<string, BadgeData[]>>((acc, s) => {
+    acc[s.key] = badges.filter(b => b.badge_group === s.group)
+    return acc
+  }, {})
 
   return (
     <div className="min-h-screen bg-gray-950 px-4 py-5 pb-20">
@@ -162,57 +218,149 @@ export default function AchievementsPage() {
           <h1 className="text-lg font-bold text-white flex items-center gap-2">
             <Trophy size={20} className="text-amber-400" /> Thành tựu
           </h1>
+          <p className="text-[11px] text-gray-500 mt-px">Theo dõi hành trình thể thao của bạn</p>
         </div>
         {!loading && !error && (
-          <span className="text-xs text-gray-500 bg-gray-800 rounded-full px-2.5 py-1">
-            <span className="text-emerald-400 font-bold">{unlocked}</span> / {total}
-          </span>
+          <button onClick={fetchBadges} className="p-1.5 rounded-lg bg-gray-800 text-gray-500 hover:text-gray-300">
+            <RefreshCw size={14} />
+          </button>
         )}
       </div>
 
-      {/* Overall Progress Bar */}
+      {/* Overall Progress */}
       {!loading && !error && total > 0 && (
-        <div className="mb-5 space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-gray-500">
-            <span>Tiến độ tổng thể</span>
-            <span className="text-emerald-400 font-semibold">{overallPct}%</span>
+        <div className="mb-5 rounded-xl border border-gray-800/60 bg-slate-900/50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-300">Tiến độ tổng thể</span>
+            <span className="text-xs font-bold text-emerald-400">{unlocked}/{total} huy hiệu</span>
           </div>
-          <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+          <div className="h-2.5 rounded-full bg-slate-800 overflow-hidden mb-1.5">
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-700"
               style={{ width: `${overallPct}%` }}
             />
           </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-500">{overallPct}% hoàn thành</span>
+            <span className="text-[10px] text-gray-500">{total - unlocked} huy hiệu còn lại</span>
+          </div>
         </div>
       )}
 
-      {/* Category Tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 mb-1">
-        {BADGE_GROUPS.map((group) => {
-          const isActive = activeGroup === group.key
-          const count = groupCounts[group.key] ?? 0
-          return (
-            <button
-              key={group.key}
-              onClick={() => setActiveGroup(group.key)}
-              className={clsx(
-                'flex-shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-medium border transition-all whitespace-nowrap',
-                isActive
-                  ? 'bg-green-500/20 text-green-400 border-green-500/40'
-                  : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700 hover:text-gray-300'
-              )}
-            >
-              {group.icon} {group.label}
-              <span className={clsx(
-                'text-[9px] rounded-full px-1.5 py-px',
-                isActive ? 'bg-green-500/30 text-green-300' : 'bg-gray-800 text-gray-500'
-              )}>
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      {/* Mode switcher */}
+      {!loading && !error && (
+        <div className="flex rounded-xl bg-gray-900 border border-gray-800 p-1 mb-4">
+          <button
+            onClick={() => { setTabMode('general'); setActiveTab('all') }}
+            className={clsx(
+              'flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              tabMode === 'general' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200'
+            )}
+          >
+            🏆 Chung
+          </button>
+          <button
+            onClick={() => { setTabMode('sport'); setSportOverview(true) }}
+            className={clsx(
+              'flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              tabMode === 'sport' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200'
+            )}
+          >
+            ⚡ Theo môn
+          </button>
+        </div>
+      )}
+
+      {/* Sport overview grid when in sport mode and no specific sport selected (show all sports) */}
+      {!loading && !error && tabMode === 'sport' && (
+        <>
+          {/* Sport overview — all sports summary */}
+          {sportOverview && (
+            <div className="grid grid-cols-1 gap-2 mb-4">
+              {SPORT_TABS.map(sport => (
+                <div key={sport.key} onClick={() => { setSportOverview(false); setActiveTab(sport.key) }} className="cursor-pointer">
+                  <SportProgressCard
+                    sport={sport}
+                    badges={sportBadgesMap[sport.key] ?? []}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Sport detail — selected sport's badges */}
+          {!sportOverview && (
+            <>
+              <button
+                onClick={() => setSportOverview(true)}
+                className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-200 mb-3"
+              >
+                <ChevronLeft size={14} /> Tất cả môn
+              </button>
+              <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4 mb-4">
+                {SPORT_TABS.map((sport) => {
+                  const isActive = activeTab === sport.key
+                  const sCount = sportBadgesMap[sport.key]?.filter(b => b.is_unlocked).length ?? 0
+                  const sTotal = sportBadgesMap[sport.key]?.length ?? 0
+                  return (
+                    <button
+                      key={sport.key}
+                      onClick={() => setActiveTab(sport.key)}
+                      className={clsx(
+                        'flex-shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium border transition-all whitespace-nowrap',
+                        isActive
+                          ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                          : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700 hover:text-gray-300'
+                      )}
+                    >
+                      <SportIcon sport={sport.key} size={13} />
+                      {sport.label}
+                      <span className={clsx(
+                        'text-[9px] rounded-full px-1.5 py-px',
+                        isActive ? 'bg-green-500/30 text-green-300' : 'bg-gray-800 text-gray-500'
+                      )}>
+                        {sCount}/{sTotal}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* General tabs */}
+      {!loading && !error && tabMode === 'general' && (
+        <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4 mb-4">
+          {GENERAL_TABS.map((tab) => {
+            const isActive = activeTab === tab.key
+            const count = tab.key === 'all'
+              ? badges.length
+              : badges.filter(b => b.badge_group === tab.key).length
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={clsx(
+                  'flex-shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-medium border transition-all whitespace-nowrap',
+                  isActive
+                    ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                    : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700 hover:text-gray-300'
+                )}
+              >
+                {tab.emoji} {tab.label}
+                <span className={clsx(
+                  'text-[9px] rounded-full px-1.5 py-px',
+                  isActive ? 'bg-green-500/30 text-green-300' : 'bg-gray-800 text-gray-500'
+                )}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && <LoadingSkeleton />}
@@ -231,8 +379,8 @@ export default function AchievementsPage() {
         </div>
       )}
 
-      {/* Badge Grid */}
-      {!loading && !error && (
+      {/* Badge Grid — hidden when sport overview is showing */}
+      {!loading && !error && !(tabMode === 'sport' && sportOverview) && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {filtered.map((badge) => {
@@ -240,17 +388,19 @@ export default function AchievementsPage() {
               const binary = isBinaryBadge(badge)
               const progress = getProgress(badge)
               const remaining = Math.max(badge.condition_value - badge.current_value, 0)
-              const isClose = !badge.is_unlocked && !binary && remaining > 0 && remaining <= badge.condition_value * 0.2
+              const isClose = !badge.is_unlocked && !binary && remaining > 0 && remaining <= Math.ceil(badge.condition_value * 0.2)
+              const isHiddenMystery = badge.is_hidden && !badge.is_unlocked
 
               return (
                 <div
                   key={badge.id}
                   className={clsx(
                     'relative rounded-xl border p-4 transition-all duration-300 group',
-                    badge.is_unlocked ? config.border : 'border-gray-800/50',
-                    badge.is_unlocked
-                      ? 'bg-gradient-to-b from-slate-800/80 to-slate-900/80'
-                      : 'bg-slate-900/60 opacity-70',
+                    isHiddenMystery
+                      ? 'border-purple-900/40 bg-purple-950/20'
+                      : badge.is_unlocked
+                        ? clsx(config.border, 'bg-gradient-to-b from-slate-800/80 to-slate-900/80')
+                        : 'border-gray-800/50 bg-slate-900/60 opacity-70',
                     badge.tier === 'GOLD' && badge.is_unlocked && 'shadow-md shadow-yellow-500/10'
                   )}
                 >
@@ -268,14 +418,30 @@ export default function AchievementsPage() {
                   <div className="relative">
                     {/* Top row */}
                     <div className="flex items-start justify-between mb-3">
-                      <div className={clsx(
-                        'w-11 h-11 rounded-xl border-2 flex items-center justify-center transition-transform group-hover:scale-105',
-                        badge.is_unlocked ? config.iconRing : 'border-gray-700 bg-gray-800/50'
-                      )}>
-                        {badge.is_unlocked && badge.icon_url ? (
-                          <img src={badge.icon_url} alt="" className="w-6 h-6" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                        ) : (
-                          <Lock size={16} className="text-gray-600" />
+                      <div className="flex items-center gap-2">
+                        <div className={clsx(
+                          'w-11 h-11 rounded-xl border-2 flex items-center justify-center transition-transform group-hover:scale-105',
+                          isHiddenMystery
+                            ? 'border-purple-700/50 bg-purple-900/30'
+                            : badge.is_unlocked
+                              ? config.iconRing
+                              : 'border-gray-700 bg-gray-800/50'
+                        )}>
+                          {isHiddenMystery ? (
+                            <span className="text-lg">🔮</span>
+                          ) : badge.is_unlocked && badge.icon_url ? (
+                            <img src={badge.icon_url} alt="" className="w-6 h-6" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                          ) : badge.sport_type ? (
+                            <SportIcon sport={badge.sport_type} size={20} />
+                          ) : (
+                            <Lock size={16} className="text-gray-600" />
+                          )}
+                        </div>
+                        {/* Sport tag on sport-specific badges */}
+                        {badge.sport_type && !isHiddenMystery && (
+                          <span className="flex items-center gap-0.5 text-[9px] text-gray-500 bg-gray-800/60 rounded-full px-1.5 py-0.5">
+                            {getSportEmoji(badge.sport_type)}
+                          </span>
                         )}
                       </div>
 
@@ -285,50 +451,69 @@ export default function AchievementsPage() {
                             <Check size={8} strokeWidth={3} /> Đang đeo
                           </span>
                         )}
-                        <span className={clsx('rounded-full px-2 py-0.5 text-[9px] font-semibold', config.labelBg)}>
-                          {badge.tier === 'GOLD' && <Sparkles size={8} className="inline mr-0.5" />}
-                          {config.label}
-                        </span>
+                        {isHiddenMystery ? (
+                          <span className="rounded-full bg-purple-900/40 text-purple-400 px-2 py-0.5 text-[9px] font-semibold">
+                            🔮 Bí ẩn
+                          </span>
+                        ) : (
+                          <span className={clsx('rounded-full px-2 py-0.5 text-[9px] font-semibold', config.labelBg)}>
+                            {badge.tier === 'GOLD' && <Sparkles size={8} className="inline mr-0.5" />}
+                            {config.label}
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Name + Description */}
-                    <h4 className={clsx('text-sm font-semibold mb-0.5 leading-tight', badge.is_unlocked ? 'text-white' : 'text-gray-400')}>
-                      {badge.name}
-                    </h4>
-                    <p className="text-[11px] text-gray-500 mb-3 line-clamp-2 leading-relaxed">
-                      {badge.description}
-                    </p>
+                    {isHiddenMystery ? (
+                      <>
+                        <h4 className="text-sm font-semibold mb-0.5 leading-tight text-purple-400 flex items-center gap-1">
+                          <Eye size={12} className="opacity-60" /> Huy hiệu bí ẩn
+                        </h4>
+                        <p className="text-[11px] text-gray-600 mb-3">Tiếp tục chơi để khám phá...</p>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className={clsx('text-sm font-semibold mb-0.5 leading-tight', badge.is_unlocked ? 'text-white' : 'text-gray-400')}>
+                          {badge.name}
+                        </h4>
+                        <p className="text-[11px] text-gray-500 mb-3 line-clamp-2 leading-relaxed">
+                          {badge.description}
+                        </p>
+                      </>
+                    )}
 
                     {/* Progress */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[10px]">
-                        {binary ? (
-                          <span className={badge.is_unlocked ? 'text-emerald-400' : 'text-gray-600'}>
-                            {badge.is_unlocked ? 'Đã kích hoạt' : 'Chưa kích hoạt'}
-                          </span>
-                        ) : (
-                          <span className={badge.is_unlocked ? 'text-emerald-400 font-medium' : 'text-gray-500'}>
-                            {badge.current_value}/{badge.condition_value}
-                          </span>
-                        )}
-                        {isClose && (
-                          <span className="text-amber-400 font-semibold animate-pulse">Còn {remaining}!</span>
-                        )}
-                        {badge.is_unlocked && !binary && (
-                          <span className="text-emerald-400">✓ Đã mở</span>
-                        )}
-                      </div>
-                      <div className="h-1.5 rounded-full bg-slate-700/80 overflow-hidden">
-                        <div
-                          className={clsx(
-                            'h-full rounded-full transition-all duration-700',
-                            badge.is_unlocked ? 'bg-emerald-500' : config.progressBar
+                    {!isHiddenMystery && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          {binary ? (
+                            <span className={badge.is_unlocked ? 'text-emerald-400' : 'text-gray-600'}>
+                              {badge.is_unlocked ? 'Đã kích hoạt' : 'Chưa kích hoạt'}
+                            </span>
+                          ) : (
+                            <span className={badge.is_unlocked ? 'text-emerald-400 font-medium' : 'text-gray-500'}>
+                              {badge.current_value}/{badge.condition_value}
+                            </span>
                           )}
-                          style={{ width: `${progress}%` }}
-                        />
+                          {isClose && (
+                            <span className="text-amber-400 font-semibold animate-pulse">Còn {remaining}!</span>
+                          )}
+                          {badge.is_unlocked && !binary && (
+                            <span className="text-emerald-400">✓ Đã mở</span>
+                          )}
+                        </div>
+                        <div className="h-1.5 rounded-full bg-slate-700/80 overflow-hidden">
+                          <div
+                            className={clsx(
+                              'h-full rounded-full transition-all duration-700',
+                              badge.is_unlocked ? 'bg-emerald-500' : config.progressBar
+                            )}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Equip button */}
                     {badge.is_unlocked && !badge.is_equipped && (
@@ -348,7 +533,7 @@ export default function AchievementsPage() {
             })}
           </div>
 
-          {filtered.length === 0 && (
+          {filtered.length === 0 && !loading && (
             <div className="text-center py-16">
               <p className="text-3xl mb-2">🏆</p>
               <p className="text-sm text-gray-500">Chưa có huy hiệu nào trong nhóm này</p>

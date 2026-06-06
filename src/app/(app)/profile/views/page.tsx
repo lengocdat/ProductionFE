@@ -29,36 +29,15 @@ export default function ProfileViewsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch<{ user: { is_premium: boolean } }>('/auth/me')
-      .then(d => setIsPremium(d.user.is_premium))
-      .catch(() => {})
-
-    apiFetch<{ views: ProfileView[]; total: number }>('/premium/profile-views')
-      .then(d => { setViews(d.views || []); setTotal(d.total || 0) })
+    apiFetch<{ views: ProfileView[] | null; total: number; is_premium: boolean }>('/premium/profile-views')
+      .then(d => {
+        setTotal(d.total || 0)
+        setIsPremium(d.is_premium)
+        setViews(d.views || [])
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
-
-  // Non-premium upsell
-  if (!loading && !isPremium) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-gray-50">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center mb-4 shadow-xl shadow-amber-300/30">
-          <Crown size={36} className="text-white" />
-        </div>
-        <h1 className="text-xl font-black text-gray-900 mb-2">Tính năng Premium</h1>
-        <p className="text-sm text-gray-500 leading-relaxed mb-6">
-          Nâng cấp Premium để biết ai đã xem hồ sơ của bạn trong 30 ngày gần nhất.<br />
-          Chủ động kết nối với người phù hợp!
-        </p>
-        <Link href="/profile/premium"
-          className="rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 px-8 py-3.5 text-sm font-black text-gray-900 shadow-lg shadow-amber-300/30">
-          Nâng cấp ngay
-        </Link>
-        <button onClick={() => router.back()} className="mt-4 text-xs text-gray-400">Quay lại</button>
-      </div>
-    )
-  }
 
   return (
     <div className="px-4 py-5 max-w-md mx-auto">
@@ -78,13 +57,52 @@ export default function ProfileViewsPage() {
         <div className="flex justify-center py-16">
           <div className="animate-spin h-6 w-6 rounded-full border-2 border-green-500 border-t-transparent" />
         </div>
-      ) : views.length === 0 ? (
+      ) : total === 0 ? (
         <div className="text-center py-16">
           <p className="text-4xl mb-3">👁️</p>
           <p className="text-gray-500 text-sm">Chưa có ai xem hồ sơ bạn</p>
-          <p className="text-gray-400 text-xs mt-1">Hãy tham gia thêm trận để tăng độ hiện diện!</p>
+          <p className="text-gray-400 text-xs mt-1">Tham gia thêm trận để tăng độ hiện diện!</p>
+        </div>
+      ) : !isPremium ? (
+        /* Free user: teaser — show count + blurred bubbles + soft upsell */
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4 text-center">
+            <div className="flex justify-center gap-1 mb-3">
+              {Array.from({ length: Math.min(total, 5) }).map((_, i) => {
+                const colors = ['bg-green-300', 'bg-blue-300', 'bg-purple-300', 'bg-orange-300', 'bg-teal-300']
+                return (
+                  <div key={i} className={`h-10 w-10 rounded-full ${colors[i % colors.length]} blur-sm border-2 border-white -ml-1 first:ml-0`} />
+                )
+              })}
+              {total > 5 && <span className="text-sm text-gray-500 self-center ml-1">+{total - 5}</span>}
+            </div>
+            <p className="text-base font-black text-gray-900 mb-1">
+              {total} người đã xem hồ sơ bạn
+            </p>
+            <p className="text-xs text-gray-500 mb-4">Nâng cấp Premium để biết họ là ai và chủ động kết nối</p>
+            <Link
+              href="/profile/premium"
+              className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 px-6 py-2.5 text-sm font-black text-gray-900 shadow-md shadow-amber-200/40"
+            >
+              <Crown size={14} /> Xem ngay với Premium
+            </Link>
+          </div>
+
+          {/* Ghost rows for FOMO */}
+          <div className="space-y-2 opacity-40 pointer-events-none select-none">
+            {Array.from({ length: Math.min(total, 3) }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3">
+                <div className="h-10 w-10 rounded-full bg-gray-200 blur-sm shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-24 bg-gray-200 rounded blur-sm" />
+                  <div className="h-2 w-16 bg-gray-100 rounded blur-sm" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
+        /* Premium user: full list */
         <div className="space-y-2.5">
           {views.map((v) => (
             <Link key={v.id} href={`/users/${v.viewer_id}`}

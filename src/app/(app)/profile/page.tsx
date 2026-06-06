@@ -109,15 +109,8 @@ export default function ProfilePage() {
         {user.is_premium && (
           <MenuLink href="/profile/radar" icon={<span className="text-lg">🎯</span>} label="Radar của tôi" desc="Quản lý radar tự động tìm trận" />
         )}
-        {user.is_premium && (
-          <MenuLink href="/profile/views" icon={<Eye size={18} className="text-indigo-500" />} label="Ai đã xem hồ sơ bạn" desc="30 ngày gần nhất · chỉ Premium" />
-        )}
-        {user.is_premium && (
-          <MenuLink href="/profile/stats" icon={<BarChart2 size={18} className="text-purple-500" />} label="Thống kê của tôi" desc="Phân tích chuyên sâu hoạt động thể thao" />
-        )}
-        {!user.is_premium && (
-          <MenuLink href="/profile/premium" icon={<Eye size={18} className="text-gray-400" />} label="Ai xem hồ sơ bạn?" desc="Nâng cấp Premium để xem" premium />
-        )}
+        <MenuLink href="/profile/views" icon={<Eye size={18} className="text-indigo-500" />} label="Ai đã xem hồ sơ bạn" desc={user.is_premium ? '30 ngày gần nhất · Premium' : 'Xem số lượt xem · chi tiết cần Premium'} />
+        <MenuLink href="/profile/stats" icon={<BarChart2 size={18} className="text-purple-500" />} label="Thống kê của tôi" desc={user.is_premium ? 'Phân tích chuyên sâu hoạt động thể thao' : 'Tổng quan miễn phí · phân tích đầy đủ cần Premium'} />
         <MenuLink href="/dashboard/courts" icon={<LayoutDashboard size={18} className="text-blue-500" />} label="Quản lý sân (Chủ sân)" desc="Dashboard booking & lịch sân" />
       </div>
 

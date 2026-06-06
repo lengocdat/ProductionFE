@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Crown, BarChart2, Zap, Star, Users, Trophy, TrendingUp, Clock } from 'lucide-react'
+import { ArrowLeft, Crown, BarChart2, Zap, Star, Users, Trophy, TrendingUp, Clock, Lock } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { clsx } from 'clsx'
 
@@ -24,7 +24,7 @@ interface MyStats {
 const SPORT_ICON: Record<string, string> = {
   BADMINTON: '🏸', FOOTBALL: '⚽', BASKETBALL: '🏀',
   VOLLEYBALL: '🏐', TABLE_TENNIS: '🏓', TENNIS: '🎾',
-  RUNNING: '🏃', PICKLEBALL: '🏓',
+  RUNNING: '🏃', PICKLEBALL: '🥏',
 }
 const SPORT_LABEL: Record<string, string> = {
   BADMINTON: 'Cầu lông', FOOTBALL: 'Bóng đá', BASKETBALL: 'Bóng rổ',
@@ -39,34 +39,11 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch<{ user: { is_premium: boolean } }>('/auth/me')
-      .then(d => setIsPremium(d.user.is_premium))
-      .catch(() => {})
-
-    apiFetch<{ stats: MyStats }>('/premium/my-stats')
-      .then(d => setStats(d.stats))
+    apiFetch<{ stats: MyStats; is_premium: boolean }>('/premium/my-stats')
+      .then(d => { setStats(d.stats); setIsPremium(d.is_premium) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
-
-  if (!loading && !isPremium) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-gray-50">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center mb-4 shadow-xl shadow-amber-300/30">
-          <Crown size={36} className="text-white" />
-        </div>
-        <h1 className="text-xl font-black text-gray-900 mb-2">Thống kê nâng cao</h1>
-        <p className="text-sm text-gray-500 leading-relaxed mb-6">
-          Nâng cấp Premium để xem phân tích chuyên sâu về hoạt động thể thao của bạn.
-        </p>
-        <Link href="/profile/premium"
-          className="rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 px-8 py-3.5 text-sm font-black text-gray-900 shadow-lg shadow-amber-300/30">
-          Nâng cấp ngay
-        </Link>
-        <button onClick={() => router.back()} className="mt-4 text-xs text-gray-400">Quay lại</button>
-      </div>
-    )
-  }
 
   return (
     <div className="px-4 py-5 max-w-md mx-auto pb-20">
@@ -78,7 +55,9 @@ export default function StatsPage() {
           <h1 className="text-lg font-black text-gray-900 flex items-center gap-1.5">
             <BarChart2 size={18} className="text-purple-500" /> Thống kê của tôi
           </h1>
-          <p className="text-xs text-gray-500">Phân tích hoạt động thể thao · Premium</p>
+          <p className="text-xs text-gray-500">
+            {isPremium ? 'Phân tích nâng cao · Premium' : 'Tổng quan hoạt động'}
+          </p>
         </div>
       </div>
 
@@ -89,14 +68,14 @@ export default function StatsPage() {
       ) : (
         <div className="space-y-4">
 
-          {/* Overview cards */}
+          {/* Overview cards — free for all */}
           <div className="grid grid-cols-3 gap-2">
             <StatCard icon={<Trophy size={16} className="text-amber-500" />} value={String(stats.total_matches)} label="Tổng trận" color="amber" />
             <StatCard icon={<Zap size={16} className="text-blue-500" />} value={String(stats.hosted_matches)} label="Chủ trận" color="blue" />
             <StatCard icon={<Users size={16} className="text-green-500" />} value={String(stats.joined_matches)} label="Tham gia" color="green" />
           </div>
 
-          {/* Rating */}
+          {/* Rating — free for all */}
           <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">⭐ Đánh giá</p>
             <div className="flex gap-4">
@@ -122,84 +101,124 @@ export default function StatsPage() {
             </div>
           </div>
 
-          {/* Sport breakdown */}
-          {stats.sport_breakdown && stats.sport_breakdown.length > 0 && (
-            <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">🏅 Môn thể thao</p>
-              <div className="space-y-2.5">
-                {stats.sport_breakdown.map((s, i) => {
-                  const maxCount = stats.sport_breakdown[0].count
-                  const pct = Math.round((s.count / maxCount) * 100)
-                  return (
-                    <div key={s.sport} className="flex items-center gap-2">
-                      <span className="text-lg w-6 text-center">{SPORT_ICON[s.sport] || '🏃'}</span>
-                      <div className="flex-1">
-                        <div className="flex justify-between mb-0.5">
-                          <span className="text-[11px] font-medium text-gray-700">{SPORT_LABEL[s.sport] || s.sport}</span>
-                          <span className="text-[11px] text-gray-500">{s.count} trận</span>
+          {/* Premium-only sections */}
+          {isPremium ? (
+            <>
+              {/* Sport breakdown */}
+              {stats.sport_breakdown && stats.sport_breakdown.length > 0 && (
+                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">🏅 Môn thể thao</p>
+                  <div className="space-y-2.5">
+                    {stats.sport_breakdown.map((s, i) => {
+                      const maxCount = stats.sport_breakdown[0].count
+                      const pct = Math.round((s.count / maxCount) * 100)
+                      return (
+                        <div key={s.sport} className="flex items-center gap-2">
+                          <span className="text-lg w-6 text-center">{SPORT_ICON[s.sport] || '🏃'}</span>
+                          <div className="flex-1">
+                            <div className="flex justify-between mb-0.5">
+                              <span className="text-[11px] font-medium text-gray-700">{SPORT_LABEL[s.sport] || s.sport}</span>
+                              <span className="text-[11px] text-gray-500">{s.count} trận</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                              <div
+                                className={clsx('h-full rounded-full transition-all', i === 0 ? 'bg-purple-500' : i === 1 ? 'bg-blue-400' : 'bg-gray-300')}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                          <div
-                            className={clsx('h-full rounded-full transition-all', i === 0 ? 'bg-purple-500' : i === 1 ? 'bg-blue-400' : 'bg-gray-300')}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Streak + Active hour */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 text-center">
+                  <TrendingUp size={20} className="text-orange-500 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-gray-900">{stats.weekly_streak}</p>
+                  <p className="text-[11px] text-gray-500 leading-tight">tuần liên tiếp có trận</p>
+                  {stats.weekly_streak >= 4 && <p className="text-[10px] text-orange-500 font-bold mt-1">🔥 Đang streak!</p>}
+                </div>
+                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 text-center">
+                  <Clock size={20} className="text-indigo-500 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-gray-900">{stats.most_active_hour}:00</p>
+                  <p className="text-[11px] text-gray-500 leading-tight">giờ hoạt động nhiều nhất</p>
+                  <p className="text-[10px] text-indigo-500 font-medium mt-1">
+                    {stats.most_active_hour < 8 ? '🌅 Sáng sớm' : stats.most_active_hour < 12 ? '☀️ Buổi sáng' : stats.most_active_hour < 18 ? '🌤️ Buổi chiều' : '🌙 Buổi tối'}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Streak + Active hour */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 text-center">
-              <TrendingUp size={20} className="text-orange-500 mx-auto mb-1" />
-              <p className="text-2xl font-black text-gray-900">{stats.weekly_streak}</p>
-              <p className="text-[11px] text-gray-500 leading-tight">tuần liên tiếp có trận</p>
-              {stats.weekly_streak >= 4 && <p className="text-[10px] text-orange-500 font-bold mt-1">🔥 Đang streak!</p>}
-            </div>
-            <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 text-center">
-              <Clock size={20} className="text-indigo-500 mx-auto mb-1" />
-              <p className="text-2xl font-black text-gray-900">{stats.most_active_hour}:00</p>
-              <p className="text-[11px] text-gray-500 leading-tight">giờ hoạt động nhiều nhất</p>
-              <p className="text-[10px] text-indigo-500 font-medium mt-1">
-                {stats.most_active_hour < 8 ? '🌅 Sáng sớm' : stats.most_active_hour < 12 ? '☀️ Buổi sáng' : stats.most_active_hour < 18 ? '🌤️ Buổi chiều' : '🌙 Buổi tối'}
-              </p>
-            </div>
-          </div>
-
-          {/* Top co-players */}
-          {stats.top_co_players && stats.top_co_players.length > 0 && (
-            <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">🤝 Đồng đội thường gặp</p>
-              <div className="space-y-2">
-                {stats.top_co_players.map((cp, i) => (
-                  <Link key={cp.user_id} href={`/users/${cp.user_id}`}
-                    className="flex items-center gap-3 hover:bg-gray-50 rounded-xl px-2 py-1.5 -mx-2 transition-colors">
-                    <span className={clsx(
-                      'flex h-7 w-7 items-center justify-center rounded-full text-xs font-black',
-                      i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-100 text-gray-600' : 'bg-orange-50 text-orange-600'
-                    )}>
-                      {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">{cp.username}</p>
-                      <p className="text-[10px] text-gray-400">{cp.count} trận cùng nhau</p>
+              {/* Top co-players */}
+              {stats.top_co_players && stats.top_co_players.length > 0 && (
+                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">🤝 Đồng đội thường gặp</p>
+                  <div className="space-y-2">
+                    {stats.top_co_players.map((cp, i) => (
+                      <Link key={cp.user_id} href={`/users/${cp.user_id}`}
+                        className="flex items-center gap-3 hover:bg-gray-50 rounded-xl px-2 py-1.5 -mx-2 transition-colors">
+                        <span className={clsx(
+                          'flex h-7 w-7 items-center justify-center rounded-full text-xs font-black',
+                          i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-100 text-gray-600' : 'bg-orange-50 text-orange-600'
+                        )}>
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-900">{cp.username}</p>
+                          <p className="text-[10px] text-gray-400">{cp.count} trận cùng nhau</p>
+                        </div>
+                        <div className="h-1.5 w-16 rounded-full bg-gray-100 overflow-hidden">
+                          <div className="h-full bg-green-400 rounded-full"
+                            style={{ width: `${Math.round((cp.count / stats.top_co_players[0].count) * 100)}%` }} />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Free user: locked advanced sections with soft upsell */
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Lock size={14} className="text-amber-500" />
+                <p className="text-xs font-bold text-amber-700">Phân tích nâng cao · Premium</p>
+              </div>
+              <div className="space-y-2 opacity-50 pointer-events-none select-none mb-4">
+                {/* Fake sport breakdown preview */}
+                {['🏸 Cầu lông', '⚽ Bóng đá', '🎾 Tennis'].map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-sm w-20 truncate text-gray-600">{s}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                      <div className="h-full bg-purple-300 rounded-full" style={{ width: `${90 - i * 25}%` }} />
                     </div>
-                    <div className="h-1.5 w-16 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full bg-green-400 rounded-full"
-                        style={{ width: `${Math.round((cp.count / stats.top_co_players[0].count) * 100)}%` }} />
-                    </div>
-                  </Link>
+                  </div>
                 ))}
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="rounded-xl bg-white border p-3 text-center">
+                    <p className="text-lg font-black text-gray-300">—</p>
+                    <p className="text-[10px] text-gray-300">Streak</p>
+                  </div>
+                  <div className="rounded-xl bg-white border p-3 text-center">
+                    <p className="text-lg font-black text-gray-300">—:00</p>
+                    <p className="text-[10px] text-gray-300">Giờ chơi</p>
+                  </div>
+                </div>
               </div>
+              <Link
+                href="/profile/premium"
+                className="flex items-center justify-center gap-1.5 w-full rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 py-2.5 text-sm font-black text-gray-900 shadow-sm"
+              >
+                <Crown size={14} /> Mở khoá phân tích đầy đủ
+              </Link>
             </div>
           )}
 
           <p className="text-center text-[10px] text-gray-400 pb-4">
-            Dữ liệu được tính từ tất cả trận đã hoàn thành
+            Dữ liệu tính từ tất cả trận đã hoàn thành
           </p>
         </div>
       )}
