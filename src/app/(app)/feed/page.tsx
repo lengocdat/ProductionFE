@@ -16,6 +16,7 @@ interface Host {
   tier: string
   negative_reports: number
   is_verified: boolean
+  status?: string
 }
 
 interface SportMatch {
@@ -155,16 +156,21 @@ export default function FeedPage() {
   const [mismatchWarning, setMismatchWarning] = useState<SportMatch | null>(null)
   const [userSkill, setUserSkill] = useState('INTERMEDIATE')
   const [isPremium, setIsPremium] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
+  const [newUserDismissed, setNewUserDismissed] = useState(false)
   const [showAdvFilters, setShowAdvFilters] = useState(false)
   const [advFilters, setAdvFilters] = useState<AdvancedFilters>({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' })
   const [advFiltersActive, setAdvFiltersActive] = useState(false)
 
   // Load user profile for skill level + premium status
   useEffect(() => {
-    apiFetch<{ user: { skill_level: string; is_premium: boolean } }>('/auth/me')
+    const dismissed = localStorage.getItem('new_user_banner_dismissed')
+    if (dismissed) setNewUserDismissed(true)
+    apiFetch<{ user: { skill_level: string; is_premium: boolean; completed_matches_count: number } }>('/auth/me')
       .then(d => {
         if (d.user.skill_level) setUserSkill(d.user.skill_level)
         setIsPremium(d.user.is_premium)
+        if ((d.user.completed_matches_count ?? 0) === 0) setIsNewUser(true)
       })
       .catch(() => {})
   }, [])
@@ -281,6 +287,31 @@ export default function FeedPage() {
         <div className="flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 mb-3">
           <MapPin size={14} className="text-orange-500" />
           <span className="text-xs text-orange-700">Không thể truy cập GPS. Đang dùng vị trí mặc định. Bật quyền định vị để tìm chính xác hơn.</span>
+        </div>
+      )}
+
+      {/* New user welcome banner */}
+      {isNewUser && !newUserDismissed && (
+        <div className="mb-3 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 p-4 text-white relative overflow-hidden">
+          <div className="absolute right-0 top-0 text-6xl opacity-10 -mt-2 -mr-1">🏸</div>
+          <button
+            onClick={() => { setNewUserDismissed(true); localStorage.setItem('new_user_banner_dismissed', '1') }}
+            className="absolute top-2 right-2 text-white/60 hover:text-white text-lg leading-none"
+          >×</button>
+          <p className="text-xs font-bold text-green-100 mb-0.5">👋 Chào mừng đến CoDuyen!</p>
+          <p className="text-sm font-bold mb-3">Tìm trận đầu tiên của bạn</p>
+          <div className="flex gap-2">
+            <Link href="/matches/create"
+              className="flex-1 text-center rounded-xl bg-white/20 border border-white/30 py-2 text-xs font-bold hover:bg-white/30 transition-colors"
+            >
+              ⚡ Tạo trận
+            </Link>
+            <Link href="/onboarding"
+              className="flex-1 text-center rounded-xl bg-white text-green-700 py-2 text-xs font-bold hover:bg-green-50 transition-colors"
+            >
+              Hoàn thiện hồ sơ
+            </Link>
+          </div>
         </div>
       )}
 
@@ -462,10 +493,16 @@ export default function FeedPage() {
           <p className="text-sm text-gray-400">Đang tìm trận gần bạn...</p>
         </div>
       ) : filteredMatches.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="flex justify-center mb-2"><SportIcon sport={sportFilter} size={48} /></div>
-          <p className="text-base text-gray-500">Không có trận nào</p>
-          <p className="text-xs text-gray-400 mt-1">Thử đổi bộ lọc hoặc tạo trận mới!</p>
+        <div className="text-center py-14">
+          <div className="flex justify-center mb-3"><SportIcon sport={sportFilter} size={52} /></div>
+          <p className="text-base font-semibold text-gray-700">Chưa có trận nào hôm nay</p>
+          <p className="text-xs text-gray-400 mt-1 mb-5">Đổi ngày, bỏ bộ lọc, hoặc tự tổ chức trận!</p>
+          <Link
+            href="/matches/create"
+            className="inline-flex items-center gap-2 rounded-2xl bg-green-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-green-200 hover:bg-green-600 active:scale-[0.98] transition-all"
+          >
+            ⚡ Tạo trận ngay
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -594,6 +631,11 @@ function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch;
       {hostPremium && !match.is_friend_host && !match.is_boosted && (
         <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-semibold text-amber-600">
           <Crown size={11} /> Premium Host · Uy tín cao
+        </div>
+      )}
+      {match.host?.status === 'SUSPENDED' && (
+        <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-bold text-red-600">
+          <ShieldAlert size={11} /> ⚠️ Tài khoản host đang bị tạm khóa — không nên tham gia
         </div>
       )}
 

@@ -75,6 +75,8 @@ function getSkillIndex(key: string): number {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+const ONBOARDING_DRAFT_KEY = 'onboarding_draft'
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -88,14 +90,34 @@ export default function OnboardingPage() {
   const [finalSkill, setFinalSkill] = useState<string>('INTERMEDIATE')
   const [saving, setSaving] = useState(false)
 
-  // Auth guard
+  // Auth guard + restore draft
   useEffect(() => {
     const token = localStorage.getItem('access_token')
     if (!token) { router.replace('/login'); return }
     apiFetch<{ user: { username: string; skill_level: string } }>('/auth/me')
       .then(d => setUsername(d.user.username))
       .catch(() => router.replace('/login'))
+    // Restore draft
+    try {
+      const raw = localStorage.getItem(ONBOARDING_DRAFT_KEY)
+      if (raw) {
+        const draft = JSON.parse(raw)
+        if (draft.step) setStep(draft.step)
+        if (draft.sports) setSports(draft.sports)
+        if (draft.duration) setDuration(draft.duration)
+        if (draft.training) setTraining(draft.training)
+        if (draft.competition) setCompetition(draft.competition)
+      }
+    } catch {}
   }, [router])
+
+  // Save draft on every answer change
+  useEffect(() => {
+    if (step === 0) return
+    try {
+      localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify({ step, sports, duration, training, competition }))
+    } catch {}
+  }, [step, sports, duration, training, competition])
 
   // When entering result step, calculate
   useEffect(() => {
@@ -117,12 +139,10 @@ export default function OnboardingPage() {
     setSaving(true)
     try {
       await apiFetch('/auth/profile', { method: 'PATCH', json: { skill_level: finalSkill } })
-      localStorage.setItem('onboarding_done', '1')
-      router.replace('/feed')
-    } catch {
-      localStorage.setItem('onboarding_done', '1')
-      router.replace('/feed')
-    }
+    } catch {}
+    localStorage.setItem('onboarding_done', '1')
+    localStorage.removeItem(ONBOARDING_DRAFT_KEY)
+    router.replace('/feed')
   }
 
   const canNext = (

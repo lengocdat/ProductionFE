@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, CreditCard, QrCode } from 'lucide-react'
+import { Send, CreditCard, QrCode, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
@@ -20,6 +20,8 @@ interface SportMatch {
   bank_name?: string
   bank_account_number?: string
   bank_account_holder?: string
+  bank_verified?: boolean
+  bank_updated_at?: string
 }
 
 interface Props {
@@ -155,9 +157,24 @@ export default function JoinModal({ match, onClose }: Props) {
             </DialogHeader>
 
             <div className="space-y-3">
-              {/* Bank Info */}
+              {/* Bank Info with verification badge */}
               <div className="rounded-xl bg-blue-50 border border-blue-200 p-4 space-y-1.5">
-                <p className="text-xs text-blue-600 font-medium">Thông tin chuyển khoản:</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-blue-600 font-medium">Thông tin chuyển khoản:</p>
+                  {match.bank_verified ? (
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                      <ShieldCheck size={11} /> Đã xác minh
+                    </span>
+                  ) : match.bank_updated_at && (Date.now() - new Date(match.bank_updated_at).getTime()) < 7 * 24 * 60 * 60 * 1000 ? (
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                      <ShieldAlert size={11} /> Mới thay đổi
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                      <AlertTriangle size={11} /> Chưa xác minh
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm font-semibold text-blue-900">{match.bank_account_holder}</p>
                 <p className="text-sm text-blue-800">{match.bank_name} · {match.bank_account_number}</p>
                 <p className="text-sm font-bold text-blue-900">{match.price_per_slot?.toLocaleString('vi-VN')}đ</p>
@@ -174,6 +191,20 @@ export default function JoinModal({ match, onClose }: Props) {
                 <div className="text-center">
                   <p className="text-[10px] text-gray-500 mb-1.5 flex items-center justify-center gap-1"><QrCode size={11} /> Quét mã QR:</p>
                   <img src={vietqrUrl} alt="VietQR" className="mx-auto w-48 h-48 rounded-lg border" />
+                </div>
+              )}
+
+              {/* Name-match safety warning */}
+              {match.bank_account_holder && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 space-y-1">
+                  <p className="text-xs font-semibold text-orange-800 flex items-center gap-1.5">
+                    <AlertTriangle size={13} /> Kiểm tra trước khi chuyển
+                  </p>
+                  <p className="text-[11px] text-orange-700 leading-relaxed">
+                    Mở app ngân hàng, xác nhận tên chủ tài khoản hiển thị là{' '}
+                    <span className="font-bold text-orange-900">"{match.bank_account_holder}"</span>.
+                    Nếu tên <span className="font-bold">không khớp</span>, đừng chuyển và báo cáo ngay.
+                  </p>
                 </div>
               )}
 

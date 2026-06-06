@@ -163,6 +163,33 @@ export default function MyMatchesPage() {
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${badge.class} ${req.status === 'PENDING' ? 'animate-pulse' : ''}`}>{badge.label}</span>
                 </div>
 
+                {/* Deposit status indicator */}
+                {activeTab === 'upcoming' && req.deposit_amount > 0 && (
+                  <div className="mb-2">
+                    {req.deposit_status === 'PENDING' && (
+                      <div className="flex items-center justify-between rounded-lg bg-red-50 border border-red-200 px-2.5 py-2">
+                        <p className="text-[10px] text-red-700 font-semibold">⚠️ Chưa chuyển cọc ({req.deposit_amount.toLocaleString('vi-VN')}đ)</p>
+                        <Link href={`/matches/${req.match_id}`} className="text-[10px] font-bold text-red-600 underline underline-offset-2">Chuyển ngay →</Link>
+                      </div>
+                    )}
+                    {req.deposit_status === 'PENDING_VERIFICATION' && (
+                      <p className="text-[10px] text-blue-700 bg-blue-50 rounded-lg px-2.5 py-1.5">
+                        💳 Đã CK {req.deposit_amount.toLocaleString('vi-VN')}đ · Chờ Host xác nhận
+                      </p>
+                    )}
+                    {req.deposit_status === 'PAID' && (
+                      <p className="text-[10px] text-green-700 bg-green-50 rounded-lg px-2.5 py-1.5">
+                        ✅ Cọc {req.deposit_amount.toLocaleString('vi-VN')}đ đã được xác nhận
+                      </p>
+                    )}
+                    {req.deposit_status === 'REFUNDED' && (
+                      <p className="text-[10px] text-gray-600 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                        💸 Hoàn cọc {req.deposit_amount.toLocaleString('vi-VN')}đ — kiểm tra tài khoản ngân hàng
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Cancellation deadline / Pending helper */}
                 {activeTab === 'upcoming' && match && (
                   <div className="mb-2">

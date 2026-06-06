@@ -132,13 +132,19 @@ export default function LoginPage() {
       </div>
 
       {/* Bottom */}
-      <div className="px-6 pb-8 text-center">
+      <div className="px-6 pb-8 text-center space-y-3">
         <p className="text-sm text-gray-500">
           Chưa có tài khoản?{' '}
           <Link href="/register" className="font-semibold text-green-600 hover:text-green-700">
             Đăng ký ngay
           </Link>
         </p>
+        <Link
+          href="/account-compromised"
+          className="block text-xs text-red-500 hover:text-red-600 underline underline-offset-2"
+        >
+          🔒 Tài khoản bị xâm phạm / bị hack?
+        </Link>
       </div>
     </div>
   )

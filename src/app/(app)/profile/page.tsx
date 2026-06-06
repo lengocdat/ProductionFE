@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap } from 'lucide-react'
+import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap, Check } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import EquippedBadge from '@/components/EquippedBadge'
 
@@ -44,8 +44,52 @@ export default function ProfilePage() {
   if (!user) return null
   const avgStars = ratings.length > 0 ? (ratings.reduce((s, r) => s + r.stars, 0) / ratings.length).toFixed(1) : '—'
 
+  const isNewUser = (user.completed_matches_count ?? 0) === 0
+  const completionSteps = [
+    { done: !!user.username, label: 'Tạo tên người dùng', href: null as string | null },
+    { done: (user.completed_matches_count ?? 0) > 0, label: 'Tham gia trận đầu tiên', href: '/feed' },
+    { done: ratings.length > 0, label: 'Nhận đánh giá đầu tiên', href: '/feed' },
+  ]
+  const completedSteps = completionSteps.filter(s => s.done).length
+
   return (
     <div className="px-4 py-5">
+      {/* New user checklist */}
+      {isNewUser && (
+        <div className="mb-4 rounded-2xl overflow-hidden border border-green-200 bg-white shadow-sm">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-green-100">Bắt đầu hành trình</p>
+              <p className="text-sm font-extrabold text-white">{completedSteps}/{completionSteps.length} hoàn thành</p>
+            </div>
+            <div className="relative w-10 h-10">
+              <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="white" strokeWidth="3"
+                  strokeDasharray={`${(completedSteps / completionSteps.length) * 100} 100`}
+                  strokeLinecap="round" />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                {Math.round((completedSteps / completionSteps.length) * 100)}%
+              </span>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {completionSteps.map((s, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${s.done ? 'bg-green-500' : 'bg-gray-100'}`}>
+                  {s.done && <Check size={11} className="text-white" strokeWidth={3} />}
+                </div>
+                <span className={`flex-1 text-xs ${s.done ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>{s.label}</span>
+                {!s.done && s.href && (
+                  <a href={s.href} className="text-[10px] font-bold text-green-600 shrink-0">Đi ngay →</a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={`rounded-2xl bg-white p-5 shadow-sm text-center ${user.is_premium ? 'ring-2 ring-amber-400/60' : ''}`}>
         <div className="relative mx-auto mb-2 w-16 h-16">
           <div className={`flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-xl font-bold text-green-600 ${user.is_premium ? 'ring-2 ring-amber-400 ring-offset-2' : badgeSummary?.equipped_badge_icon ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>

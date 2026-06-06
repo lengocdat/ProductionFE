@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban, Crown, Lock, Shield } from 'lucide-react'
+import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban, Crown, Lock, Shield, Share2, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
@@ -44,6 +44,9 @@ interface JoinReq {
     tier: string
     no_show_count: number
     negative_reports: number
+    bank_name?: string
+    bank_account_number?: string
+    bank_account_holder?: string
   }
 }
 
@@ -138,6 +141,22 @@ export default function MatchDetailPage() {
               }`}>{match.status === 'CANCELLED' ? 'ĐÃ HỦY' : match.status}</span>
             </div>
           </div>
+          <button
+            onClick={() => {
+              const url = window.location.href
+              if (navigator.share) {
+                navigator.share({ title: match.title, url })
+              } else {
+                navigator.clipboard.writeText(url).then(() => {
+                  toast.success('Đã copy link trận!')
+                })
+              }
+            }}
+            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+            title="Chia sẻ trận"
+          >
+            <Share2 size={16} />
+          </button>
         </div>
 
         {/* Tabs */}
@@ -291,7 +310,91 @@ function MatchInfoTab({ match, requests, isPremium, isHost, matchId }: {
         className="block w-full text-center rounded-xl border border-gray-200 py-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
         🗺️ Xem vị trí trên Google Maps
       </a>
+
+      {/* Report Match */}
+      {!isHost && <ReportMatchSection matchId={matchId} />}
     </div>
+  )
+}
+
+function ReportMatchSection({ matchId }: { matchId: number }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('SCAM')
+  const [desc, setDesc] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+
+  async function submit() {
+    setLoading(true)
+    try {
+      await apiFetch(`/matches/${matchId}/report`, {
+        method: 'POST',
+        json: { reason, description: desc },
+      })
+      setDone(true)
+      setOpen(false)
+      toast.success('Báo cáo đã được ghi nhận. Chúng tôi sẽ xem xét trong 24h.')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Không thể gửi báo cáo')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (done) return null
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-red-100 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors"
+      >
+        🚩 Báo cáo trận này
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 space-y-4 shadow-xl">
+            <h3 className="text-base font-bold text-gray-900">🚩 Báo cáo trận</h3>
+            <p className="text-xs text-gray-500">Giúp chúng tôi bảo vệ cộng đồng. Báo cáo giả mạo hoặc lừa đảo.</p>
+
+            <div className="space-y-2">
+              {[
+                { value: 'SCAM', label: '💸 Lừa đảo / Chiếm tiền cọc' },
+                { value: 'FAKE_INFO', label: '📍 Thông tin sai (địa điểm, giờ, giá)' },
+                { value: 'WRONG_LOCATION', label: '🗺️ Địa điểm không tồn tại' },
+                { value: 'OTHER', label: '⚠️ Lý do khác' },
+              ].map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="reason" value={opt.value}
+                    checked={reason === opt.value} onChange={() => setReason(opt.value)}
+                    className="accent-red-500" />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <textarea
+              value={desc} onChange={e => setDesc(e.target.value)}
+              placeholder="Mô tả thêm (không bắt buộc)..."
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-red-300 resize-none"
+            />
+
+            <div className="flex gap-2">
+              <button onClick={() => setOpen(false)}
+                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600">
+                Hủy
+              </button>
+              <button onClick={submit} disabled={loading}
+                className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1">
+                {loading ? <Loader2 size={14} className="animate-spin" /> : 'Gửi báo cáo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -327,7 +430,10 @@ function HostManageTab({ matchId, match, requests, onRefresh, isPremium }: {
       await apiFetch(`/matches/${matchId}/requests/${reqId}/accept`, { method: 'POST' })
       toast.success('Đã duyệt!')
       onRefresh()
-    } catch (err: any) { toast.error(err.message) } finally { setActionLoading(null) }
+    } catch (err: any) {
+      const msg: string = err.message || ''
+      toast.error(msg.startsWith('DEPOSIT_PENDING:') ? msg.slice(16) : msg)
+    } finally { setActionLoading(null) }
   }
 
   async function handleReject(reqId: number) {
@@ -507,14 +613,11 @@ function RefundRejectModal({ matchId, request, onClose, onSuccess }: {
   const [loading, setLoading] = useState(false)
   const [playerBank, setPlayerBank] = useState<{ bank_name?: string; bank_account_number?: string; bank_account_holder?: string } | null>(null)
 
-  // Fetch player bank details
   useEffect(() => {
-    // In production, fetch player profile with bank info
-    // For now, show what we have from the player object
     setPlayerBank({
-      bank_name: (request.player as any)?.bank_name || 'Chưa cung cấp',
-      bank_account_number: (request.player as any)?.bank_account_number || 'Chưa cung cấp',
-      bank_account_holder: (request.player as any)?.bank_account_holder || request.player?.username || '',
+      bank_name: request.player?.bank_name,
+      bank_account_number: request.player?.bank_account_number,
+      bank_account_holder: request.player?.bank_account_holder || request.player?.username,
     })
   }, [request])
 
@@ -536,7 +639,7 @@ function RefundRejectModal({ matchId, request, onClose, onSuccess }: {
   }
 
   const refundAmount = request.deposit_amount
-  const vietqrUrl = playerBank?.bank_name && playerBank.bank_account_number !== 'Chưa cung cấp'
+  const vietqrUrl = playerBank?.bank_name && playerBank.bank_account_number
     ? `https://img.vietqr.io/image/${playerBank.bank_name}-${playerBank.bank_account_number}-compact2.png?amount=${refundAmount}&addInfo=${encodeURIComponent(`HOAN COC APP ${request.id}`)}&accountName=${encodeURIComponent(playerBank.bank_account_holder || '')}`
     : null
 
@@ -552,12 +655,18 @@ function RefundRejectModal({ matchId, request, onClose, onSuccess }: {
         </p>
 
         {/* Player bank details */}
-        <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 space-y-1">
-          <p className="text-[10px] text-blue-600 font-medium">Chuyển hoàn về:</p>
-          <p className="text-sm font-semibold text-blue-900">{playerBank?.bank_account_holder}</p>
-          <p className="text-sm text-blue-800">{playerBank?.bank_name} · {playerBank?.bank_account_number}</p>
-          <p className="text-sm font-bold text-blue-900">{refundAmount.toLocaleString('vi-VN')}đ</p>
-        </div>
+        {playerBank?.bank_account_number ? (
+          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 space-y-1">
+            <p className="text-[10px] text-blue-600 font-medium">Chuyển hoàn về:</p>
+            <p className="text-sm font-semibold text-blue-900">{playerBank.bank_account_holder}</p>
+            <p className="text-sm text-blue-800">{playerBank.bank_name} · {playerBank.bank_account_number}</p>
+            <p className="text-sm font-bold text-blue-900">{refundAmount.toLocaleString('vi-VN')}đ</p>
+          </div>
+        ) : (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+            <p className="text-xs text-amber-800">⚠️ Người chơi chưa cung cấp thông tin ngân hàng. Liên hệ qua chat để lấy STK trước khi hoàn tiền.</p>
+          </div>
+        )}
 
         {/* VietQR */}
         {vietqrUrl && (
