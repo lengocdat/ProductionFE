@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban } from 'lucide-react'
+import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban, Crown, Lock, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
@@ -72,9 +72,13 @@ export default function MatchDetailPage() {
   })
   const [requests, setRequests] = useState<JoinReq[]>([])
   const [loading, setLoading] = useState(true)
+  const [isPremium, setIsPremium] = useState(false)
 
   useEffect(() => {
-    apiFetch<{ user: { id: number } }>('/auth/me').then((d) => setMyId(d.user.id))
+    apiFetch<{ user: { id: number; is_premium: boolean } }>('/auth/me').then((d) => {
+      setMyId(d.user.id)
+      setIsPremium(d.user.is_premium)
+    })
     apiFetch<{ match: MatchInfo; is_host: boolean }>(`/matches/${matchId}`)
       .then((d) => { setMatch(d.match); setIsHost(d.is_host) })
       .catch(() => {})
@@ -147,9 +151,9 @@ export default function MatchDetailPage() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'info' && <MatchInfoTab match={match} requests={requests} />}
+        {activeTab === 'info' && <MatchInfoTab match={match} requests={requests} isPremium={isPremium} isHost={isHost} matchId={matchId} />}
         {activeTab === 'manage' && isHost && (
-          <HostManageTab matchId={matchId} match={match} requests={requests} onRefresh={loadRequests} />
+          <HostManageTab matchId={matchId} match={match} requests={requests} onRefresh={loadRequests} isPremium={isPremium} />
         )}
         {activeTab === 'chat' && <ChatTab matchId={matchId} myId={myId} />}
       </div>
@@ -158,9 +162,22 @@ export default function MatchDetailPage() {
 }
 
 // --- Info Tab ---
-function MatchInfoTab({ match, requests }: { match: MatchInfo; requests: JoinReq[] }) {
+function MatchInfoTab({ match, requests, isPremium, isHost, matchId }: {
+  match: MatchInfo; requests: JoinReq[]; isPremium: boolean; isHost: boolean; matchId: number
+}) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
   const accepted = requests.filter((r) => r.status === 'ACCEPTED')
+
+  // F4: Participants preview for non-host premium users
+  interface Participant { user_id: number; username: string; skill_level: string; avatar_url: string }
+  const [participants, setParticipants] = useState<Participant[]>([])
+
+  useEffect(() => {
+    if (!isPremium || isHost) return
+    apiFetch<{ participants: Participant[] }>(`/premium/matches/${matchId}/participants`)
+      .then(d => setParticipants(d.participants || []))
+      .catch(() => {})
+  }, [isPremium, isHost, matchId])
 
   return (
     <div className="p-4 space-y-3">
@@ -191,8 +208,48 @@ function MatchInfoTab({ match, requests }: { match: MatchInfo; requests: JoinReq
         </div>
       )}
 
-      {/* Members already joined */}
-      {accepted.length > 0 && (
+      {/* F4: Participants preview — premium non-host sees who's joining with skill levels */}
+      {!isHost && (
+        <div className="rounded-xl border p-3">
+          <p className="text-[10px] text-gray-500 font-medium mb-2">👥 Người đã đăng ký ({match.filled_slots}/{match.max_slots})</p>
+          {isPremium ? (
+            participants.length === 0 ? (
+              <p className="text-xs text-gray-400">Chưa có ai đăng ký</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {participants.map((p) => (
+                  <Link key={p.user_id} href={`/users/${p.user_id}`}
+                    className="flex items-center gap-1.5 rounded-full bg-gray-50 border border-gray-200 px-2.5 py-1 hover:bg-gray-100 transition-colors">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-200 text-[9px] font-bold text-green-800 shrink-0">
+                      {p.username.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="text-[11px] font-medium text-gray-800">{p.username}</span>
+                    <span className="text-[9px] text-gray-500">
+                      {p.skill_level === 'BEGINNER' ? 'Yếu' : p.skill_level === 'INTERMEDIATE' ? 'TB' : p.skill_level === 'ADVANCED' ? 'Khá' : p.skill_level === 'SEMI_PRO' ? 'Pro' : p.skill_level?.replace('_', ' ')}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-1">
+                {Array.from({ length: Math.min(match.filled_slots, 4) }).map((_, i) => (
+                  <div key={i} className="h-6 w-6 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center">
+                    <Lock size={8} className="text-gray-400" />
+                  </div>
+                ))}
+              </div>
+              <Link href="/profile/premium" className="flex items-center gap-1 text-[11px] text-amber-600 font-semibold">
+                <Crown size={11} /> Premium để xem tên + trình độ
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Members already joined (host view only) */}
+      {isHost && accepted.length > 0 && (
         <div className="rounded-xl border border-gray-100 p-3">
           <p className="text-[10px] text-gray-500 font-medium mb-2">👥 Đã tham gia ({accepted.length}/{match.max_slots})</p>
           <div className="flex flex-wrap gap-1.5">
@@ -217,12 +274,27 @@ function MatchInfoTab({ match, requests }: { match: MatchInfo; requests: JoinReq
 }
 
 // --- Host Management Tab ---
-function HostManageTab({ matchId, match, requests, onRefresh }: {
-  matchId: number; match: MatchInfo; requests: JoinReq[]; onRefresh: () => void
+function HostManageTab({ matchId, match, requests, onRefresh, isPremium }: {
+  matchId: number; match: MatchInfo; requests: JoinReq[]; onRefresh: () => void; isPremium: boolean
 }) {
   const [actionLoading, setActionLoading] = useState<number | null>(null)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [refundTarget, setRefundTarget] = useState<JoinReq | null>(null)
+
+  // F5: Anti-ghosting data for premium hosts
+  interface AGInfo { request_id: number; player_id: number; no_show_count: number; completed_matches_count: number; negative_reports: number }
+  const [agData, setAgData] = useState<Record<number, AGInfo>>({})
+
+  useEffect(() => {
+    if (!isPremium) return
+    apiFetch<{ players: AGInfo[] }>(`/premium/matches/${matchId}/anti-ghosting`)
+      .then(d => {
+        const map: Record<number, AGInfo> = {}
+        ;(d.players || []).forEach(p => { map[p.request_id] = p })
+        setAgData(map)
+      })
+      .catch(() => {})
+  }, [isPremium, matchId])
 
   const pending = requests.filter((r) => r.status === 'PENDING')
   const accepted = requests.filter((r) => r.status === 'ACCEPTED')
@@ -277,10 +349,19 @@ function HostManageTab({ matchId, match, requests, onRefresh }: {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-900">{req.player?.username || `Player #${req.player_id}`}</p>
-                    <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                    <div className="flex items-center gap-2 text-[9px] text-gray-500 flex-wrap">
                       <span>{req.player?.tier === 'VERIFIED_HOST' ? '✅ Uy tín' : req.player?.tier === 'REGULAR' ? '👍 Thường' : '🆕 Mới'}</span>
                       {(req.player?.no_show_count || 0) > 0 && <span className="text-red-500">⚠️ Bùng {req.player?.no_show_count} lần</span>}
                       {(req.player?.negative_reports || 0) > 2 && <span className="text-red-500">🚩 {req.player?.negative_reports} phiếu xấu</span>}
+                      {/* F5: Anti-ghosting premium data */}
+                      {isPremium && agData[req.id] && (
+                        <span className={`flex items-center gap-0.5 font-semibold ${agData[req.id].completed_matches_count >= 10 ? 'text-green-600' : agData[req.id].completed_matches_count >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
+                          <Shield size={8} /> {agData[req.id].completed_matches_count} trận xong
+                        </span>
+                      )}
+                      {isPremium && !agData[req.id] && (
+                        <span className="text-gray-300 text-[8px]">Loading...</span>
+                      )}
                     </div>
                   </div>
                 </div>

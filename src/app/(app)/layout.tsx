@@ -45,7 +45,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     apiFetch<{ user: User }>('/auth/me')
-      .then((data) => setUser(data.user))
+      .then((data) => {
+        setUser(data.user)
+        if (!localStorage.getItem('onboarding_done')) {
+          router.replace('/onboarding')
+        }
+      })
       .catch(() => {
         localStorage.removeItem('access_token')
         router.replace('/login')

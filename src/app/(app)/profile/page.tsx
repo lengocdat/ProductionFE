@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users } from 'lucide-react'
+import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import EquippedBadge from '@/components/EquippedBadge'
 
@@ -106,6 +106,18 @@ export default function ProfilePage() {
         <MenuLink href="/profile/achievements" icon={<Trophy size={18} className="text-amber-500" />} label="Thành tựu & Huy hiệu" desc="Xem tiến trình và badge đã đạt" />
         <MenuLink href="/marketplace" icon={<ShoppingBag size={18} className="text-green-500" />} label="Chợ đồ thể thao" desc="Mua bán đồ cũ, tìm deals" />
         <MenuLink href="/profile/premium" icon={<Crown size={18} className="text-yellow-500" />} label={user.is_premium ? 'Premium đang hoạt động' : 'Nâng cấp Premium'} desc={user.is_premium ? 'Radar, ưu tiên hiển thị, crown badge' : 'Radar tự động, ưu tiên hiển thị, badge Crown'} premium={!user.is_premium} active={user.is_premium} />
+        {user.is_premium && (
+          <MenuLink href="/profile/radar" icon={<span className="text-lg">🎯</span>} label="Radar của tôi" desc="Quản lý radar tự động tìm trận" />
+        )}
+        {user.is_premium && (
+          <MenuLink href="/profile/views" icon={<Eye size={18} className="text-indigo-500" />} label="Ai đã xem hồ sơ bạn" desc="30 ngày gần nhất · chỉ Premium" />
+        )}
+        {user.is_premium && (
+          <MenuLink href="/profile/stats" icon={<BarChart2 size={18} className="text-purple-500" />} label="Thống kê của tôi" desc="Phân tích chuyên sâu hoạt động thể thao" />
+        )}
+        {!user.is_premium && (
+          <MenuLink href="/profile/premium" icon={<Eye size={18} className="text-gray-400" />} label="Ai xem hồ sơ bạn?" desc="Nâng cấp Premium để xem" premium />
+        )}
         <MenuLink href="/dashboard/courts" icon={<LayoutDashboard size={18} className="text-blue-500" />} label="Quản lý sân (Chủ sân)" desc="Dashboard booking & lịch sân" />
       </div>
 

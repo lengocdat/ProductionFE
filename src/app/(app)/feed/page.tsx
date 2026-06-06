@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert, UserCheck, ArrowUpDown } from 'lucide-react'
+import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert, UserCheck, ArrowUpDown, Radar, Crown, Lock, SlidersHorizontal, X, Zap } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import JoinModal from '@/components/JoinModal'
 import WeeklyCalendarStrip from '@/components/WeeklyCalendarStrip'
@@ -31,10 +31,24 @@ interface SportMatch {
   end_time: string
   max_slots: number
   filled_slots: number
+  price_per_slot?: number
   status: string
   distance?: number
   is_friend_host?: boolean
+  is_boosted?: boolean
+  host_is_premium?: boolean
   host?: Host
+  court_name?: string
+  court_number?: number
+  google_maps_url?: string
+}
+
+interface AdvancedFilters {
+  maxDist: string
+  minPrice: string
+  maxPrice: string
+  startAfter: string
+  startBefore: string
 }
 
 // --- Constants ---
@@ -138,9 +152,21 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<SportMatch | null>(null)
   const [mismatchWarning, setMismatchWarning] = useState<SportMatch | null>(null)
+  const [userSkill, setUserSkill] = useState('INTERMEDIATE')
+  const [isPremium, setIsPremium] = useState(false)
+  const [showAdvFilters, setShowAdvFilters] = useState(false)
+  const [advFilters, setAdvFilters] = useState<AdvancedFilters>({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' })
+  const [advFiltersActive, setAdvFiltersActive] = useState(false)
 
-  // Mock user skill level (in real app, fetch from /auth/me profile)
-  const [userSkill] = useState('INTERMEDIATE')
+  // Load user profile for skill level + premium status
+  useEffect(() => {
+    apiFetch<{ user: { skill_level: string; is_premium: boolean } }>('/auth/me')
+      .then(d => {
+        if (d.user.skill_level) setUserSkill(d.user.skill_level)
+        setIsPremium(d.user.is_premium)
+      })
+      .catch(() => {})
+  }, [])
 
   // Geolocation
   useEffect(() => {
@@ -170,11 +196,18 @@ export default function FeedPage() {
       date: getDateString(dateFilter),
       sport: sportFilter,
     })
+    if (advFiltersActive) {
+      if (advFilters.maxDist) params.set('max_dist', advFilters.maxDist)
+      if (advFilters.minPrice) params.set('min_price', advFilters.minPrice)
+      if (advFilters.maxPrice) params.set('max_price', advFilters.maxPrice)
+      if (advFilters.startAfter) params.set('start_after', advFilters.startAfter)
+      if (advFilters.startBefore) params.set('start_before', advFilters.startBefore)
+    }
     apiFetch<{ matches: SportMatch[] }>(`/matches?${params}`)
       .then((data) => setMatches(data.matches || []))
       .catch(() => setMatches([]))
       .finally(() => setLoading(false))
-  }, [coords, dateFilter, sportFilter, getDateString])
+  }, [coords, dateFilter, sportFilter, getDateString, advFiltersActive, advFilters])
 
   // Client-side skill filter + sort
   const filteredMatches = useMemo(() => {
@@ -235,7 +268,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="px-4 pt-3 pb-4">
+    <div className="px-4 pt-3 pb-20">
       {/* Geo Status */}
       {geoStatus === 'loading' && (
         <div className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 mb-3">
@@ -329,10 +362,10 @@ export default function FeedPage() {
           )}
         </div>
 
-        {/* Sort bar */}
+        {/* Sort bar + Advanced Filter toggle */}
         <div className="flex items-center gap-2 pb-1">
           <ArrowUpDown size={12} className="text-gray-400 shrink-0" />
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1">
             {([
               { value: 'distance', label: 'Gần nhất' },
               { value: 'time',     label: 'Sớm nhất' },
@@ -353,7 +386,87 @@ export default function FeedPage() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => isPremium ? setShowAdvFilters(v => !v) : setShowAdvFilters(true)}
+            className={clsx(
+              'shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all',
+              advFiltersActive
+                ? 'bg-indigo-500 text-white border-indigo-500'
+                : 'bg-white border-gray-200 text-gray-600'
+            )}
+          >
+            <SlidersHorizontal size={11} />
+            Nâng cao
+            {!isPremium && <Crown size={9} className="text-amber-500" />}
+          </button>
         </div>
+
+        {/* Advanced filters panel (premium only) */}
+        {showAdvFilters && (
+          <div className={clsx('rounded-2xl border p-4 mb-1', isPremium ? 'bg-white border-indigo-100' : 'bg-amber-50 border-amber-200')}>
+            {!isPremium ? (
+              <div className="text-center py-2">
+                <Crown size={20} className="text-amber-500 mx-auto mb-1" />
+                <p className="text-sm font-bold text-gray-800 mb-0.5">Tính năng Premium</p>
+                <p className="text-xs text-gray-500 mb-3">Lọc chính xác theo khoảng cách, giá, giờ chơi</p>
+                <Link href="/profile/premium" className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 text-xs font-black text-gray-900">
+                  <Crown size={12} /> Nâng cấp Premium
+                </Link>
+                <button onClick={() => setShowAdvFilters(false)} className="block mx-auto mt-2 text-[10px] text-gray-400">Đóng</button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-indigo-700">⚙️ Lọc nâng cao (Premium)</span>
+                  <button onClick={() => setShowAdvFilters(false)}><X size={14} className="text-gray-400" /></button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-gray-500 font-medium">Khoảng cách tối đa (km)</span>
+                    <input type="number" placeholder="VD: 5" value={advFilters.maxDist}
+                      onChange={e => setAdvFilters(f => ({ ...f, maxDist: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-gray-500 font-medium">Giá tối đa (VNĐ)</span>
+                    <input type="number" placeholder="VD: 50000" value={advFilters.maxPrice}
+                      onChange={e => setAdvFilters(f => ({ ...f, maxPrice: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-gray-500 font-medium">Bắt đầu sau</span>
+                    <input type="time" value={advFilters.startAfter}
+                      onChange={e => setAdvFilters(f => ({ ...f, startAfter: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-gray-500 font-medium">Bắt đầu trước</span>
+                    <input type="time" value={advFilters.startBefore}
+                      onChange={e => setAdvFilters(f => ({ ...f, startBefore: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-400" />
+                  </label>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => { setAdvFilters({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' }); setAdvFiltersActive(false); setShowAdvFilters(false) }}
+                    className="flex-1 rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-500"
+                  >Xoá lọc</button>
+                  <button
+                    onClick={() => { setAdvFiltersActive(true); setShowAdvFilters(false) }}
+                    className="flex-1 rounded-xl bg-indigo-500 py-2 text-xs font-bold text-white"
+                  >Áp dụng</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {advFiltersActive && (
+          <div className="flex items-center gap-1.5 pb-1">
+            <span className="text-[10px] text-indigo-600 font-medium">Đang lọc nâng cao</span>
+            <button onClick={() => { setAdvFiltersActive(false); setAdvFilters({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' }) }}
+              className="text-[10px] text-red-500 flex items-center gap-0.5"><X size={9} /> Xoá</button>
+          </div>
+        )}
       </div>
 
       {/* Match List */}
@@ -371,10 +484,25 @@ export default function FeedPage() {
       ) : (
         <div className="space-y-3">
           {filteredMatches.map((m) => (
-            <MatchCard key={m.id} match={m} onJoin={() => handleJoinClick(m)} />
+            <MatchCard key={m.id} match={m} userSkill={userSkill} isPremium={isPremium} onJoin={() => handleJoinClick(m)} />
           ))}
         </div>
       )}
+
+      {/* Radar FAB */}
+      <Link
+        href={isPremium ? '/profile/radar' : '/profile/premium'}
+        className={clsx(
+          'fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full shadow-lg py-3 px-4 text-sm font-bold transition-all active:scale-95',
+          isPremium
+            ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 shadow-amber-300/40'
+            : 'bg-gray-900 text-amber-400 border border-amber-500/30 shadow-black/20'
+        )}
+      >
+        <Radar size={16} className={isPremium ? '' : 'animate-pulse'} />
+        {isPremium ? 'Radar' : 'Mở Radar'}
+        {!isPremium && <Crown size={12} className="text-amber-400" />}
+      </Link>
 
       {/* Join Modal */}
       {selectedMatch && <JoinModal match={selectedMatch} onClose={() => setSelectedMatch(null)} />}
@@ -422,8 +550,24 @@ export default function FeedPage() {
   )
 }
 
+// Calculate match compatibility score (0-100) based on skill level and distance
+function calcMatchScore(match: SportMatch, userSkill: string): number {
+  const skillRank = SKILL_RANK[userSkill] || 3
+  const matchRank = SKILL_RANK[match.skill_level || 'INTERMEDIATE'] || 3
+  const skillDiff = Math.abs(skillRank - matchRank)
+  const skillScore = skillDiff === 0 ? 100 : skillDiff === 1 ? 72 : skillDiff === 2 ? 44 : 15
+
+  const dist = match.distance ?? 0
+  const distScore = dist <= 1 ? 100 : dist <= 2 ? 85 : dist <= 3 ? 70 : dist <= 5 ? 52 : dist <= 10 ? 35 : 15
+
+  const slotsLeft = match.max_slots - match.filled_slots
+  const urgency = slotsLeft <= 2 ? 10 : 0
+
+  return Math.min(99, Math.round(0.55 * skillScore + 0.35 * distScore + 0.1 * urgency + urgency))
+}
+
 // --- MatchCard Component ---
-function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void }) {
+function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch; userSkill: string; isPremium: boolean; onJoin: () => void }) {
   const slotsLeft = match.max_slots - match.filled_slots
   const slotPercent = (match.filled_slots / match.max_slots) * 100
   const isAlmostFull = slotsLeft <= 2
@@ -432,31 +576,68 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
   const dist = match.distance ?? 99
   const skillLevel = match.skill_level || 'INTERMEDIATE'
   const sportIcon = SPORT_ICON[match.sport_type] || '🏸'
-  const price = (match as any).price_per_slot as number
+  const price = match.price_per_slot ?? 0
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${match.latitude},${match.longitude}`
+  const hostPremium = match.host_is_premium ?? false
 
   const skillLabel = SKILL_BASED_SPORTS.includes(match.sport_type)
     ? (SKILL_LABEL_RACKET[skillLevel] || skillLevel)
     : (INTENSITY_LABEL[skillLevel] || SKILL_LABEL[skillLevel] || skillLevel)
 
+  const matchScore = calcMatchScore(match, userSkill)
+  const scoreColor = matchScore >= 80 ? 'text-green-600' : matchScore >= 60 ? 'text-amber-600' : 'text-gray-500'
+
   return (
-    <div className={`rounded-2xl border bg-white shadow-sm active:scale-[0.99] transition-all ${
-      match.is_friend_host ? 'border-green-200' : 'border-gray-100'
-    }`}>
-      {/* Friend host banner */}
+    <div className={clsx(
+      'rounded-2xl border bg-white shadow-sm active:scale-[0.99] transition-all',
+      match.is_boosted ? 'border-indigo-200 shadow-indigo-100' :
+      match.is_friend_host ? 'border-green-200' :
+      hostPremium ? 'border-amber-200/70' : 'border-gray-100'
+    )}>
+      {/* Banners */}
+      {match.is_boosted && (
+        <div className="flex items-center gap-1 px-4 pt-2 pb-0 text-[11px] font-bold text-indigo-600">
+          <Zap size={11} className="fill-indigo-500" /> Nổi bật
+        </div>
+      )}
       {match.is_friend_host && (
         <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-semibold text-green-700">
           <UserCheck size={11} /> Bạn bè của bạn tổ chức
         </div>
       )}
+      {hostPremium && !match.is_friend_host && !match.is_boosted && (
+        <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-semibold text-amber-600">
+          <Crown size={11} /> Premium Host · Uy tín cao
+        </div>
+      )}
 
       <div className="p-4">
-        {/* Row 1: Sport icon + Title + Distance */}
+        {/* Row 1: Sport icon + Title + Match Score + Distance */}
         <div className="flex items-start gap-2.5">
           <span className="text-2xl leading-none mt-0.5 shrink-0">{sportIcon}</span>
           <div className="flex-1 min-w-0">
             <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{match.title}</h3>
           </div>
+          {/* Match Score — visible for premium, locked teaser for free */}
+          <Link
+            href={isPremium ? '#' : '/profile/premium'}
+            onClick={e => isPremium && e.preventDefault()}
+            className={clsx(
+              'shrink-0 flex items-center gap-0.5 rounded-lg px-2 py-0.5 text-xs font-bold transition-all',
+              isPremium
+                ? `${scoreColor} bg-gray-50`
+                : 'bg-gray-100 text-gray-400 relative overflow-hidden'
+            )}
+          >
+            {isPremium ? (
+              <>🎯 {matchScore}%</>
+            ) : (
+              <span className="flex items-center gap-0.5 select-none">
+                <Lock size={9} className="text-gray-400" />
+                <span className="blur-[3px]">{matchScore}%</span>
+              </span>
+            )}
+          </Link>
           <span className={`shrink-0 text-xs font-semibold rounded-lg px-2 py-0.5 ${
             dist < 2 ? 'bg-green-50 text-green-700' :
             dist < 5 ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-500'
@@ -482,9 +663,9 @@ function MatchCard({ match, onJoin }: { match: SportMatch; onJoin: () => void })
           <MapPin size={12} className="text-gray-400 shrink-0 mt-0.5" />
           <span className="text-[12px] text-gray-600 leading-snug line-clamp-1">{match.address}</span>
         </div>
-        {(match as any).court_name && (
+        {match.court_name && (
           <p className="text-[11px] text-blue-600 mt-0.5 ml-[18px] truncate">
-            🏟️ {(match as any).court_name}{(match as any).court_number ? ` · Sân ${(match as any).court_number}` : ''}
+            🏟️ {match.court_name}{match.court_number ? ` · Sân ${match.court_number}` : ''}
           </p>
         )}
 
