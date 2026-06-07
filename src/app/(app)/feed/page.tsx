@@ -164,6 +164,7 @@ export default function FeedPage() {
   const [advFilters, setAdvFilters] = useState<AdvancedFilters>({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' })
   const [advFiltersActive, setAdvFiltersActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showFilterRow, setShowFilterRow] = useState(false)
 
   // Load user profile for skill level + premium status
   useEffect(() => {
@@ -326,7 +327,7 @@ export default function FeedPage() {
       )}
 
       {/* Sticky Filter Bar */}
-      <div className="sticky top-[57px] z-20 bg-gray-50 pb-3 -mx-4 px-4 pt-1 space-y-3">
+      <div className="sticky top-[57px] z-20 bg-gray-50 pb-2 -mx-4 px-4 pt-1 space-y-1.5">
         {/* Search Bar */}
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -335,131 +336,113 @@ export default function FeedPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm trận, địa chỉ..."
-            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-8 pr-8 text-sm outline-none focus:border-green-400"
+            className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-8 pr-8 text-sm outline-none focus:border-green-400"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
               <X size={14} />
             </button>
           )}
         </div>
 
-        {/* Calendar Strip (30 ngày tới) */}
-        <WeeklyCalendarStrip
-          days={30}
-          selectedDate={dateFilter}
-          onSelectDate={setDateFilter}
-        />
+        {/* Calendar Strip */}
+        <WeeklyCalendarStrip days={30} selectedDate={dateFilter} onSelectDate={setDateFilter} />
 
-        {/* Sport Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {SPORTS.map((sport) => (
-            <button
-              key={sport.value}
-              onClick={() => { setSportFilter(sport.value); setSkillFilters([]) }}
-              className={`flex-shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
-                sportFilter === sport.value
-                  ? 'bg-green-100 text-green-700 border border-green-300'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <SportIcon sport={sport.value} size={15} /> {sport.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Context-aware Level Filter */}
-        <div>
-          {SKILL_BASED_SPORTS.includes(sportFilter) ? (
-            <>
-              <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Lọc trình độ</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {SKILL_LEVELS.map((sk) => (
-                  <button
-                    key={sk.value}
-                    onClick={() => toggleSkillFilter(sk.value)}
-                    title={sk.desc}
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
-                      skillFilters.includes(sk.value)
-                        ? sk.color + ' border-current shadow-sm'
-                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {sk.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Cường độ</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {INTENSITY_LEVELS.map((lv) => (
-                  <button
-                    key={lv.value}
-                    onClick={() => toggleSkillFilter(lv.value)}
-                    title={lv.desc}
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
-                      skillFilters.includes(lv.value)
-                        ? lv.color + ' border-current shadow-sm'
-                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {lv.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {skillFilters.length > 0 && (
-            <button
-              onClick={() => setSkillFilters([])}
-              className="rounded-full px-2 py-1 text-[10px] text-gray-400 hover:text-gray-600"
-            >
-              ✕ Bỏ lọc
-            </button>
-          )}
-        </div>
-
-        {/* Sort bar + Advanced Filter toggle */}
-        <div className="flex items-center gap-2 pb-1">
-          <ArrowUpDown size={12} className="text-gray-400 shrink-0" />
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1">
-            {([
-              { value: 'distance', label: 'Gần nhất' },
-              { value: 'time',     label: 'Sớm nhất' },
-              { value: 'price',    label: 'Giá thấp' },
-              { value: 'slots',    label: 'Còn nhiều slot' },
-            ] as const).map(opt => (
+        {/* Sport Chips + Filter toggle */}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1 pb-0.5">
+            {SPORTS.map((sport) => (
               <button
-                key={opt.value}
-                onClick={() => setSortBy(opt.value)}
-                className={clsx(
-                  'flex-shrink-0 rounded-full px-3 py-1 text-[11px] font-medium transition-all',
-                  sortBy === opt.value
-                    ? 'bg-green-500 text-white shadow-sm'
-                    : 'bg-white border border-gray-200 text-gray-600'
-                )}
+                key={sport.value}
+                onClick={() => { setSportFilter(sport.value); setSkillFilters([]) }}
+                className={`flex-shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all ${
+                  sportFilter === sport.value
+                    ? 'bg-green-100 text-green-700 border border-green-300'
+                    : 'bg-white text-gray-600 border border-gray-200'
+                }`}
               >
-                {opt.label}
+                <SportIcon sport={sport.value} size={13} /> {sport.label}
               </button>
             ))}
           </div>
           <button
-            onClick={() => setShowAdvFilters(v => !v)}
+            onClick={() => setShowFilterRow(v => !v)}
             className={clsx(
-              'shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all',
-              advFiltersActive
-                ? 'bg-indigo-500 text-white border-indigo-500'
-                : 'bg-white border-gray-200 text-gray-600'
+              'shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium border transition-all',
+              (showFilterRow || skillFilters.length > 0 || sortBy !== 'distance' || advFiltersActive)
+                ? 'bg-green-500 text-white border-green-500'
+                : 'bg-white text-gray-600 border-gray-200'
             )}
           >
-            <SlidersHorizontal size={11} />
-            Nâng cao
+            <SlidersHorizontal size={12} />
+            {(skillFilters.length + (sortBy !== 'distance' ? 1 : 0) + (advFiltersActive ? 1 : 0)) > 0 && (
+              <span className="text-[10px] font-bold">
+                {skillFilters.length + (sortBy !== 'distance' ? 1 : 0) + (advFiltersActive ? 1 : 0)}
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Advanced filters panel — open to all users */}
+        {/* Collapsible: Skill + Sort + Advanced */}
+        {(showFilterRow || skillFilters.length > 0 || sortBy !== 'distance' || advFiltersActive) && (
+          <div className="space-y-1.5 pb-0.5">
+            {/* Skill/Intensity chips */}
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+              {(SKILL_BASED_SPORTS.includes(sportFilter) ? SKILL_LEVELS : INTENSITY_LEVELS).map((sk) => (
+                <button
+                  key={sk.value}
+                  onClick={() => toggleSkillFilter(sk.value)}
+                  title={sk.desc}
+                  className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all ${
+                    skillFilters.includes(sk.value)
+                      ? sk.color + ' border-current shadow-sm'
+                      : 'bg-white text-gray-500 border-gray-200'
+                  }`}
+                >
+                  {sk.label}
+                </button>
+              ))}
+              {skillFilters.length > 0 && (
+                <button onClick={() => setSkillFilters([])} className="flex-shrink-0 rounded-full px-2 py-1 text-[10px] text-gray-400">
+                  ✕ Bỏ lọc
+                </button>
+              )}
+            </div>
+
+            {/* Sort + Advanced */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+              <ArrowUpDown size={11} className="text-gray-400 shrink-0" />
+              {([
+                { value: 'distance', label: 'Gần nhất' },
+                { value: 'time',     label: 'Sớm nhất' },
+                { value: 'price',    label: 'Giá thấp' },
+                { value: 'slots',    label: 'Nhiều slot' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSortBy(opt.value)}
+                  className={clsx(
+                    'flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all',
+                    sortBy === opt.value ? 'bg-green-500 text-white' : 'bg-white border border-gray-200 text-gray-600'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowAdvFilters(v => !v)}
+                className={clsx(
+                  'shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium border',
+                  advFiltersActive ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white border-gray-200 text-gray-600'
+                )}
+              >
+                <SlidersHorizontal size={10} /> Nâng cao
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Advanced filters panel */}
         {showAdvFilters && (
           <div className="rounded-2xl border border-indigo-100 bg-white p-4 mb-1">
             <div className="flex items-center justify-between mb-3">
@@ -505,7 +488,7 @@ export default function FeedPage() {
           </div>
         )}
         {advFiltersActive && (
-          <div className="flex items-center gap-1.5 pb-1">
+          <div className="flex items-center gap-1.5 pb-0.5">
             <span className="text-[10px] text-indigo-600 font-medium">Đang lọc nâng cao</span>
             <button onClick={() => { setAdvFiltersActive(false); setAdvFilters({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' }) }}
               className="text-[10px] text-red-500 flex items-center gap-0.5"><X size={9} /> Xoá</button>
