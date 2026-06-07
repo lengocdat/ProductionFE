@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban, Crown, Lock, Shield, Share2, Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -61,6 +61,14 @@ interface Message {
 }
 
 export default function MatchDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin h-8 w-8 rounded-full border-2 border-green-500 border-t-transparent" /></div>}>
+      <MatchDetailContent />
+    </Suspense>
+  )
+}
+
+function MatchDetailContent() {
   const params = useParams()
   const matchId = Number(params.id)
   const [match, setMatch] = useState<MatchInfo | null>(null)
