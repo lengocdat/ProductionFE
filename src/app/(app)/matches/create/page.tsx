@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Clock, Users, Loader2, Zap } from 'lucide-react'
+import { Clock, Users, Loader2, Zap, RefreshCw } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
@@ -76,6 +76,9 @@ export default function CreateMatchPage() {
     bank_account_number: '',
     bank_account_holder: '',
     cancellation_window_hours: '2',
+    is_recurring: false,
+    recurrence_type: 'WEEKLY',
+    recurrence_day_of_week: new Date().getDay(),
   })
 
   // Apply template
@@ -96,10 +99,10 @@ export default function CreateMatchPage() {
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-    const { name, value } = e.target
-    setForm((f) => ({ ...f, [name]: value }))
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
+    setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : type === 'number' && name === 'recurrence_day_of_week' ? parseInt(value) : value }))
     setErrors((prev) => ({ ...prev, [name]: undefined }))
-    // Deselect template if user modifies form manually
     if (['title', 'sport_type', 'skill_level', 'max_slots'].includes(name)) {
       setSelectedTemplate(null)
     }
@@ -153,6 +156,9 @@ export default function CreateMatchPage() {
           bank_account_number: form.bank_account_number || undefined,
           bank_account_holder: form.bank_account_holder || undefined,
           cancellation_window_hours: parseInt(form.cancellation_window_hours) || 2,
+          is_recurring: form.is_recurring,
+          recurrence_type: form.is_recurring ? form.recurrence_type : undefined,
+          recurrence_day_of_week: form.is_recurring ? form.recurrence_day_of_week : undefined,
         },
       })
       toast.success('Tạo trận thành công! 🎉')
@@ -339,6 +345,47 @@ export default function CreateMatchPage() {
             )}
           </div>
         )}
+
+        {/* Recurring Match */}
+        <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-4 space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="is_recurring"
+              checked={form.is_recurring}
+              onChange={handleChange}
+              className="h-4 w-4 rounded border-gray-300 text-purple-600 accent-purple-500"
+            />
+            <div className="flex items-center gap-1.5">
+              <RefreshCw size={14} className="text-purple-600" />
+              <span className="text-sm font-semibold text-purple-900">Trận cố định (lặp lại)</span>
+            </div>
+          </label>
+          <p className="text-[10px] text-purple-600 ml-7">Hiển thị badge "Hàng tuần" để thu hút người chơi muốn tham gia đều đặn</p>
+          {form.is_recurring && (
+            <div className="flex gap-3 ml-7">
+              <Select value={form.recurrence_type} onValueChange={(v: string) => setForm((f) => ({ ...f, recurrence_type: v }))}>
+                <SelectTrigger className="w-[130px] rounded-xl text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="WEEKLY">Hàng tuần</SelectItem>
+                  <SelectItem value="BIWEEKLY">2 tuần / lần</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={String(form.recurrence_day_of_week)} onValueChange={(v: string) => setForm((f) => ({ ...f, recurrence_day_of_week: parseInt(v) }))}>
+                <SelectTrigger className="flex-1 rounded-xl text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((d, i) => (
+                    <SelectItem key={i} value={String(i)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
 
         {/* Cancellation Policy */}
         <FieldGroup label="Cho phép hủy trước giờ đá" icon={<Clock size={14} className="text-gray-400" />}>

@@ -4,8 +4,10 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import TopHeader from '@/components/TopHeader'
 import BottomNav from '@/components/BottomNav'
+import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { Toaster } from '@/components/ui/sonner'
 import { apiFetch } from '@/lib/api'
+import { registerPushNotifications } from '@/lib/firebase'
 
 interface User {
   id: number
@@ -80,6 +82,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     fetchInitialData()
 
+    // Register FCM push token once per session
+    registerPushNotifications((token) => {
+      apiFetch('/auth/fcm-token', { method: 'PATCH', body: JSON.stringify({ token }) }).catch(() => {})
+    })
+
     const token = localStorage.getItem('access_token')
     if (!token) return
 
@@ -143,6 +150,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <BottomNav unreadCount={unreadCount} />
+      <PWAInstallPrompt />
       <Toaster position="top-center" richColors />
     </>
   )

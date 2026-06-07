@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Clock, MapPin, Users, Loader2, Ban, MessageSquare } from 'lucide-react'
+import { Clock, MapPin, Users, Loader2, Ban, MessageSquare, Star } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import PostMatchRatingModal from '@/components/PostMatchRatingModal'
 
 interface MatchInfo {
   id: number
@@ -23,6 +24,13 @@ interface MatchInfo {
   court_name?: string
   court_number?: number
   host?: { id: number; username: string }
+}
+
+interface PendingRating {
+  match_id: number
+  match_title: string
+  host_id: number
+  host_username: string
 }
 
 interface MyRequest {
@@ -48,16 +56,32 @@ export default function MyMatchesPage() {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming')
   const [cancelTarget, setCancelTarget] = useState<MyRequest | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [pendingRatings, setPendingRatings] = useState<PendingRating[]>([])
+  const [ratingModal, setRatingModal] = useState<PendingRating | null>(null)
+  const [ratedMatchIds, setRatedMatchIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
-    apiFetch<{ requests: MyRequest[] }>('/join-requests/my')
-      .then((d) => setRequests(d.requests || []))
+    Promise.all([
+      apiFetch<{ requests: MyRequest[] }>('/join-requests/my'),
+      apiFetch<{ pending: PendingRating[] }>('/ratings/pending'),
+    ])
+      .then(([reqData, ratingData]) => {
+        setRequests(reqData.requests || [])
+        const pending = ratingData.pending || []
+        setPendingRatings(pending)
+        // Auto-prompt first pending rating
+        if (pending.length > 0) setRatingModal(pending[0])
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
-  const upcoming = requests.filter((r) => r.status === 'PENDING' || r.status === 'ACCEPTED')
-  const history = requests.filter((r) => r.status === 'REJECTED' || r.status === 'CANCELLED')
+  const upcoming = requests.filter(
+    (r) => (r.status === 'PENDING' || r.status === 'ACCEPTED') && r.match?.status !== 'FINISHED'
+  )
+  const history = requests.filter(
+    (r) => r.status === 'REJECTED' || r.status === 'CANCELLED' || r.match?.status === 'FINISHED'
+  )
   const displayed = activeTab === 'upcoming' ? upcoming : history
 
   function canCancel(req: MyRequest): { allowed: boolean; reason?: string } {
@@ -240,10 +264,50 @@ export default function MyMatchesPage() {
                     )}
                   </div>
                 )}
+
+                {/* History: rate finished match */}
+                {activeTab === 'history' && req.match?.status === 'FINISHED' && req.status === 'ACCEPTED' && match?.host && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    {ratedMatchIds.has(req.match_id) ? (
+                      <p className="text-[11px] text-green-600 text-center">✅ Đã đánh giá</p>
+                    ) : (
+                      <button
+                        onClick={() => setRatingModal({
+                          match_id: req.match_id,
+                          match_title: match.title,
+                          host_id: match.host!.id,
+                          host_username: match.host!.username,
+                        })}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-yellow-50 border border-yellow-200 py-2 text-xs font-semibold text-yellow-700 hover:bg-yellow-100"
+                      >
+                        <Star size={13} className="fill-yellow-400 text-yellow-400" /> Đánh giá Host
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
+      )}
+
+      {/* Post-match rating modal */}
+      {ratingModal && (
+        <PostMatchRatingModal
+          matchId={ratingModal.match_id}
+          rateeId={ratingModal.host_id}
+          rateeUsername={ratingModal.host_username}
+          rateeRole="Host"
+          onClose={() => setRatingModal(null)}
+          onSuccess={() => {
+            setRatedMatchIds((prev) => new Set([...prev, ratingModal.match_id]))
+            // Show next pending rating if any
+            const next = pendingRatings.find(
+              (p) => p.match_id !== ratingModal.match_id && !ratedMatchIds.has(p.match_id)
+            )
+            setRatingModal(next ?? null)
+          }}
+        />
       )}
 
       {/* Cancel Confirmation Dialog */}

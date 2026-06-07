@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert, UserCheck, ArrowUpDown, Radar, Crown, Lock, SlidersHorizontal, X, Zap } from 'lucide-react'
+import { MapPin, Clock, Users, CheckCircle, AlertTriangle, Loader2, ShieldAlert, UserCheck, ArrowUpDown, Radar, Crown, Lock, SlidersHorizontal, X, Zap, Search, Share2, RefreshCw, Flame } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import JoinModal from '@/components/JoinModal'
 import WeeklyCalendarStrip from '@/components/WeeklyCalendarStrip'
@@ -43,6 +43,8 @@ interface SportMatch {
   court_name?: string
   court_number?: number
   google_maps_url?: string
+  is_recurring?: boolean
+  recurrence_type?: string
 }
 
 interface AdvancedFilters {
@@ -161,6 +163,7 @@ export default function FeedPage() {
   const [showAdvFilters, setShowAdvFilters] = useState(false)
   const [advFilters, setAdvFilters] = useState<AdvancedFilters>({ maxDist: '', minPrice: '', maxPrice: '', startAfter: '', startBefore: '' })
   const [advFiltersActive, setAdvFiltersActive] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Load user profile for skill level + premium status
   useEffect(() => {
@@ -216,11 +219,18 @@ export default function FeedPage() {
       .finally(() => setLoading(false))
   }, [coords, dateFilter, sportFilter, getDateString, advFiltersActive, advFilters])
 
-  // Client-side skill filter + sort
+  // Client-side skill filter + search + sort
   const filteredMatches = useMemo(() => {
     let result = skillFilters.length === 0
       ? [...matches]
       : matches.filter((m) => skillFilters.includes(m.skill_level || 'INTERMEDIATE'))
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter((m) =>
+        m.title.toLowerCase().includes(q) || m.address.toLowerCase().includes(q)
+      )
+    }
 
     result.sort((a, b) => {
       // Friends always first
@@ -317,6 +327,23 @@ export default function FeedPage() {
 
       {/* Sticky Filter Bar */}
       <div className="sticky top-[57px] z-20 bg-gray-50 pb-3 -mx-4 px-4 pt-1 space-y-3">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm trận, địa chỉ..."
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-8 pr-8 text-sm outline-none focus:border-green-400"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
         {/* Calendar Strip (30 ngày tới) */}
         <WeeklyCalendarStrip
           days={30}
@@ -589,11 +616,14 @@ function calcMatchScore(match: SportMatch, userSkill: string): number {
   return Math.min(99, Math.round(0.55 * skillScore + 0.35 * distScore + 0.1 * urgency + urgency))
 }
 
+const RECURRENCE_LABEL: Record<string, string> = { WEEKLY: 'Hàng tuần', BIWEEKLY: '2 tuần/lần' }
+
 // --- MatchCard Component ---
 function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch; userSkill: string; isPremium: boolean; onJoin: () => void }) {
   const slotsLeft = match.max_slots - match.filled_slots
   const slotPercent = (match.filled_slots / match.max_slots) * 100
   const isAlmostFull = slotsLeft <= 2
+  const isLastSlot = slotsLeft === 1
   const isFull = slotsLeft <= 0
 
   const dist = match.distance ?? 99
@@ -636,6 +666,16 @@ function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch;
       {match.host?.status === 'SUSPENDED' && (
         <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-bold text-red-600">
           <ShieldAlert size={11} /> ⚠️ Tài khoản host đang bị tạm khóa — không nên tham gia
+        </div>
+      )}
+      {isLastSlot && (
+        <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-bold text-red-600 animate-pulse">
+          <Flame size={11} className="fill-red-500" /> Còn đúng 1 slot cuối — tham gia ngay!
+        </div>
+      )}
+      {match.is_recurring && match.recurrence_type && !isLastSlot && (
+        <div className="flex items-center gap-1 px-4 pt-2.5 pb-0 text-[11px] font-semibold text-purple-600">
+          <RefreshCw size={10} /> {RECURRENCE_LABEL[match.recurrence_type] || match.recurrence_type}
         </div>
       )}
 
@@ -758,6 +798,19 @@ function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch;
           >
             <MapPin size={12} /> Bản đồ
           </a>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/matches/${match.id}`
+              if (navigator.share) {
+                navigator.share({ title: match.title, text: `${match.title} lúc ${match.start_time.slice(0,5)} tại ${match.address}`, url })
+              } else {
+                navigator.clipboard.writeText(url)
+              }
+            }}
+            className="flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+          >
+            <Share2 size={12} />
+          </button>
           {!isFull ? (
             <button
               onClick={onJoin}

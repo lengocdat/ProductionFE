@@ -3,19 +3,22 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap, Check } from 'lucide-react'
+import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap, Check, Copy, Gift } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import EquippedBadge from '@/components/EquippedBadge'
+import { toast } from 'sonner'
 
 interface User { id: number; username: string; email: string; role: string; tier: string; skill_level: string; negative_reports: number; no_show_count: number; completed_matches_count: number; is_premium: boolean; premium_expires_at?: string; created_at: string }
 interface Rating { id: number; stars: number; is_negative: boolean; review_text: string; created_at: string }
 interface BadgeSummary { equipped_badge_name: string; equipped_badge_icon: string; unlocked: number; total: number }
+interface ReferralInfo { code: string; count: number }
 
 export default function ProfilePage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [ratings, setRatings] = useState<Rating[]>([])
   const [badgeSummary, setBadgeSummary] = useState<BadgeSummary | null>(null)
+  const [referral, setReferral] = useState<ReferralInfo | null>(null)
 
   useEffect(() => {
     apiFetch<{ user: User }>('/auth/me').then((d) => {
@@ -33,6 +36,7 @@ export default function ProfilePage() {
         })
       })
       .catch(() => {})
+    apiFetch<ReferralInfo>('/auth/referral').then(setReferral).catch(() => {})
   }, [])
 
   function logout() {
@@ -141,6 +145,52 @@ export default function ProfilePage() {
         <StatCard icon={<AlertTriangle size={16} className="text-orange-500" />} value={String(user.no_show_count || 0)} label="Bùng trận" />
         <StatCard icon={<Calendar size={16} className="text-green-500" />} value={new Date(user.created_at).toLocaleDateString('vi-VN')} label="Tham gia" />
       </div>
+
+      {/* Referral Card */}
+      {referral && referral.code && (
+        <div className="mt-4 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 p-4 shadow-md text-white">
+          <div className="flex items-center gap-2 mb-2">
+            <Gift size={16} className="text-green-100" />
+            <p className="text-xs font-bold text-green-100">Giới thiệu bạn bè</p>
+          </div>
+          <p className="text-[11px] text-green-100 mb-3">
+            Mỗi người đăng ký bằng mã của bạn → cả hai nhận <strong className="text-white">7 ngày Premium</strong> miễn phí!
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 rounded-xl bg-white/20 border border-white/30 px-3 py-2 text-center">
+              <p className="text-lg font-black tracking-widest text-white">{referral.code}</p>
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(referral.code)
+                toast.success('Đã copy mã giới thiệu!')
+              }}
+              className="flex items-center gap-1.5 rounded-xl bg-white/20 border border-white/30 px-3 py-2 text-xs font-semibold text-white hover:bg-white/30 transition-colors"
+            >
+              <Copy size={13} /> Copy
+            </button>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/register?ref=${referral.code}`
+                if (navigator.share) {
+                  navigator.share({ title: 'CoDuyen', text: `Tham gia CoDuyen với mã ${referral.code}`, url })
+                } else {
+                  navigator.clipboard.writeText(url)
+                  toast.success('Đã copy link mời!')
+                }
+              }}
+              className="flex items-center gap-1.5 rounded-xl bg-white/20 border border-white/30 px-3 py-2 text-xs font-semibold text-white hover:bg-white/30 transition-colors"
+            >
+              <Zap size={13} /> Chia sẻ
+            </button>
+          </div>
+          {referral.count > 0 && (
+            <p className="text-[11px] text-green-100 mt-2">
+              🎉 Bạn đã giới thiệu <strong className="text-white">{referral.count} người</strong>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Quick Menu */}
       <div className="mt-4 rounded-2xl bg-white shadow-sm overflow-hidden divide-y divide-gray-100">
