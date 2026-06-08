@@ -8,7 +8,7 @@ import { apiFetch } from '@/lib/api'
 import EquippedBadge from '@/components/EquippedBadge'
 import { toast } from 'sonner'
 
-interface User { id: number; username: string; email: string; role: string; tier: string; skill_level: string; negative_reports: number; no_show_count: number; completed_matches_count: number; is_premium: boolean; premium_expires_at?: string; created_at: string }
+interface User { id: number; username: string; email: string; role: string; tier: string; skill_level: string; negative_reports: number; no_show_count: number; completed_matches_count: number; is_premium: boolean; premium_expires_at?: string; current_streak: number; max_streak: number; created_at: string }
 interface Rating { id: number; stars: number; is_negative: boolean; review_text: string; created_at: string }
 interface BadgeSummary { equipped_badge_name: string; equipped_badge_icon: string; unlocked: number; total: number }
 interface ReferralInfo { code: string; count: number }
@@ -91,6 +91,22 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Streak banner */}
+      {(user.current_streak ?? 0) > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 px-4 py-3">
+          <span className="text-2xl">🔥</span>
+          <div className="flex-1">
+            <p className="text-sm font-black text-orange-700">{user.current_streak} ngày liên tiếp!</p>
+            <p className="text-[11px] text-orange-500">Kỷ lục: {user.max_streak} ngày · Mở app mỗi ngày để giữ streak</p>
+          </div>
+          {user.current_streak >= 7 && (
+            <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+              {user.current_streak >= 30 ? '👑' : user.current_streak >= 14 ? '⚔️' : '🏅'}
+            </span>
+          )}
         </div>
       )}
 
