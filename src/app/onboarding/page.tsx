@@ -138,8 +138,13 @@ export default function OnboardingPage() {
   async function handleFinish() {
     setSaving(true)
     try {
-      await apiFetch('/auth/profile', { method: 'PATCH', json: { skill_level: finalSkill } })
+      await apiFetch('/auth/profile', {
+        method: 'PATCH',
+        json: { skill_level: finalSkill, pref_sports: sports, pref_city: '' },
+      })
     } catch {}
+    if (sports.length > 0) localStorage.setItem('pref_sport', sports[0])
+    localStorage.setItem('pref_skill', finalSkill)
     localStorage.setItem('onboarding_done', '1')
     localStorage.removeItem(ONBOARDING_DRAFT_KEY)
     router.replace('/feed')
