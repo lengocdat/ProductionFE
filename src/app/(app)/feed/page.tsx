@@ -783,7 +783,7 @@ function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch;
           </a>
           <button
             onClick={() => {
-              const url = `${window.location.origin}/matches/${match.id}`
+              const url = `${window.location.origin}/m/${match.id}`
               if (navigator.share) {
                 navigator.share({ title: match.title, text: `${match.title} lúc ${match.start_time.slice(0,5)} tại ${match.address}`, url })
               } else {

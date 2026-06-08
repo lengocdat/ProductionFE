@@ -116,6 +116,17 @@ export default function PremiumPage() {
   async function handleActivate() {
     setActivating(true)
     try {
+      // Try MoMo payment first
+      const result = await apiFetch<{ pay_url: string; qr_code: string }>('/payment/momo/premium', { method: 'POST' })
+      if (result.pay_url) {
+        // Redirect to MoMo payment page
+        window.location.href = result.pay_url
+        return
+      }
+    } catch {
+      // MoMo not configured — fall back to manual activation
+    }
+    try {
       await apiFetch('/premium/activate', { method: 'POST', json: { plan: selectedPlan } })
       setStep('done')
       setUser(prev => prev ? { ...prev, is_premium: true } : prev)
