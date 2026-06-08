@@ -53,6 +53,7 @@ export default function PremiumPage() {
   const [payInfo, setPayInfo]     = useState<PaymentInfo | null>(null)
   const [showFaq, setShowFaq]     = useState<number | null>(null)
   const pollRef                   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollCountRef              = useRef(0)
 
   useEffect(() => {
     apiFetch<{ user: UserMe }>('/auth/me')
@@ -71,11 +72,19 @@ export default function PremiumPage() {
   async function handleStartPayment() {
     setPaying(true)
     try {
-      const info = await apiFetch<PaymentInfo>('/payment/premium', { method: 'POST' })
+      const info = await apiFetch<PaymentInfo>('/payment/premium', { method: 'POST', json: { amount: plan.price } })
       setPayInfo(info)
       setStep('payment')
-      // Poll every 4s for up to 15 min
+      pollCountRef.current = 0
+      // Poll every 4s, stop after 225 polls (15 min)
       pollRef.current = setInterval(async () => {
+        pollCountRef.current += 1
+        if (pollCountRef.current > 225) {
+          clearInterval(pollRef.current!)
+          toast.error('Hết thời gian chờ. Nếu đã chuyển khoản, vui lòng liên hệ hỗ trợ.')
+          setStep('plans')
+          return
+        }
         try {
           const { status } = await apiFetch<{ status: string }>(`/payment/status/${info.order_id}`)
           if (status === 'PAID') {

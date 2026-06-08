@@ -77,10 +77,15 @@ export default function TopHeader({ username, notifications, notifCount, pending
   }
 
   const getNotificationIcon = (type: string) => {
+    if (type === 'STREAK_REMINDER') return '🔥'
+    if (type === 'TRIAL_EXPIRY_WARNING') return '⏰'
+    if (type === 'NEW_MATCH_NEARBY') return '📍'
+    if (type === 'CLUB_MATCH_POSTED') return '🏆'
     if (type.includes('FRIEND')) return '👥'
     if (type.includes('APPROVED') || type.includes('ACCEPTED')) return '✅'
     if (type.includes('REFUND')) return '💰'
     if (type.includes('CANCELLED')) return '❌'
+    if (type.includes('REMINDER')) return '⏰'
     return '🔔'
   }
 

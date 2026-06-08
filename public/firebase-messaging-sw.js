@@ -14,11 +14,23 @@ const messaging = firebase.messaging()
 
 messaging.onBackgroundMessage((payload) => {
   const { title = 'CoDuyen', body = '' } = payload.notification ?? {}
+  const notifType = payload.data?.type ?? ''
+  const link = payload.data?.link ?? '/'
+
+  const actions = []
+  if (notifType === 'JOIN_REQUEST' || notifType === 'MATCH_REMINDER' || notifType === 'NEW_MATCH_NEARBY') {
+    actions.push({ action: 'open', title: 'Xem ngay' })
+  }
+
   self.registration.showNotification(title, {
     body,
     icon: '/icon-192.png',
     badge: '/icon-72.png',
-    data: payload.data,
+    tag: notifType || 'coduyen',
+    renotify: true,
+    data: { link, ...payload.data },
+    actions,
+    vibrate: [200, 100, 200],
   })
 })
 

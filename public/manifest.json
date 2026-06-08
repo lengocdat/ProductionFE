@@ -2,17 +2,30 @@
   "name": "CoDuyen – Tìm trận thể thao",
   "short_name": "CoDuyen",
   "description": "Tìm trận thể thao gần bạn, kết nối người chơi cùng trình độ tại Việt Nam",
-  "start_url": "/",
+  "id": "/",
+  "start_url": "/feed",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#f9fafb",
   "theme_color": "#16a34a",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "lang": "vi",
   "categories": ["sports", "social", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-72.png",  "sizes": "72x72",   "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
     { "src": "/og-image.png", "sizes": "1200x630", "type": "image/png", "form_factor": "wide" }
+  ],
+  "shortcuts": [
+    { "name": "Tìm trận",  "url": "/feed",           "description": "Xem trận thể thao gần bạn",   "icons": [{ "src": "/icon-72.png", "sizes": "72x72" }] },
+    { "name": "Tạo trận",  "url": "/matches/create", "description": "Tạo trận mới",                 "icons": [{ "src": "/icon-72.png", "sizes": "72x72" }] },
+    { "name": "Hồ sơ",     "url": "/profile",        "description": "Hồ sơ và huy hiệu cá nhân",   "icons": [{ "src": "/icon-72.png", "sizes": "72x72" }] }
   ]
 }

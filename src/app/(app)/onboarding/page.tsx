@@ -49,9 +49,12 @@ export default function OnboardingPage() {
     if (city) localStorage.setItem('pref_city', city)
     localStorage.setItem('pref_skill', skill)
 
-    // Persist skill level to profile (best-effort)
+    // Persist skill level + preferences to profile (best-effort)
     try {
-      await apiFetch('/auth/profile', { method: 'PATCH', json: { skill_level: skill } })
+      await apiFetch('/auth/profile', {
+        method: 'PATCH',
+        json: { skill_level: skill, pref_sports: sports, pref_city: city },
+      })
     } catch { /* ignore */ }
 
     localStorage.setItem('onboarding_done', '1')

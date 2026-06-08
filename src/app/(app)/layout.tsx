@@ -38,6 +38,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [notifCount, setNotifCount] = useState(0)
   const [pendingFriends, setPendingFriends] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
+  const reconnectDelayRef = useRef(2000)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('access_token')
@@ -90,39 +92,55 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const token = localStorage.getItem('access_token')
     if (!token) return
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${protocol}//${window.location.host}/v1/ws?token=${token}`)
-    wsRef.current = ws
+    let destroyed = false
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.type === 'notification') {
-          const notif = data.payload as Notification
-          setNotifications((prev) => [notif, ...prev].slice(0, 5))
-          setNotifCount((prev) => prev + 1)
-        } else if (data.type === 'new_message') {
-          // Increment unread count for messages not from current user
-          if (data.payload?.sender_id !== user.id) {
-            setUnreadCount((prev) => prev + 1)
+    function connectWS() {
+      if (destroyed) return
+      const t = localStorage.getItem('access_token')
+      if (!t) return
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const ws = new WebSocket(`${protocol}//${window.location.host}/v1/ws?token=${t}`)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        reconnectDelayRef.current = 2000
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'notification') {
+            const notif = data.payload as Notification
+            setNotifications((prev) => [notif, ...prev].slice(0, 5))
+            setNotifCount((prev) => prev + 1)
+          } else if (data.type === 'new_message') {
+            if (data.payload?.sender_id !== user?.id) {
+              setUnreadCount((prev) => prev + 1)
+            }
+          } else if (data.type === 'friend_request') {
+            setPendingFriends((prev) => prev + 1)
           }
-        } else if (data.type === 'friend_request') {
-          setPendingFriends((prev) => prev + 1)
-        }
-      } catch {}
+        } catch {}
+      }
+
+      ws.onclose = () => {
+        wsRef.current = null
+        if (destroyed) return
+        // Exponential backoff reconnect, cap at 30s
+        reconnectTimerRef.current = setTimeout(() => {
+          reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 1.5, 30000)
+          connectWS()
+        }, reconnectDelayRef.current)
+      }
     }
 
-    ws.onclose = () => {
-      // Reconnect after 5s if disconnected
-      setTimeout(() => {
-        if (wsRef.current === ws) {
-          wsRef.current = null
-        }
-      }, 5000)
-    }
+    connectWS()
 
     return () => {
-      ws.close()
+      destroyed = true
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+      wsRef.current?.close()
       wsRef.current = null
     }
   }, [user, fetchInitialData])

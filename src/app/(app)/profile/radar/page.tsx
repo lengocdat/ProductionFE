@@ -102,7 +102,7 @@ export default function RadarPage() {
         </div>
         <h1 className="text-xl font-bold text-white mb-2">Tính năng Premium</h1>
         <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-          Radar tự động chỉ dành cho thành viên Premium. Nâng cấp để nhận thông báo ngay khi có kèo đấu hoặc đồ cũ phù hợp với bạn.
+          Radar tự động chỉ dành cho thành viên Premium. Nâng cấp để nhận thông báo ngay khi có trận đấu hoặc đồ cũ phù hợp với bạn.
         </p>
         <Link
           href="/profile/premium"
@@ -147,7 +147,7 @@ export default function RadarPage() {
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
           <p className="text-xs font-bold text-amber-400 mb-1">⚡ Hoạt động như thế nào?</p>
           <p className="text-[11px] text-gray-400 leading-relaxed">
-            Khi có kèo đấu hoặc đồ cũ mới khớp với tiêu chí của bạn, hệ thống sẽ gửi thông báo ngay lập tức. Bạn không cần phải liên tục mở app để kiểm tra.
+            Khi có trận đấu hoặc đồ cũ mới khớp với tiêu chí của bạn, hệ thống sẽ gửi thông báo ngay lập tức. Bạn không cần phải liên tục mở app để kiểm tra.
           </p>
         </div>
 

@@ -45,12 +45,14 @@ export async function registerPushNotifications(
     const token = await getToken(m, { vapidKey, serviceWorkerRegistration: swReg })
     if (token) onTokenReceived(token)
 
-    // Handle foreground messages as browser notifications
+    // Handle foreground messages — skip if app is focused (WebSocket already shows real-time update)
     onMessage(m, (payload) => {
       if (!payload.notification) return
+      if (document.hasFocus()) return
       new Notification(payload.notification.title ?? 'CoDuyen', {
-        body: payload.notification.body,
+        body: payload.notification.body ?? '',
         icon: '/icon-192.png',
+        badge: '/icon-72.png',
       })
     })
   } catch {

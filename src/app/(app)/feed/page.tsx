@@ -17,6 +17,7 @@ interface Host {
   negative_reports: number
   is_verified: boolean
   status?: string
+  completed_matches_count?: number
 }
 
 interface SportMatch {
@@ -762,6 +763,11 @@ function MatchCard({ match, userSkill, isPremium, onJoin }: { match: SportMatch;
             <span className="text-[11px] text-gray-500">{match.host.username}</span>
             {match.host.tier === 'VERIFIED_HOST' && (
               <CheckCircle size={12} className="text-blue-500" />
+            )}
+            {(match.host.completed_matches_count ?? 0) > 0 && (
+              <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 rounded-full px-1.5 py-0.5">
+                ✓ {match.host.completed_matches_count} trận
+              </span>
             )}
             {match.host.negative_reports > 3 && (
               <span className="flex items-center gap-0.5 text-[10px] font-medium text-red-500">
