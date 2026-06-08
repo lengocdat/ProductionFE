@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MapPin, PlusCircle, MessageSquare, ShoppingBag, CalendarCheck } from 'lucide-react'
+import { MapPin, PlusCircle, MessageSquare, ShoppingBag, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/feed', icon: MapPin, label: 'Khám phá' },
-  { href: '/courts', icon: CalendarCheck, label: 'Đặt sân' },
+  { href: '/clubs', icon: Users, label: 'CLB' },
   { href: '/matches/create', icon: PlusCircle, label: 'Tạo trận' },
   { href: '/marketplace', icon: ShoppingBag, label: 'Chợ đồ' },
   { href: '/chats', icon: MessageSquare, label: 'Tin nhắn', badge: true },
