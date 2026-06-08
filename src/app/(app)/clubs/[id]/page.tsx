@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Users, MapPin, Loader2, LogOut, UserPlus } from 'lucide-react'
+import { ArrowLeft, Users, MapPin, Loader2, LogOut, UserPlus, Calendar, Clock, PlusCircle } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
 
@@ -25,6 +25,18 @@ interface Member {
   role: string
 }
 
+interface ClubMatch {
+  id: number
+  title: string
+  sport_type: string
+  address: string
+  match_date: string
+  start_time: string
+  max_slots: number
+  filled_slots: number
+  status: string
+}
+
 const SPORT_ICON: Record<string, string> = {
   BADMINTON: '🏸', FOOTBALL: '⚽', BASKETBALL: '🏀',
   VOLLEYBALL: '🏐', TABLE_TENNIS: '🏓', TENNIS: '🎾',
@@ -33,17 +45,23 @@ const SPORT_ICON: Record<string, string> = {
 
 export default function ClubDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const clubId = params.id
   const [club, setClub] = useState<Club | null>(null)
   const [members, setMembers] = useState<Member[]>([])
+  const [matches, setMatches] = useState<ClubMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
+  const [tab, setTab] = useState<'matches' | 'members'>('matches')
 
   useEffect(() => {
-    apiFetch<{ club: Club; members: Member[] }>(`/clubs/${clubId}`)
-      .then(d => { setClub(d.club); setMembers(d.members || []) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    Promise.all([
+      apiFetch<{ club: Club; members: Member[] }>(`/clubs/${clubId}`),
+      apiFetch<{ matches: ClubMatch[] }>(`/clubs/${clubId}/matches`),
+    ]).then(([d, m]) => {
+      setClub(d.club); setMembers(d.members || [])
+      setMatches(m.matches || [])
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [clubId])
 
   async function handleJoin() {
@@ -141,25 +159,76 @@ export default function ClubDetailPage() {
           </div>
         )}
 
-        {/* Members */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs font-semibold text-gray-500 mb-3">Thành viên ({members.length})</p>
-          <div className="space-y-2.5">
-            {members.map(m => (
-              <Link key={m.user_id} href={`/users/${m.user_id}`}
-                className="flex items-center gap-3 hover:opacity-80">
-                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold text-green-700 shrink-0">
-                  {m.username.charAt(0).toUpperCase()}
+        {/* Tabs */}
+        <div className="flex rounded-2xl bg-gray-100 p-1 mb-4">
+          <button onClick={() => setTab('matches')}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === 'matches' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+            🏆 Trận ({matches.length})
+          </button>
+          <button onClick={() => setTab('members')}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${tab === 'members' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+            👥 Thành viên ({members.length})
+          </button>
+        </div>
+
+        {/* Matches tab */}
+        {tab === 'matches' && (
+          <div className="space-y-3">
+            {isMember && (
+              <button onClick={() => router.push('/matches/create')}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-green-300 py-3 text-sm font-semibold text-green-600 hover:bg-green-50">
+                <PlusCircle size={16} /> Đăng trận cho CLB
+              </button>
+            )}
+            {matches.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Calendar size={32} className="mx-auto mb-2 opacity-40" />
+                <p className="text-sm">CLB chưa có trận nào</p>
+              </div>
+            ) : matches.map(m => (
+              <Link key={m.id} href={`/matches/${m.id}`}
+                className="block bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-sm transition-shadow">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800 leading-tight">{m.title}</p>
+                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <MapPin size={10} /> {m.address}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                      <Clock size={10} /> {m.match_date} · {m.start_time}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                      m.status === 'FULL' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {m.status === 'FULL' ? 'Hết chỗ' : `Còn ${m.max_slots - m.filled_slots} chỗ`}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-800">{m.username}</p>
-                </div>
-                {m.role === 'OWNER' && <span className="text-[10px] text-amber-600 font-bold">👑 Chủ</span>}
-                {m.role === 'ADMIN' && <span className="text-[10px] text-blue-600 font-bold">⭐ Admin</span>}
               </Link>
             ))}
           </div>
-        </div>
+        )}
+
+        {/* Members tab */}
+        {tab === 'members' && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+            <div className="space-y-2.5">
+              {members.map(m => (
+                <Link key={m.user_id} href={`/users/${m.user_id}`}
+                  className="flex items-center gap-3 hover:opacity-80">
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold text-green-700 shrink-0">
+                    {m.username.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 flex-1">{m.username}</p>
+                  {m.role === 'OWNER' && <span className="text-[10px] text-amber-600 font-bold">👑 Chủ</span>}
+                  {m.role === 'ADMIN' && <span className="text-[10px] text-blue-600 font-bold">⭐ Admin</span>}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

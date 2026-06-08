@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Clock, Users, Loader2, Zap, RefreshCw } from 'lucide-react'
@@ -52,6 +52,8 @@ interface FormErrors {
   skill_level?: string
 }
 
+interface MyClub { id: number; name: string; sport_type: string }
+
 export default function CreateMatchPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -59,6 +61,12 @@ export default function CreateMatchPage() {
   const [submitError, setSubmitError] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
   const [formFlash, setFormFlash] = useState(false)
+  const [myClubs, setMyClubs] = useState<MyClub[]>([])
+  const [selectedClubID, setSelectedClubID] = useState<number | null>(null)
+
+  useEffect(() => {
+    apiFetch<{ clubs: MyClub[] }>('/clubs/my').then(d => setMyClubs(d.clubs || [])).catch(() => {})
+  }, [])
 
   const [form, setForm] = useState({
     title: '',
@@ -159,6 +167,7 @@ export default function CreateMatchPage() {
           is_recurring: form.is_recurring,
           recurrence_type: form.is_recurring ? form.recurrence_type : undefined,
           recurrence_day_of_week: form.is_recurring ? form.recurrence_day_of_week : undefined,
+          club_id: selectedClubID ?? undefined,
         },
       })
       toast.success('Tạo trận thành công! 🎉')
@@ -201,6 +210,34 @@ export default function CreateMatchPage() {
           ))}
         </div>
       </div>
+
+      {/* ============ Club Selector ============ */}
+      {myClubs.length > 0 && (
+        <div className="mb-5">
+          <p className="text-sm font-semibold text-gray-700 mb-2">🏆 Đăng cho CLB?</p>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+            <button type="button"
+              onClick={() => setSelectedClubID(null)}
+              className={`flex-shrink-0 rounded-2xl border-2 px-4 py-2 text-xs font-semibold transition-all ${
+                selectedClubID === null ? 'border-gray-400 bg-gray-100 text-gray-700' : 'border-gray-200 text-gray-400'
+              }`}>
+              Không có
+            </button>
+            {myClubs.map(c => (
+              <button key={c.id} type="button"
+                onClick={() => setSelectedClubID(c.id)}
+                className={`flex-shrink-0 rounded-2xl border-2 px-4 py-2 text-xs font-semibold transition-all ${
+                  selectedClubID === c.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}>
+                {c.name}
+              </button>
+            ))}
+          </div>
+          {selectedClubID && (
+            <p className="text-[11px] text-green-600 mt-1.5 ml-1">✓ Thành viên CLB sẽ nhận thông báo về trận này</p>
+          )}
+        </div>
+      )}
 
       {/* ============ Form ============ */}
       <form
