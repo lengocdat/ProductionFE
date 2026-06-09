@@ -45,6 +45,15 @@ export default function TopHeader({ username, notifications, notifCount, pending
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
+  const handleDropdownOpenChange = (open: boolean) => {
+    setDropdownOpen(open)
+    if (open && notifCount > 0) {
+      apiFetch('/notifications/read-all', { method: 'POST' }).catch(() => {})
+      const updated = notifications.map(n => ({ ...n, is_read: true }))
+      onNotificationsChange(updated, 0)
+    }
+  }
+
   // Format relative time
   const getRelativeTime = (date: string) => {
     const now = new Date()
@@ -97,7 +106,7 @@ export default function TopHeader({ username, notifications, notifCount, pending
       </Link>
       <div className="flex items-center gap-2">
         {/* Notification dropdown */}
-        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+        <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownOpenChange}>
           <DropdownMenuTrigger asChild>
             <button className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
               <Bell size={20} className="text-gray-600" />

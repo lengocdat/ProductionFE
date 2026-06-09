@@ -703,6 +703,7 @@ function ChatTab({ matchId, myId }: { matchId: number; myId: number }) {
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   // Load history
   useEffect(() => {
@@ -735,7 +736,12 @@ function ChatTab({ matchId, myId }: { matchId: number; myId: number }) {
     return () => { ws.close() }
   }, [myId, matchId])
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100
+    if (isAtBottom) endRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   async function sendMessage() {
     if (!text.trim() || sending) return
@@ -762,7 +768,7 @@ function ChatTab({ matchId, myId }: { matchId: number; myId: number }) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {messages.length === 0 && <p className="text-center text-xs text-gray-400 py-8">Chưa có tin nhắn</p>}
         {messages.map((msg) => {
           const isMe = msg.sender_id === myId
@@ -795,6 +801,7 @@ function ChatTab({ matchId, myId }: { matchId: number; myId: number }) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Nhập tin nhắn..."
+            maxLength={500}
             className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-green-400"
           />
           <button onClick={sendMessage} disabled={!text.trim() || sending} className="rounded-xl bg-green-500 px-4 py-2.5 text-white hover:bg-green-600 disabled:opacity-40 active:scale-95">

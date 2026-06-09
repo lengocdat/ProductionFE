@@ -37,9 +37,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notifCount, setNotifCount] = useState(0)
   const [pendingFriends, setPendingFriends] = useState(0)
+  const [isOffline, setIsOffline] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectDelayRef = useRef(2000)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true)
+    const goOnline = () => setIsOffline(false)
+    window.addEventListener('offline', goOffline)
+    window.addEventListener('online', goOnline)
+    return () => {
+      window.removeEventListener('offline', goOffline)
+      window.removeEventListener('online', goOnline)
+    }
+  }, [])
 
   useEffect(() => {
     const token = localStorage.getItem('access_token')
@@ -157,6 +169,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {isOffline && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-gray-800 px-4 py-2 text-xs font-medium text-white">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
+          Mất kết nối mạng — các thao tác sẽ không hoạt động
+        </div>
+      )}
       <TopHeader
         username={user.username}
         notifications={notifications}
@@ -164,7 +182,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         pendingFriends={pendingFriends}
         onNotificationsChange={(notifs, count) => { setNotifications(notifs); setNotifCount(count) }}
       />
-      <main className="pb-20 min-h-[calc(100vh-120px)]">
+      <main className={`pb-20 min-h-[calc(100vh-120px)]${isOffline ? ' pt-8' : ''}`}>
         {children}
       </main>
       <BottomNav unreadCount={unreadCount} />

@@ -49,10 +49,25 @@ export default function JoinModal({ match, onClose }: Props) {
   const [requestId, setRequestId] = useState<number | null>(null)
   const [payInfo, setPayInfo] = useState<PaymentInfo | null>(null)
   const [payStatus, setPayStatus] = useState<'pending' | 'paid'>('pending')
+  const [timeLeft, setTimeLeft] = useState(300) // 5 minutes
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollCountRef = useRef(0)
 
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
+  useEffect(() => () => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    if (timerRef.current) clearInterval(timerRef.current)
+  }, [])
+
+  const startCountdown = () => {
+    setTimeLeft(300)
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) { clearInterval(timerRef.current!); return 0 }
+        return t - 1
+      })
+    }, 1000)
+  }
 
   const hasDeposit = (match.price_per_slot ?? 0) > 0
   const hasBankInfo = match.bank_name && match.bank_account_number
@@ -75,6 +90,7 @@ export default function JoinModal({ match, onClose }: Props) {
             json: { join_request_id: reqId, amount: match.price_per_slot },
           })
           setPayInfo(info)
+          startCountdown()
           // Poll payment status every 4s for up to 5 min (75 polls)
           pollCountRef.current = 0
           pollRef.current = setInterval(async () => {
@@ -151,8 +167,10 @@ export default function JoinModal({ match, onClose }: Props) {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
+                maxLength={300}
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm resize-none focus:border-green-400 outline-none"
               />
+              <p className="text-[10px] text-gray-400 text-right mt-0.5">{message.length}/300</p>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-2">
@@ -245,10 +263,19 @@ export default function JoinModal({ match, onClose }: Props) {
                 </div>
               )}
 
-              {/* Auto-detection status */}
-              <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
-                <Loader2 size={12} className="animate-spin text-green-500" />
-                Đang chờ xác nhận tự động từ ngân hàng...
+              {/* Auto-detection status + countdown */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                  <Loader2 size={12} className="animate-spin text-green-500" />
+                  Đang chờ xác nhận tự động từ ngân hàng...
+                </div>
+                {timeLeft > 0 ? (
+                  <p className="text-[11px] font-mono text-gray-400">
+                    Còn lại: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-red-500">Hết thời gian chờ. Liên hệ Host nếu đã chuyển khoản.</p>
+                )}
               </div>
             </div>
 
