@@ -155,6 +155,29 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Founder story */}
+        <section className="px-5 py-10 bg-green-50">
+          <div className="relative rounded-3xl bg-white border border-green-100 shadow-sm px-6 pt-8 pb-6">
+            {/* Large decorative quote mark */}
+            <span className="absolute -top-5 left-6 text-6xl leading-none text-green-200 font-serif select-none">"</span>
+            <p className="text-sm text-gray-700 leading-relaxed mb-5">
+              Một buổi tối, tôi mất gần một giờ chỉ để tìm một sân cầu lông có người chơi phù hợp.
+              Tôi nhận ra việc kết nối những người yêu thể thao ở Việt Nam vẫn còn quá khó khăn.{' '}
+              <span className="font-semibold text-gray-900">
+                CoDuyen được tạo ra để thay đổi điều đó
+              </span>{' '}
+              — giúp mọi người dễ dàng tìm sân, tìm đội và kết nối với cộng đồng thể thao xung quanh mình.
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold shrink-0">K</div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Ken</p>
+                <p className="text-[11px] text-gray-400">Người sáng lập CoDuyen</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA bottom */}
         <section className="px-5 py-10 bg-gradient-to-b from-white to-green-50 text-center">
           <h2 className="text-xl font-extrabold text-gray-900 mb-2">Sẵn sàng ra sân?</h2>
