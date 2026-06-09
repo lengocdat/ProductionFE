@@ -7,6 +7,7 @@ import { Clock, Users, Loader2, Zap, RefreshCw } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import PhoneModal from '@/components/PhoneModal'
 
 // Dynamic import MapPicker (Leaflet requires window/document)
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false })
@@ -59,6 +60,8 @@ export default function CreateMatchPage() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitError, setSubmitError] = useState('')
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [phoneModalMsg, setPhoneModalMsg] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
   const [formFlash, setFormFlash] = useState(false)
   const [myClubs, setMyClubs] = useState<MyClub[]>([])
@@ -140,10 +143,14 @@ export default function CreateMatchPage() {
     return Object.keys(e).length === 0
   }
 
-  async function handleSubmit(ev: React.FormEvent) {
-    ev.preventDefault()
+  async function submitMatch() {
+    // Proactive phone check — avoids a wasted API call if we already know phone is missing
+    if (!localStorage.getItem('user_phone')) {
+      setPhoneModalMsg('Vui lòng thêm số điện thoại vào hồ sơ để tạo trận — người tham gia cần liên hệ với bạn.')
+      setShowPhoneModal(true)
+      return
+    }
     setSubmitError('')
-    if (!validate()) return
     setLoading(true)
     try {
       await apiFetch('/matches', {
@@ -173,11 +180,33 @@ export default function CreateMatchPage() {
       toast.success('Tạo trận thành công! 🎉')
       router.push('/feed')
     } catch (err: any) {
-      setSubmitError(err.message || 'Có lỗi xảy ra')
-      toast.error(err.message || 'Có lỗi xảy ra')
+      const msg: string = err.message || ''
+      if (msg.startsWith('PHONE_REQUIRED:')) {
+        setPhoneModalMsg(msg.replace('PHONE_REQUIRED:', ''))
+        setShowPhoneModal(true)
+      } else {
+        setSubmitError(msg || 'Có lỗi xảy ra')
+        toast.error(msg || 'Có lỗi xảy ra')
+      }
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!validate()) return
+    submitMatch()
+  }
+
+  if (showPhoneModal) {
+    return (
+      <PhoneModal
+        message={phoneModalMsg}
+        onSaved={() => { setShowPhoneModal(false); submitMatch() }}
+        onClose={() => setShowPhoneModal(false)}
+      />
+    )
   }
 
   return (

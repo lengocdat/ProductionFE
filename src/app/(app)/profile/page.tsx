@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap, Check, Copy, Gift } from 'lucide-react'
+import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap, Check, Copy, Gift, Phone, Pencil } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import EquippedBadge from '@/components/EquippedBadge'
 import { toast } from 'sonner'
 
-interface User { id: number; username: string; email: string; role: string; tier: string; skill_level: string; negative_reports: number; no_show_count: number; completed_matches_count: number; is_premium: boolean; premium_expires_at?: string; current_streak: number; max_streak: number; created_at: string }
+interface User { id: number; username: string; email: string; role: string; tier: string; skill_level: string; negative_reports: number; no_show_count: number; completed_matches_count: number; is_premium: boolean; premium_expires_at?: string; current_streak: number; max_streak: number; created_at: string; phone_number?: string }
 interface Rating { id: number; stars: number; is_negative: boolean; review_text: string; created_at: string }
 interface BadgeSummary { equipped_badge_name: string; equipped_badge_icon: string; unlocked: number; total: number }
 interface ReferralInfo { code: string; count: number }
@@ -19,10 +19,35 @@ export default function ProfilePage() {
   const [ratings, setRatings] = useState<Rating[]>([])
   const [badgeSummary, setBadgeSummary] = useState<BadgeSummary | null>(null)
   const [referral, setReferral] = useState<ReferralInfo | null>(null)
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [savingPhone, setSavingPhone] = useState(false)
+
+  async function savePhone() {
+    const trimmed = phoneInput.trim().replace(/\s/g, '')
+    if (!/^(0|\+84)[3-9]\d{8}$/.test(trimmed)) {
+      toast.error('Số điện thoại không hợp lệ (VD: 0912345678)')
+      return
+    }
+    setSavingPhone(true)
+    try {
+      await apiFetch('/auth/profile', { method: 'PATCH', json: { phone_number: trimmed } })
+      localStorage.setItem('user_phone', trimmed)
+      setUser(u => u ? { ...u, phone_number: trimmed } : u)
+      setEditingPhone(false)
+      toast.success('Đã cập nhật số điện thoại')
+    } catch {
+      toast.error('Không lưu được, thử lại sau')
+    } finally {
+      setSavingPhone(false)
+    }
+  }
 
   useEffect(() => {
     apiFetch<{ user: User }>('/auth/me').then((d) => {
       setUser(d.user)
+      localStorage.setItem('user_phone', d.user.phone_number || '')
+      setPhoneInput(d.user.phone_number || '')
       apiFetch<{ ratings: Rating[] }>(`/ratings/${d.user.id}`).then((r) => setRatings(r.ratings || [])).catch(() => {})
     })
     apiFetch<{ badges: Array<{ name: string; icon_url: string; is_equipped: boolean; is_unlocked: boolean }>; unlocked: number; total: number }>('/badges/my')
@@ -133,6 +158,39 @@ export default function ProfilePage() {
           )}
         </h1>
         <p className="text-xs text-gray-500">{user.email}</p>
+
+        {/* Phone number — inline editor */}
+        <div className="mt-1.5 flex items-center justify-center gap-1.5">
+          {editingPhone ? (
+            <>
+              <Phone size={12} className="text-green-500 shrink-0" />
+              <input
+                type="tel"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') savePhone(); if (e.key === 'Escape') setEditingPhone(false) }}
+                placeholder="0912 345 678"
+                maxLength={12}
+                autoFocus
+                className="w-32 rounded-lg border border-green-300 bg-white px-2 py-0.5 text-xs outline-none focus:border-green-500 text-center"
+              />
+              <button onClick={savePhone} disabled={savingPhone} className="text-[10px] font-bold text-green-600 hover:text-green-700 disabled:opacity-50">
+                {savingPhone ? '...' : 'Lưu'}
+              </button>
+              <button onClick={() => setEditingPhone(false)} className="text-[10px] text-gray-400 hover:text-gray-600">Hủy</button>
+            </>
+          ) : (
+            <button
+              onClick={() => { setPhoneInput(user.phone_number || ''); setEditingPhone(true) }}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 transition-colors group"
+            >
+              <Phone size={12} className="shrink-0" />
+              <span>{user.phone_number || 'Thêm số điện thoại'}</span>
+              <Pencil size={10} className="opacity-0 group-hover:opacity-60 transition-opacity" />
+            </button>
+          )}
+        </div>
+
         <div className="flex justify-center flex-wrap gap-1.5 mt-2">
           <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-medium text-blue-700">
             {user.tier === 'VERIFIED_HOST' ? '✅ Uy tín' : user.tier === 'REGULAR' ? '👍 Thường xuyên' : '🆕 Mới'}

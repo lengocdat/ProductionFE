@@ -17,6 +17,7 @@ interface User {
   tier: string
   negative_reports: number
   status: string
+  phone_number?: string
 }
 
 interface Notification {
@@ -63,6 +64,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     apiFetch<{ user: User }>('/auth/me')
       .then((data) => {
         setUser(data.user)
+        // Cache phone so JoinModal / create-match can pre-check without a round-trip
+        localStorage.setItem('user_phone', data.user.phone_number || '')
         if (!localStorage.getItem('onboarding_done')) {
           router.replace('/onboarding')
         }

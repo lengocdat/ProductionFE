@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import PhoneModal from '@/components/PhoneModal'
 
 interface SportMatch {
   id: number
@@ -50,6 +51,8 @@ export default function JoinModal({ match, onClose }: Props) {
   const [payInfo, setPayInfo] = useState<PaymentInfo | null>(null)
   const [payStatus, setPayStatus] = useState<'pending' | 'paid'>('pending')
   const [timeLeft, setTimeLeft] = useState(300) // 5 minutes
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [phoneModalMsg, setPhoneModalMsg] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollCountRef = useRef(0)
@@ -73,6 +76,12 @@ export default function JoinModal({ match, onClose }: Props) {
   const hasBankInfo = match.bank_name && match.bank_account_number
 
   async function handleJoin() {
+    // Proactive phone check — avoids a wasted API call if we already know phone is missing
+    if (!localStorage.getItem('user_phone')) {
+      setPhoneModalMsg('Vui lòng thêm số điện thoại để tham gia trận — Host cần liên hệ với bạn.')
+      setShowPhoneModal(true)
+      return
+    }
     setLoading(true)
     try {
       const res = await apiFetch<{ request: { id: number } }>('/join-requests', {
@@ -111,7 +120,13 @@ export default function JoinModal({ match, onClose }: Props) {
         onClose()
       }
     } catch (err: any) {
-      toast.error(err.message || 'Có lỗi xảy ra')
+      const msg: string = err.message || ''
+      if (msg.startsWith('PHONE_REQUIRED:')) {
+        setPhoneModalMsg(msg.replace('PHONE_REQUIRED:', ''))
+        setShowPhoneModal(true)
+      } else {
+        toast.error(msg || 'Có lỗi xảy ra')
+      }
     } finally {
       setLoading(false)
     }
@@ -122,6 +137,16 @@ export default function JoinModal({ match, onClose }: Props) {
     ? `https://img.vietqr.io/image/${match.bank_name}-${match.bank_account_number}-compact2.png?amount=${match.price_per_slot}&addInfo=${encodeURIComponent(`CODEP ${requestId || ''}`)}&accountName=${encodeURIComponent(match.bank_account_holder || '')}`
     : null)
   const transferContent = payInfo?.transfer_content || `CODEP ${requestId || ''}`
+
+  if (showPhoneModal) {
+    return (
+      <PhoneModal
+        message={phoneModalMsg}
+        onSaved={() => { setShowPhoneModal(false); handleJoin() }}
+        onClose={() => setShowPhoneModal(false)}
+      />
+    )
+  }
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
