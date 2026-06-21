@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban, Crown, Lock, Shield, Share2, Loader2 } from 'lucide-react'
+import { ArrowLeft, Clock, Users, MapPin, MessageSquare, Settings, Send, Wifi, WifiOff, AlertTriangle, CheckCircle, XCircle, Ban, Crown, Lock, Shield, Share2, Loader2, Pencil, History } from 'lucide-react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
@@ -432,15 +432,26 @@ function HostManageTab({ matchId, match, requests, onRefresh, isPremium }: {
   const pending = requests.filter((r) => r.status === 'PENDING')
   const accepted = requests.filter((r) => r.status === 'ACCEPTED')
 
-  async function handleAccept(reqId: number) {
+  async function handleAccept(reqId: number, waiveDeposit = false) {
     setActionLoading(reqId)
     try {
-      await apiFetch(`/matches/${matchId}/requests/${reqId}/accept`, { method: 'POST' })
-      toast.success('Đã duyệt!')
+      await apiFetch(`/matches/${matchId}/requests/${reqId}/accept`, {
+        method: 'POST',
+        json: { waive_deposit: waiveDeposit },
+      })
+      toast.success(waiveDeposit ? 'Đã duyệt (miễn cọc)!' : 'Đã duyệt!')
       onRefresh()
     } catch (err: any) {
       const msg: string = err.message || ''
-      toast.error(msg.startsWith('DEPOSIT_PENDING:') ? msg.slice(16) : msg)
+      if (msg.startsWith('DEPOSIT_PENDING:')) {
+        // Player hasn't paid — offer to accept anyway without a deposit.
+        if (window.confirm(msg.slice(16) + '\n\nBạn vẫn muốn duyệt người này mà KHÔNG cần cọc?')) {
+          await handleAccept(reqId, true)
+          return
+        }
+      } else {
+        toast.error(msg)
+      }
     } finally { setActionLoading(null) }
   }
 
@@ -570,6 +581,9 @@ function HostManageTab({ matchId, match, requests, onRefresh, isPremium }: {
       <div className="pt-3 border-t space-y-2">
         {match.status === 'OPEN' || match.status === 'FULL' ? (
           <>
+            <Link href={`/matches/${matchId}/edit`} className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-gray-200 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+              <Pencil size={13} /> Sửa thông tin trận (giờ, địa điểm, STK...)
+            </Link>
             <button onClick={handleFinishMatch} className="w-full rounded-xl bg-blue-500 py-2.5 text-xs font-bold text-white hover:bg-blue-600">
               ✅ Kết thúc trận (nhận Trust points)
             </button>
@@ -580,6 +594,7 @@ function HostManageTab({ matchId, match, requests, onRefresh, isPremium }: {
         ) : (
           <p className="text-center text-xs text-gray-400">Trận đã kết thúc hoặc bị hủy</p>
         )}
+        <EditHistorySection matchId={matchId} />
       </div>
 
       {/* Cancel Confirmation Dialog */}
@@ -809,6 +824,83 @@ function ChatTab({ matchId, myId }: { matchId: number; myId: number }) {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// --- Edit History (audit trail of host edits) ---
+interface EditHistoryEntry {
+  id: number
+  field: string
+  old_value?: string | null
+  new_value?: string | null
+  created_at: string
+  editor_name?: string | null
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  title: 'Tiêu đề',
+  sport_type: 'Môn thể thao',
+  skill_level: 'Trình độ',
+  address: 'Địa chỉ',
+  google_maps_url: 'Link bản đồ',
+  match_date: 'Ngày',
+  start_time: 'Giờ bắt đầu',
+  end_time: 'Giờ kết thúc',
+  max_slots: 'Số slot',
+  price_per_slot: 'Phí/slot',
+  cancellation_window_hours: 'Hạn hủy (giờ)',
+  bank_name: 'Ngân hàng',
+  bank_account_number: 'Số tài khoản',
+  bank_account_holder: 'Chủ tài khoản',
+}
+
+function EditHistorySection({ matchId }: { matchId: number }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [entries, setEntries] = useState<EditHistoryEntry[]>([])
+
+  async function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && !loaded) {
+      setLoading(true)
+      try {
+        const d = await apiFetch<{ history: EditHistoryEntry[] }>(`/matches/${matchId}/history`)
+        setEntries(d.history || [])
+      } catch { /* ignore */ } finally {
+        setLoading(false)
+        setLoaded(true)
+      }
+    }
+  }
+
+  return (
+    <div className="pt-1">
+      <button onClick={toggle} className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-700">
+        <History size={13} /> Lịch sử chỉnh sửa {open ? '▲' : '▼'}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          {loading && <p className="text-[11px] text-gray-400">Đang tải...</p>}
+          {!loading && entries.length === 0 && <p className="text-[11px] text-gray-400">Chưa có chỉnh sửa nào.</p>}
+          {entries.map((e) => (
+            <div key={e.id} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-700">{FIELD_LABELS[e.field] || e.field}</span>
+                <span className="text-[10px] text-gray-400">{new Date(e.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
+              </div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-gray-600">
+                <span className="line-through text-red-400 break-all">{e.old_value || '(trống)'}</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-green-600 font-medium break-all">{e.new_value || '(trống)'}</span>
+              </div>
+              {e.editor_name && <p className="mt-0.5 text-[10px] text-gray-400">bởi {e.editor_name}</p>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

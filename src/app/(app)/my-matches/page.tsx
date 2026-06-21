@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import PostMatchRatingModal from '@/components/PostMatchRatingModal'
+import DepositResumeModal from '@/components/DepositResumeModal'
 
 interface MatchInfo {
   id: number
@@ -58,9 +59,10 @@ export default function MyMatchesPage() {
   const [cancelling, setCancelling] = useState(false)
   const [pendingRatings, setPendingRatings] = useState<PendingRating[]>([])
   const [ratingModal, setRatingModal] = useState<PendingRating | null>(null)
+  const [payTargetId, setPayTargetId] = useState<number | null>(null)
   const [ratedMatchIds, setRatedMatchIds] = useState<Set<number>>(new Set())
 
-  useEffect(() => {
+  function load() {
     Promise.all([
       apiFetch<{ requests: MyRequest[] }>('/join-requests/my'),
       apiFetch<{ pending: PendingRating[] }>('/ratings/pending'),
@@ -74,6 +76,11 @@ export default function MyMatchesPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const upcoming = requests.filter(
@@ -193,7 +200,7 @@ export default function MyMatchesPage() {
                     {req.deposit_status === 'PENDING' && (
                       <div className="flex items-center justify-between rounded-lg bg-red-50 border border-red-200 px-2.5 py-2">
                         <p className="text-[10px] text-red-700 font-semibold">⚠️ Chưa chuyển cọc ({req.deposit_amount.toLocaleString('vi-VN')}đ)</p>
-                        <Link href={`/matches/${req.match_id}`} className="text-[10px] font-bold text-red-600 underline underline-offset-2">Chuyển ngay →</Link>
+                        <button onClick={() => setPayTargetId(req.id)} className="text-[10px] font-bold text-red-600 underline underline-offset-2">Chuyển ngay →</button>
                       </div>
                     )}
                     {req.deposit_status === 'PENDING_VERIFICATION' && (
@@ -307,6 +314,15 @@ export default function MyMatchesPage() {
             )
             setRatingModal(next ?? null)
           }}
+        />
+      )}
+
+      {/* Resume deposit payment modal */}
+      {payTargetId !== null && (
+        <DepositResumeModal
+          requestId={payTargetId}
+          onClose={() => setPayTargetId(null)}
+          onPaid={() => { setPayTargetId(null); load() }}
         />
       )}
 
