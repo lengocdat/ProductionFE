@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap, Check, Copy, Gift, Phone, Pencil } from 'lucide-react'
+import { Star, AlertTriangle, Calendar, Shield, LogOut, Trophy, Crown, ShoppingBag, LayoutDashboard, ChevronRight, User, Users, Eye, BarChart2, Zap, Check, Copy, Gift, Phone, Pencil, Lightbulb } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import EquippedBadge from '@/components/EquippedBadge'
 import { toast } from 'sonner'
@@ -272,6 +272,7 @@ export default function ProfilePage() {
         <MenuLink href="/friends" icon={<Users size={18} className="text-blue-500" />} label="Bạn bè" desc="Danh sách bạn và lời mời kết bạn" />
         <MenuLink href="/my-matches" icon={<Calendar size={18} className="text-green-500" />} label="Trận của tôi" desc="Xem lịch, hủy tham gia, lịch sử" />
         <MenuLink href="/profile/achievements" icon={<Trophy size={18} className="text-amber-500" />} label="Thành tựu & Huy hiệu" desc="Xem tiến trình và badge đã đạt" />
+        <MenuLink href="/feature-requests" icon={<Lightbulb size={18} className="text-amber-500" />} label="Đề xuất tính năng" desc="Góp ý & vote tính năng bạn muốn bên mình làm" />
         <MenuLink href="/marketplace" icon={<ShoppingBag size={18} className="text-green-500" />} label="Chợ đồ thể thao" desc="Mua bán đồ cũ, tìm deals" />
         <MenuLink href="/profile/premium" icon={<Crown size={18} className="text-yellow-500" />} label={user.is_premium ? 'Premium đang hoạt động' : 'Nâng cấp Premium'} desc={user.is_premium ? 'Radar, ưu tiên hiển thị, crown badge' : 'Radar tự động, ưu tiên hiển thị, badge Crown'} premium={!user.is_premium} active={user.is_premium} />
         {user.is_premium && (
