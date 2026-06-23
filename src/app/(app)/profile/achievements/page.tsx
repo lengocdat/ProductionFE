@@ -15,7 +15,7 @@ interface BadgeData {
   icon_url: string
   condition_type: string
   condition_value: number
-  tier: 'BRONZE' | 'SILVER' | 'GOLD'
+  tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM'
   badge_group: string
   sport_type?: string | null
   is_hidden: boolean
@@ -76,6 +76,14 @@ const TIER_CONFIG = {
     iconRing: 'border-yellow-400 bg-yellow-900/20',
     progressBar: 'bg-gradient-to-r from-yellow-500 to-amber-400',
     dot: 'bg-yellow-400',
+  },
+  PLATINUM: {
+    label: 'Cao Thủ',
+    labelBg: 'bg-cyan-900/40 text-cyan-300',
+    border: 'border-cyan-400/30',
+    iconRing: 'border-cyan-300 bg-cyan-900/20',
+    progressBar: 'bg-gradient-to-r from-cyan-400 to-teal-300',
+    dot: 'bg-cyan-300',
   },
 }
 

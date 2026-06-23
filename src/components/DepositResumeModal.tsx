@@ -37,8 +37,6 @@ export default function DepositResumeModal({ requestId, onClose, onPaid }: Props
   const [error, setError] = useState('')
   const [info, setInfo] = useState<DepositInfo | null>(null)
   const [paid, setPaid] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const pollCountRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
@@ -50,28 +48,12 @@ export default function DepositResumeModal({ requestId, onClose, onPaid }: Props
           setPaid(true)
           return
         }
-        // Poll payment status while a transfer order exists.
-        if (d.payment) {
-          pollRef.current = setInterval(async () => {
-            pollCountRef.current += 1
-            if (pollCountRef.current > 75) { clearInterval(pollRef.current!); return }
-            try {
-              const { status } = await apiFetch<{ status: string }>(`/payment/status/${d.payment!.order_id}`)
-              if (status === 'PAID') {
-                clearInterval(pollRef.current!)
-                setPaid(true)
-                onPaid?.()
-              }
-            } catch { /* ignore */ }
-          }, 4000)
-        }
+        // P2P: deposit goes straight to the host's bank — there is no platform auto-detection.
+        // Confirmation is manual (player taps "Tôi đã chuyển" → host approves).
       })
       .catch((err) => { if (!cancelled) setError(err.message || 'Không tải được thông tin thanh toán') })
       .finally(() => { if (!cancelled) setLoading(false) })
-    return () => {
-      cancelled = true
-      if (pollRef.current) clearInterval(pollRef.current)
-    }
+    return () => { cancelled = true }
   }, [requestId, onPaid])
 
   const pay = info?.payment
@@ -137,9 +119,8 @@ export default function DepositResumeModal({ requestId, onClose, onPaid }: Props
                 </p>
               </div>
 
-              <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
-                <Loader2 size={12} className="animate-spin text-green-500" />
-                Đang chờ xác nhận tự động từ ngân hàng...
+              <div className="text-center text-[11px] text-gray-500">
+                Sau khi chuyển vào tài khoản Host, bấm <span className="font-semibold text-gray-700">"Tôi đã chuyển"</span> để Host xác nhận.
               </div>
             </div>
 

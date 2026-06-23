@@ -273,7 +273,7 @@ export default function PublicProfilePage() {
   )
 }
 
-const TIER_LABEL: Record<string, string> = { BRONZE: 'Tập Sự', SILVER: 'Chuyên Nghiệp', GOLD: 'Huyền Thoại' }
+const TIER_LABEL: Record<string, string> = { BRONZE: 'Tập Sự', SILVER: 'Chuyên Nghiệp', GOLD: 'Huyền Thoại', PLATINUM: 'Cao Thủ' }
 const BADGE_GROUP_ORDER = ['hoat_dong', 'bau_so', 'choi_dep', 'thuong_gia', 'premium']
 const BADGE_GROUP_LABEL: Record<string, string> = {
   hoat_dong: '⚔️ Hoạt động',
@@ -475,6 +475,7 @@ function EmptyState({ text }: { text: string }) {
 
 function getTierEmoji(tier: string) {
   switch (tier) {
+    case 'PLATINUM': return '💎'
     case 'GOLD': return '🥇'
     case 'SILVER': return '🥈'
     case 'BRONZE': return '🥉'
@@ -484,6 +485,7 @@ function getTierEmoji(tier: string) {
 
 function getTierColor(tier: string) {
   switch (tier) {
+    case 'PLATINUM': return 'bg-cyan-100 text-cyan-700'
     case 'GOLD': return 'bg-amber-100 text-amber-700'
     case 'SILVER': return 'bg-blue-100 text-blue-700'
     case 'BRONZE': return 'bg-orange-100 text-orange-700'
@@ -493,6 +495,7 @@ function getTierColor(tier: string) {
 
 function getTierDot(tier: string) {
   switch (tier) {
+    case 'PLATINUM': return 'bg-cyan-300'
     case 'GOLD': return 'bg-amber-400'
     case 'SILVER': return 'bg-blue-400'
     case 'BRONZE': return 'bg-orange-500'

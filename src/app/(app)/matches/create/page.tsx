@@ -150,6 +150,11 @@ export default function CreateMatchPage() {
       setShowPhoneModal(true)
       return
     }
+    // P2P: a paid match needs the host's bank account so players can transfer the deposit.
+    if ((parseInt(form.price_per_slot) || 0) > 0 && (!form.bank_name.trim() || !form.bank_account_number.trim())) {
+      setSubmitError('Trận có phí cần nhập tên ngân hàng và số tài khoản để người chơi chuyển cọc.')
+      return
+    }
     setSubmitError('')
     setLoading(true)
     try {
@@ -185,8 +190,9 @@ export default function CreateMatchPage() {
         setPhoneModalMsg(msg.replace('PHONE_REQUIRED:', ''))
         setShowPhoneModal(true)
       } else {
-        setSubmitError(msg || 'Có lỗi xảy ra')
-        toast.error(msg || 'Có lỗi xảy ra')
+        const clean = msg.replace('BANK_REQUIRED:', '')
+        setSubmitError(clean || 'Có lỗi xảy ra')
+        toast.error(clean || 'Có lỗi xảy ra')
       }
     } finally {
       setLoading(false)

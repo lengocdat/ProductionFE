@@ -4,7 +4,7 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { Lock, Check } from 'lucide-react';
 
-type BadgeTier = 'BRONZE' | 'SILVER' | 'GOLD';
+type BadgeTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 
 interface BadgeProgressData {
   id: number;
@@ -60,10 +60,20 @@ const tierStyles: Record<BadgeTier, {
     labelColor: 'text-yellow-400 bg-yellow-900/30',
     progressBar: 'bg-gradient-to-r from-yellow-500 to-amber-400',
   },
+  PLATINUM: {
+    ring: 'ring-cyan-300/60',
+    bg: 'bg-gradient-to-br from-cyan-900/30 to-teal-950/40',
+    accent: 'text-cyan-300',
+    glow: 'shadow-lg shadow-cyan-400/20',
+    label: 'Cao Thủ',
+    labelColor: 'text-cyan-300 bg-cyan-900/30',
+    progressBar: 'bg-gradient-to-r from-cyan-400 to-teal-300',
+  },
 };
 
 export default function BadgeProgressCard({ badge, onEquip }: BadgeProgressCardProps) {
-  const style = tierStyles[badge.tier];
+  // Fallback to BRONZE so an unexpected tier never crashes the card.
+  const style = tierStyles[badge.tier] ?? tierStyles.BRONZE;
   const progress = Math.min((badge.currentValue / badge.conditionValue) * 100, 100);
   const remaining = Math.max(badge.conditionValue - badge.currentValue, 0);
 

@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Send, CreditCard, QrCode, ShieldCheck, ShieldAlert, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react'
+import { useState } from 'react'
+import { Send, CreditCard, QrCode, ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
@@ -50,26 +50,23 @@ export default function JoinModal({ match, onClose }: Props) {
   const [requestId, setRequestId] = useState<number | null>(null)
   const [payInfo, setPayInfo] = useState<PaymentInfo | null>(null)
   const [payStatus, setPayStatus] = useState<'pending' | 'paid'>('pending')
-  const [timeLeft, setTimeLeft] = useState(300) // 5 minutes
+  const [submitting, setSubmitting] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [phoneModalMsg, setPhoneModalMsg] = useState('')
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const pollCountRef = useRef(0)
 
-  useEffect(() => () => {
-    if (pollRef.current) clearInterval(pollRef.current)
-    if (timerRef.current) clearInterval(timerRef.current)
-  }, [])
-
-  const startCountdown = () => {
-    setTimeLeft(300)
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) { clearInterval(timerRef.current!); return 0 }
-        return t - 1
-      })
-    }, 1000)
+  // P2P deposit: player transfers to the host's bank, then taps "Tôi đã chuyển" for the host to verify.
+  async function handleSubmittedPayment() {
+    if (!requestId) return
+    setSubmitting(true)
+    try {
+      await apiFetch(`/join-requests/${requestId}/submit-payment`, { method: 'POST', json: { proof_url: '' } })
+      toast.success('Đã báo Host kiểm tra chuyển khoản 👍')
+      onClose()
+    } catch (err: any) {
+      toast.error(err.message || 'Có lỗi xảy ra')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const hasDeposit = (match.price_per_slot ?? 0) > 0
@@ -92,29 +89,15 @@ export default function JoinModal({ match, onClose }: Props) {
       setRequestId(reqId)
 
       if (hasDeposit && !waiveDeposit) {
-        // Create SePay deposit order and start auto-polling
+        // P2P: fetch transfer details pointing at the HOST's bank account (not a platform account).
         try {
-          const info = await apiFetch<PaymentInfo>('/payment/deposit', {
-            method: 'POST',
-            json: { join_request_id: reqId, amount: match.price_per_slot },
-          })
-          setPayInfo(info)
-          startCountdown()
-          // Poll payment status every 4s for up to 5 min (75 polls)
-          pollCountRef.current = 0
-          pollRef.current = setInterval(async () => {
-            pollCountRef.current += 1
-            if (pollCountRef.current > 75) { clearInterval(pollRef.current!); return }
-            try {
-              const { status } = await apiFetch<{ status: string }>(`/payment/status/${info.order_id}`)
-              if (status === 'PAID') { clearInterval(pollRef.current!); setPayStatus('paid') }
-            } catch { /* ignore */ }
-          }, 4000)
+          const d = await apiFetch<{ payment?: PaymentInfo }>(`/join-requests/${reqId}/deposit-info`)
+          if (d.payment) setPayInfo(d.payment)
         } catch {
-          // Deposit API failed — show manual bank info without auto-polling
+          // deposit-info failed — fall back to building the QR from match bank info below
         }
         setShowPaymentStep(true)
-        toast.success('Yêu cầu đã gửi! Vui lòng quét mã QR để đặt cọc.')
+        toast.success('Yêu cầu đã gửi! Chuyển cọc vào STK của Host để được duyệt.')
       } else {
         toast.success('Đăng ký thành công! 🎉 Đợi Host duyệt.')
         onClose()
@@ -173,15 +156,22 @@ export default function JoinModal({ match, onClose }: Props) {
                     : 'Hủy sau thời hạn quy định → mất cọc.'}
                 </p>
                 
-                {/* Waive deposit toggle */}
-                <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                {/* Waive deposit toggle — large tappable card */}
+                <label
+                  className={`mt-1 flex items-center gap-3 rounded-xl border-2 p-3 cursor-pointer transition-colors ${
+                    waiveDeposit ? 'border-amber-400 bg-amber-100' : 'border-amber-200 bg-white hover:border-amber-300'
+                  }`}
+                >
                   <input
                     type="checkbox"
                     checked={waiveDeposit}
                     onChange={(e) => setWaiveDeposit(e.target.checked)}
-                    className="rounded border-amber-300 text-amber-500 focus:ring-amber-200"
+                    className="h-5 w-5 shrink-0 rounded border-amber-300 text-amber-500 accent-amber-500 focus:ring-amber-200"
                   />
-                  <span className="text-[11px] text-amber-800">Xin tham gia không cọc (dựa trên uy tín)</span>
+                  <span className="flex flex-col">
+                    <span className="text-sm font-semibold text-amber-900">Xin tham gia không cọc</span>
+                    <span className="text-[11px] text-amber-700">Dựa trên uy tín — Host sẽ quyết định duyệt hay không</span>
+                  </span>
                 </label>
               </div>
             )}
@@ -288,24 +278,17 @@ export default function JoinModal({ match, onClose }: Props) {
                 </div>
               )}
 
-              {/* Auto-detection status + countdown */}
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                  <Loader2 size={12} className="animate-spin text-green-500" />
-                  Đang chờ xác nhận tự động từ ngân hàng...
-                </div>
-                {timeLeft > 0 ? (
-                  <p className="text-[11px] font-mono text-gray-400">
-                    Còn lại: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-red-500">Hết thời gian chờ. Liên hệ Host nếu đã chuyển khoản.</p>
-                )}
+              {/* P2P: manual confirmation — money goes to the host's bank, host verifies */}
+              <div className="text-center text-[11px] text-gray-500">
+                Sau khi chuyển vào STK của Host, bấm <span className="font-semibold text-gray-700">"Tôi đã chuyển"</span> để Host xác nhận và duyệt bạn vào trận.
               </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button variant="outline" onClick={onClose} className="w-full">Để sau (đóng)</Button>
+              <Button onClick={handleSubmittedPayment} disabled={submitting} className="flex-1 bg-green-500 hover:bg-green-600">
+                {submitting ? 'Đang gửi...' : 'Tôi đã chuyển'}
+              </Button>
+              <Button variant="outline" onClick={onClose} className="flex-1">Để sau</Button>
             </DialogFooter>
           </>
         )}

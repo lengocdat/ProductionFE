@@ -5,7 +5,7 @@ import { clsx } from 'clsx';
 import { ShoppingBag, Swords, Mic2, Star, Gem } from 'lucide-react';
 import BadgeProgressCard from './BadgeProgressCard';
 
-type BadgeTier = 'BRONZE' | 'SILVER' | 'GOLD';
+type BadgeTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 
 interface BadgeData {
   id: number;
@@ -70,11 +70,13 @@ export default function BadgeShowcase({ badges, onEquip }: BadgeShowcaseProps) {
                     className={clsx(
                       'w-2 h-2 rounded-full',
                       b.isUnlocked
-                        ? b.tier === 'GOLD'
-                          ? 'bg-yellow-400'
-                          : b.tier === 'SILVER'
-                            ? 'bg-blue-400'
-                            : 'bg-amber-700'
+                        ? b.tier === 'PLATINUM'
+                          ? 'bg-cyan-300'
+                          : b.tier === 'GOLD'
+                            ? 'bg-yellow-400'
+                            : b.tier === 'SILVER'
+                              ? 'bg-blue-400'
+                              : 'bg-amber-700'
                         : 'bg-gray-700'
                     )}
                   />
