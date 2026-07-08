@@ -35,6 +35,14 @@ export default function PWAInstallPrompt() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
+  // Banner float đè lên nút cuối trang (VD nút submit form tạo trận) — tự ẩn sau 15s
+  // để không chặn thao tác; không set cờ dismissed nên lần vào sau vẫn gợi ý lại.
+  useEffect(() => {
+    if (!show) return
+    const t = setTimeout(() => setShow(false), 15000)
+    return () => clearTimeout(t)
+  }, [show])
+
   function dismiss() {
     setShow(false)
     localStorage.setItem('pwa_install_dismissed', '1')

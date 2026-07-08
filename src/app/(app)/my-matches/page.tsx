@@ -51,8 +51,16 @@ const STATUS_BADGE: Record<string, { label: string; class: string }> = {
   CANCELLED: { label: 'Đã hủy', class: 'bg-gray-100 text-gray-500' },
 }
 
+const HOSTED_BADGE: Record<string, { label: string; class: string }> = {
+  OPEN: { label: 'Đang mở', class: 'bg-green-100 text-green-700' },
+  FULL: { label: 'Đủ người', class: 'bg-blue-100 text-blue-700' },
+  FINISHED: { label: 'Đã kết thúc', class: 'bg-gray-100 text-gray-500' },
+  CANCELLED: { label: 'Đã hủy', class: 'bg-gray-100 text-gray-500' },
+}
+
 export default function MyMatchesPage() {
   const [requests, setRequests] = useState<MyRequest[]>([])
+  const [hosted, setHosted] = useState<MatchInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming')
   const [cancelTarget, setCancelTarget] = useState<MyRequest | null>(null)
@@ -66,9 +74,11 @@ export default function MyMatchesPage() {
     Promise.all([
       apiFetch<{ requests: MyRequest[] }>('/join-requests/my'),
       apiFetch<{ pending: PendingRating[] }>('/ratings/pending'),
+      apiFetch<{ matches: MatchInfo[] }>('/matches/my').catch(() => ({ matches: [] as MatchInfo[] })),
     ])
-      .then(([reqData, ratingData]) => {
+      .then(([reqData, ratingData, hostedData]) => {
         setRequests(reqData.requests || [])
+        setHosted(hostedData.matches || [])
         const pending = ratingData.pending || []
         setPendingRatings(pending)
         // Auto-prompt first pending rating
@@ -90,6 +100,10 @@ export default function MyMatchesPage() {
     (r) => r.status === 'REJECTED' || r.status === 'CANCELLED' || r.match?.status === 'FINISHED'
   )
   const displayed = activeTab === 'upcoming' ? upcoming : history
+
+  const hostedUpcoming = hosted.filter((m) => m.status !== 'FINISHED' && m.status !== 'CANCELLED')
+  const hostedHistory = hosted.filter((m) => m.status === 'FINISHED' || m.status === 'CANCELLED')
+  const displayedHosted = activeTab === 'upcoming' ? hostedUpcoming : hostedHistory
 
   function canCancel(req: MyRequest): { allowed: boolean; reason?: string } {
     if (req.status !== 'ACCEPTED' && req.status !== 'PENDING') return { allowed: false, reason: 'Trạng thái không cho phép hủy' }
@@ -138,7 +152,7 @@ export default function MyMatchesPage() {
             activeTab === 'upcoming' ? 'bg-green-500 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200'
           }`}
         >
-          Sắp diễn ra ({upcoming.length})
+          Sắp diễn ra ({upcoming.length + hostedUpcoming.length})
         </button>
         <button
           onClick={() => setActiveTab('history')}
@@ -146,12 +160,38 @@ export default function MyMatchesPage() {
             activeTab === 'history' ? 'bg-green-500 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200'
           }`}
         >
-          Lịch sử ({history.length})
+          Lịch sử ({history.length + hostedHistory.length})
         </button>
       </div>
 
+      {/* Hosted matches */}
+      {displayedHosted.length > 0 && (
+        <div className="space-y-3 mb-4">
+          <p className="text-xs font-semibold text-gray-500">🏟️ Trận bạn làm host</p>
+          {displayedHosted.map((m) => {
+            const badge = HOSTED_BADGE[m.status] || HOSTED_BADGE.OPEN
+            return (
+              <Link key={m.id} href={`/matches/${m.id}`} className="block rounded-2xl bg-white border border-green-100 p-4 shadow-sm hover:border-green-300">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{m.title}</h3>
+                    <div className="space-y-0.5 mt-1">
+                      <p className="text-[11px] text-gray-500 flex items-center gap-1"><MapPin size={10} /> {m.address}</p>
+                      <p className="text-[11px] text-gray-500 flex items-center gap-1"><Clock size={10} /> {m.match_date} · {m.start_time.slice(0, 5)} - {m.end_time.slice(0, 5)}</p>
+                      <p className="text-[11px] text-gray-500 flex items-center gap-1"><Users size={10} /> {m.filled_slots}/{m.max_slots} slots {m.price_per_slot > 0 && `· ${m.price_per_slot.toLocaleString('vi-VN')}đ`}</p>
+                    </div>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${badge.class}`}>{badge.label}</span>
+                </div>
+                <p className="mt-2 pt-2 border-t border-gray-100 text-[11px] font-medium text-green-600">Quản lý trận →</p>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
       {/* Match List */}
-      {displayed.length === 0 ? (
+      {displayed.length === 0 && displayedHosted.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-3xl mb-2">{activeTab === 'upcoming' ? '📅' : '📋'}</p>
           <p className="text-sm text-gray-500">{activeTab === 'upcoming' ? 'Chưa tham gia trận nào' : 'Chưa có lịch sử'}</p>
@@ -161,7 +201,7 @@ export default function MyMatchesPage() {
             </Link>
           )}
         </div>
-      ) : (
+      ) : displayed.length === 0 ? null : (
         <div className="space-y-3">
           {displayed.map((req) => {
             const match = req.match
