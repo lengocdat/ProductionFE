@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Play, Pause, Eye, ArrowRight, Volume2, Loader2 } from 'lucide-react'
-import { getLesson, mmss, type Lesson } from '@/lib/lessons'
+import { getLesson, mmss, assetUrl, playRegion, type Lesson } from '@/lib/lessons'
 
 export default function LessonPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -14,22 +14,28 @@ export default function LessonPage() {
   const [listens, setListens] = useState(0)
   const [showTranscript, setShowTranscript] = useState(false)
   const [playing, setPlaying] = useState(false)
+  const [activeIdx, setActiveIdx] = useState<number | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const cancelRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     getLesson(slug)
       .then(setLesson)
       .catch(() => {})
       .finally(() => setLoading(false))
+    return () => cancelRef.current?.()
   }, [slug])
 
-  // Full-lesson playback: prefer lesson.audio_url, else play sentences sequentially is out of scope — use audio_url.
+  // Full-lesson playback: play the whole file start to finish.
   function togglePlay() {
     const el = audioRef.current
     if (!el) return
+    cancelRef.current?.()
+    setActiveIdx(null)
     if (playing) {
       el.pause()
     } else {
+      el.currentTime = 0
       el.play().catch(() => {})
     }
   }
@@ -43,10 +49,13 @@ export default function LessonPage() {
     })
   }
 
-  function playSentence(url?: string) {
-    if (!url) return
-    const a = new Audio(url)
-    a.play().catch(() => {})
+  // Shadow one sentence: seek to its region and stop at the end.
+  function playSentence(idx: number, startMs: number, endMs: number) {
+    const el = audioRef.current
+    if (!el) return
+    cancelRef.current?.()
+    setActiveIdx(idx)
+    cancelRef.current = playRegion(el, startMs, endMs)
   }
 
   if (loading) {
@@ -64,25 +73,31 @@ export default function LessonPage() {
     <div className="px-5 pt-6 pb-8">
       <button onClick={() => router.push('/home')} className="text-sm text-gray-400 mb-4">← Trang chủ</button>
 
-      <p className="text-xs font-medium text-indigo-500">{lesson.subtitle || lesson.track}</p>
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-xs font-medium text-indigo-500">{lesson.subtitle || lesson.track}</p>
+        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">{lesson.cefr_level}</span>
+      </div>
       <h1 className="text-2xl font-extrabold text-gray-900 mb-6">{lesson.title}</h1>
 
-      {/* Audio player */}
+      {/* Single audio element drives both full playback and shadowing */}
+      {lesson.audio_url && (
+        <audio
+          ref={audioRef}
+          src={assetUrl(lesson.audio_url)}
+          preload="auto"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={onEnded}
+        />
+      )}
+
+      {/* Player */}
       <div className="rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 p-8 text-white text-center shadow-lg shadow-indigo-200 mb-6">
-        {lesson.audio_url && (
-          <audio
-            ref={audioRef}
-            src={lesson.audio_url}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onEnded={onEnded}
-          />
-        )}
         <button
           onClick={togglePlay}
           className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white text-indigo-600 shadow-xl active:scale-95 transition-transform"
         >
-          {playing ? <Pause size={34} fill="currentColor" /> : <Play size={34} fill="currentColor" className="ml-1" />}
+          {playing && activeIdx === null ? <Pause size={34} fill="currentColor" /> : <Play size={34} fill="currentColor" className="ml-1" />}
         </button>
         <p className="mt-4 text-sm text-indigo-100">
           {listens < 3
@@ -109,8 +124,10 @@ export default function LessonPage() {
             {lesson.sentences?.map((s) => (
               <button
                 key={s.id}
-                onClick={() => playSentence(s.audio_url)}
-                className="flex w-full items-start gap-3 rounded-2xl bg-white border border-gray-100 p-4 text-left shadow-sm active:bg-indigo-50 transition-colors"
+                onClick={() => playSentence(s.idx, s.start_ms, s.end_ms)}
+                className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left shadow-sm transition-colors ${
+                  activeIdx === s.idx ? 'border-indigo-300 bg-indigo-50' : 'border-gray-100 bg-white active:bg-indigo-50'
+                }`}
               >
                 <Volume2 size={18} className="mt-0.5 shrink-0 text-indigo-500" />
                 <span className="text-[15px] leading-relaxed text-gray-800">{s.text}</span>

@@ -1,29 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Volume2, ArrowRight, Loader2 } from 'lucide-react'
-import { getLesson, type Lesson } from '@/lib/lessons'
+import { getLesson, assetUrl, playRegion, type Lesson } from '@/lib/lessons'
 
 export default function ChunksPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const cancelRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     getLesson(slug)
       .then(setLesson)
       .catch(() => {})
       .finally(() => setLoading(false))
+    return () => cancelRef.current?.()
   }, [slug])
 
-  function speak(text: string, url?: string) {
-    if (url) {
-      new Audio(url).play().catch(() => {})
-      return
-    }
-    // Fallback to browser TTS if no audio file
+  // Play the chunk's region of the lesson audio.
+  function playChunk(startMs: number, endMs: number) {
+    const el = audioRef.current
+    if (!el) return
+    cancelRef.current?.()
+    cancelRef.current = playRegion(el, startMs, endMs)
+  }
+
+  // Variations have no audio region; fall back to browser TTS.
+  function speak(text: string) {
     if ('speechSynthesis' in window) {
       const u = new SpeechSynthesisUtterance(text)
       u.lang = 'en-US'
@@ -42,6 +49,8 @@ export default function ChunksPage() {
 
   return (
     <div className="px-5 pt-6 pb-8">
+      {lesson.audio_url && <audio ref={audioRef} src={assetUrl(lesson.audio_url)} preload="auto" />}
+
       <button onClick={() => router.push(`/lesson/${slug}`)} className="text-sm text-gray-400 mb-4">← Bài học</button>
       <h1 className="text-xl font-extrabold text-gray-900 mb-1">Chunks & Collocations</h1>
       <p className="text-sm text-gray-400 mb-6">Nghe và lặp lại từng cụm. Đây là cách người bản xứ nói.</p>
@@ -50,7 +59,7 @@ export default function ChunksPage() {
         {lesson.chunks?.map((c) => (
           <div key={c.id} className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
             <button
-              onClick={() => speak(c.phrase, c.audio_url)}
+              onClick={() => playChunk(c.start_ms, c.end_ms)}
               className="flex items-center gap-2.5 text-left"
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-white">

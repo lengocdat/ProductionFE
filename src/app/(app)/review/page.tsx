@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Volume2, Loader2, PartyPopper } from 'lucide-react'
-import { getReviews, gradeReview, type ReviewCard } from '@/lib/lessons'
+import { getReviews, gradeReview, assetUrl, playRegion, type ReviewCard } from '@/lib/lessons'
 
 const GRADES = [
   { q: 0, label: 'Lại', color: 'bg-red-500' },
@@ -16,19 +16,26 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true)
   const [pos, setPos] = useState(0)
   const [revealed, setRevealed] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const cancelRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     getReviews()
       .then(setCards)
       .catch(() => {})
       .finally(() => setLoading(false))
+    return () => cancelRef.current?.()
   }, [])
 
-  function play(url?: string, text?: string) {
-    if (url) {
-      new Audio(url).play().catch(() => {})
-    } else if (text && 'speechSynthesis' in window) {
-      const u = new SpeechSynthesisUtterance(text)
+  function play(c: ReviewCard) {
+    const el = audioRef.current
+    if (el && c.audio_url) {
+      cancelRef.current?.()
+      cancelRef.current = playRegion(el, c.start_ms, c.end_ms)
+      return
+    }
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(c.text)
       u.lang = 'en-US'
       speechSynthesis.speak(u)
     }
@@ -78,9 +85,13 @@ export default function ReviewPage() {
 
       <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">{card.lesson_title}</p>
 
+      {card.audio_url && (
+        <audio key={card.audio_url} ref={audioRef} src={assetUrl(card.audio_url)} preload="auto" />
+      )}
+
       <div className="rounded-3xl bg-white border border-gray-100 p-8 shadow-sm text-center">
         <button
-          onClick={() => play(card.audio_url, card.text)}
+          onClick={() => play(card)}
           className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-indigo-500 text-white shadow-lg shadow-indigo-200 active:scale-95 transition-transform"
         >
           <Volume2 size={32} />
