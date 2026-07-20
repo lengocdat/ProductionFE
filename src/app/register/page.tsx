@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useRef, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, ShieldCheck, Gift } from 'lucide-react'
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, ShieldCheck } from 'lucide-react'
 
 export default function RegisterPage() {
   return (
@@ -15,20 +15,13 @@ export default function RegisterPage() {
 
 function RegisterForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [step, setStep] = useState<'form' | 'otp'>('form')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [referralCode, setReferralCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    const ref = searchParams.get('ref') || localStorage.getItem('referral_code') || ''
-    if (ref) setReferralCode(ref.toUpperCase())
-  }, [searchParams])
 
   // OTP State
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -57,15 +50,13 @@ function RegisterForm() {
       const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, referral_code: referralCode || undefined }),
+        body: JSON.stringify({ username, email, password }),
         credentials: 'include',
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Đăng ký thất bại')
       localStorage.setItem('access_token', data.access_token)
-      // Show OTP verification (in future, backend sends OTP email)
-      // For now, skip OTP and go directly to app
-      router.replace('/feed')
+      router.replace('/home')
     } catch (err: any) {
       setError(err.message)
     } finally { setLoading(false) }
@@ -95,7 +86,7 @@ function RegisterForm() {
     const code = otp.join('')
     if (code.length !== 6) { setError('Vui lòng nhập đủ 6 số'); return }
     // TODO: verify OTP with backend
-    router.replace('/feed')
+    router.replace('/home')
   }
 
   // --- OTP Screen ---
@@ -157,11 +148,11 @@ function RegisterForm() {
     <div className="mx-auto max-w-md min-h-screen bg-white flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-200">
-            <span className="text-4xl">🏸</span>
+          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+            <span className="text-4xl">🎧</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Tạo tài khoản</h1>
-          <p className="text-sm text-gray-500 mt-1.5">Bắt đầu tìm trận thể thao ngay</p>
+          <p className="text-sm text-gray-500 mt-1.5">Bắt đầu học tiếng Anh theo phương pháp shadowing</p>
         </div>
 
         {/* Social Login */}
@@ -229,24 +220,6 @@ function RegisterForm() {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-
-          {/* Referral code (optional) */}
-          <div className="relative">
-            <Gift size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={referralCode}
-              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-              maxLength={10}
-              placeholder="Mã giới thiệu (tuỳ chọn)"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 py-3 text-sm outline-none focus:bg-white focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all"
-            />
-          </div>
-          {referralCode && (
-            <p className="text-[11px] text-green-600 bg-green-50 rounded-lg px-3 py-1.5">
-              🎁 Bạn và người giới thiệu sẽ nhận 7 ngày Premium miễn phí!
-            </p>
-          )}
 
           {error && (
             <p className="text-xs text-red-500 text-center bg-red-50 rounded-lg py-2">{error}</p>

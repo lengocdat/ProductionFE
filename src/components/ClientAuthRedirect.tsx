@@ -6,7 +6,7 @@ export default function ClientAuthRedirect() {
   const router = useRouter()
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('access_token')) {
-      router.replace('/feed')
+      router.replace('/home')
     }
   }, [router])
   return null

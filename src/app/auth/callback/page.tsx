@@ -12,7 +12,7 @@ function CallbackHandler() {
     const token = searchParams.get('token')
     if (token) {
       localStorage.setItem('access_token', token)
-      router.replace('/feed')
+      router.replace('/home')
     } else {
       router.replace('/login')
     }

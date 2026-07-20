@@ -42,7 +42,7 @@ export default function LoginPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Đăng nhập thất bại')
       localStorage.setItem('access_token', data.access_token)
-      router.replace('/feed')
+      router.replace('/home')
     } catch (err: any) {
       setError(err.message)
     } finally { setLoading(false) }
@@ -53,11 +53,11 @@ export default function LoginPage() {
       {/* Top Brand Section */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-8">
         <div className="text-center mb-10">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-200">
-            <span className="text-4xl">🏸</span>
+          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+            <span className="text-4xl">🎧</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">SportMatch</h1>
-          <p className="text-sm text-gray-500 mt-1.5">Kết nối đam mê thể thao phong trào</p>
+          <h1 className="text-2xl font-bold text-gray-900">Chunk English</h1>
+          <p className="text-sm text-gray-500 mt-1.5">Nghe, nhại, nói theo phương pháp shadowing</p>
         </div>
 
         {/* Social Login */}
