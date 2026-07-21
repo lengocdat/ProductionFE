@@ -80,7 +80,7 @@ export default function SpeakPage() {
 
   return (
     <div className="px-5 pt-6 pb-8">
-      <button onClick={() => router.push(`/lesson/${slug}/chunks`)} className="text-sm text-gray-400 mb-4">← Chunks</button>
+      <button onClick={() => router.push(`/lesson/${slug}/dialogue`)} className="text-sm text-gray-400 mb-4">← Hội thoại</button>
       <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nói 1-2 phút</h1>
 
       <div className="rounded-3xl bg-indigo-50 border border-indigo-100 p-6 mb-8">

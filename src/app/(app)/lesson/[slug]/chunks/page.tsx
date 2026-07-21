@@ -99,10 +99,10 @@ export default function ChunksPage() {
       </div>
 
       <button
-        onClick={() => router.push(`/lesson/${slug}/speak`)}
+        onClick={() => router.push(`/lesson/${slug}/dialogue`)}
         className="mt-6 w-full flex items-center justify-center gap-2 rounded-2xl bg-indigo-500 py-4 text-sm font-bold text-white shadow-md shadow-indigo-200 active:scale-[0.98] transition-transform"
       >
-        Tiếp: Nói <ArrowRight size={16} />
+        Tiếp: Hội thoại <ArrowRight size={16} />
       </button>
     </div>
   )

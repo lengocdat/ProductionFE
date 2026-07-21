@@ -34,6 +34,16 @@ export interface Chunk {
   end_ms: number
 }
 
+export interface DialogueTurn {
+  id: number
+  lesson_id: number
+  idx: number
+  speaker: string
+  text: string
+  start_ms: number
+  end_ms: number
+}
+
 export interface Lesson {
   id: number
   slug: string
@@ -51,6 +61,7 @@ export interface Lesson {
   created_at: string
   sentences?: Sentence[]
   chunks?: Chunk[]
+  dialogue?: DialogueTurn[]
   completed: boolean
 }
 
