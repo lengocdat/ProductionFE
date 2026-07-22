@@ -79,13 +79,27 @@ export interface ReviewCard {
 }
 
 export const TRACKS = [
+  { key: 'everyday', label: 'Everyday' },
   { key: 'developer', label: 'Developer' },
   { key: 'product', label: 'Product' },
   { key: 'meeting', label: 'Meeting' },
+  { key: 'speaking', label: 'Speaking' },
 ] as const
 
-export function listLessons(track?: string) {
-  const q = track ? `?track=${encodeURIComponent(track)}` : ''
+export const CEFR_LEVELS = [
+  { key: 'ALL', label: 'Tất cả', badge: 'All' },
+  { key: 'A1', label: 'A1 Sơ cấp', badge: 'Dễ nhất' },
+  { key: 'A2', label: 'A2 Cơ bản', badge: 'Dễ' },
+  { key: 'B1', label: 'B1 Trung cấp', badge: 'Vừa' },
+  { key: 'B2', label: 'B2 Trên trung cấp', badge: 'Khó' },
+  { key: 'C1', label: 'C1 Cao cấp', badge: 'Khó nhất' },
+] as const
+
+export function listLessons(track?: string, cefrLevel?: string) {
+  const params = new URLSearchParams()
+  if (track) params.set('track', track)
+  if (cefrLevel && cefrLevel !== 'ALL') params.set('cefr_level', cefrLevel)
+  const q = params.toString() ? `?${params.toString()}` : ''
   return apiFetch<{ lessons: Lesson[] }>(`/lessons${q}`).then((d) => d.lessons || [])
 }
 
