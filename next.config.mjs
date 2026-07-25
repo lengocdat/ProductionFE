@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: 'img.vietqr.io' }],
+  },
   async rewrites() {
     // In Docker, nginx handles /v1/* routing to backend
     // This rewrite is for local dev only (next dev without nginx)

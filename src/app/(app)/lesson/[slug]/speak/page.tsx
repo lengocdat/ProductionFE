@@ -6,6 +6,7 @@ import { Mic, Square, Play, Check, Loader2, CheckCircle2, Circle } from 'lucide-
 import { toast } from 'sonner'
 import { getLesson, completeLesson, saveSpeakAttempt, type Lesson } from '@/lib/lessons'
 import { trackEvent } from '@/lib/analytics'
+import DonateCard from '@/components/DonateCard'
 
 type RecState = 'idle' | 'recording' | 'recorded'
 
@@ -39,6 +40,7 @@ export default function SpeakPage() {
   const [recState, setRecState] = useState<RecState>('idle')
   const [audioURL, setAudioURL] = useState<string | null>(null)
   const [finishing, setFinishing] = useState(false)
+  const [donateCount, setDonateCount] = useState<number | null>(null)
   const [liveCaption, setLiveCaption] = useState('')
   const [transcript, setTranscript] = useState('')
   const [durationSec, setDurationSec] = useState(0)
@@ -146,14 +148,26 @@ export default function SpeakPage() {
           chunks_total: chunks.length,
         })
       }
-      await completeLesson(slug)
+      const res = await completeLesson(slug)
       trackEvent('lesson_complete', { lesson_slug: slug })
       toast.success('Hoàn thành! Các câu đã được thêm vào lịch ôn tập.')
+
+      if (res.completed_count > 0 && res.completed_count % 5 === 0) {
+        trackEvent('donate_prompt_shown', { completed_count: res.completed_count })
+        setDonateCount(res.completed_count)
+        setFinishing(false)
+        return
+      }
       router.push('/review')
     } catch {
       toast.error('Có lỗi khi lưu tiến độ.')
       setFinishing(false)
     }
+  }
+
+  function closeDonate() {
+    setDonateCount(null)
+    router.push('/review')
   }
 
   if (loading) {
@@ -266,6 +280,15 @@ export default function SpeakPage() {
             {finishing ? <Loader2 size={16} className="animate-spin" /> : <><Check size={16} /> Hoàn thành bài học</>}
           </button>
         </div>
+      )}
+
+      {donateCount !== null && (
+        <DonateCard
+          variant="modal"
+          title={`🎉 Bạn vừa hoàn thành bài học thứ ${donateCount}!`}
+          message="App này mình làm một mình và giữ miễn phí hoàn toàn cho mọi người học. Nếu thấy hữu ích, ủng hộ mình một ly cà phê để có động lực làm thêm bài học mới nhé ☕"
+          onClose={closeDonate}
+        />
       )}
     </div>
   )

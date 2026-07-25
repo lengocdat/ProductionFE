@@ -108,7 +108,7 @@ export function getLesson(slug: string) {
 }
 
 export function completeLesson(slug: string) {
-  return apiFetch(`/lessons/${slug}/complete`, { method: 'POST' })
+  return apiFetch<{ message: string; completed_count: number }>(`/lessons/${slug}/complete`, { method: 'POST' })
 }
 
 export interface SpeakAttempt {

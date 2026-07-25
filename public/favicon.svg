@@ -1,20 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Background circle -->
-  <circle cx="50" cy="50" r="48" fill="#16a34a"/>
-  <!-- Shuttlecock body (half-circle top) -->
-  <ellipse cx="50" cy="42" rx="14" ry="5" fill="white" opacity="0.95"/>
-  <!-- Shuttlecock feathers (radiating lines) -->
-  <line x1="50" y1="42" x2="36" y2="22" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="50" y1="42" x2="40" y2="20" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="50" y1="42" x2="45" y2="19" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="50" y1="42" x2="50" y2="19" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="50" y1="42" x2="55" y2="19" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="50" y1="42" x2="60" y2="20" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="50" y1="42" x2="64" y2="22" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <!-- Connect dots (people/network) -->
-  <circle cx="28" cy="70" r="6" fill="white" opacity="0.9"/>
-  <circle cx="50" cy="74" r="6" fill="white" opacity="0.9"/>
-  <circle cx="72" cy="70" r="6" fill="white" opacity="0.9"/>
-  <line x1="34" y1="70" x2="44" y2="74" stroke="white" stroke-width="2" stroke-linecap="round"/>
-  <line x1="56" y1="74" x2="66" y2="70" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <path d="M 156 280 A 100 100 0 0 1 356 280" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <rect x="138" y="262" width="46" height="82" rx="23" fill="#ffffff"/>
+  <rect x="328" y="262" width="46" height="82" rx="23" fill="#ffffff"/>
 </svg>

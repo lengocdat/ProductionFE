@@ -32,6 +32,20 @@ export const metadata: Metadata = {
     siteName: APP_NAME,
     title: TITLE,
     description: DESCRIPTION,
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: TITLE }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ['/og-image.png'],
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.json',
   alternates: {

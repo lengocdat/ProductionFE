@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut, Loader2 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import DonateCard from '@/components/DonateCard'
 
 interface User {
   id: number
@@ -52,6 +53,10 @@ export default function MePage() {
           <p className="truncate text-base font-bold text-gray-900">{user?.username}</p>
           <p className="truncate text-sm text-gray-400">{user?.email}</p>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <DonateCard />
       </div>
 
       <button
