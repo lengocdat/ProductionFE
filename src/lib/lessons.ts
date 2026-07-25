@@ -111,6 +111,26 @@ export function completeLesson(slug: string) {
   return apiFetch(`/lessons/${slug}/complete`, { method: 'POST' })
 }
 
+export interface SpeakAttempt {
+  id: number
+  transcript: string
+  duration_sec: number
+  word_count: number
+  chunks_used: number
+  chunks_total: number
+  created_at: string
+}
+
+export function saveSpeakAttempt(
+  slug: string,
+  data: { transcript: string; duration_sec: number; word_count: number; chunks_used: number }
+) {
+  return apiFetch<{ attempt: SpeakAttempt }>(`/lessons/${slug}/speak-attempt`, {
+    method: 'POST',
+    json: data,
+  }).then((d) => d.attempt)
+}
+
 export function getReviews(limit = 20) {
   return apiFetch<{ reviews: ReviewCard[] }>(`/reviews?limit=${limit}`).then((d) => d.reviews || [])
 }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react'
+import { trackEvent } from '@/lib/analytics'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,6 +43,7 @@ export default function LoginPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Đăng nhập thất bại')
       localStorage.setItem('access_token', data.access_token)
+      trackEvent('login', { method: 'email' })
       router.replace('/home')
     } catch (err: any) {
       setError(err.message)

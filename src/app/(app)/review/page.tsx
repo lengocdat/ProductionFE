@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Volume2, Loader2, PartyPopper } from 'lucide-react'
 import { getReviews, gradeReview, assetUrl, playRegion, type ReviewCard } from '@/lib/lessons'
+import { trackEvent } from '@/lib/analytics'
 
 const GRADES = [
   { q: 0, label: 'Lại', color: 'bg-red-500' },
@@ -46,6 +47,7 @@ export default function ReviewPage() {
     if (!card) return
     try {
       await gradeReview(card.sentence_id, q)
+      trackEvent('review_grade', { quality: q })
     } catch {}
     setRevealed(false)
     setPos((p) => p + 1)

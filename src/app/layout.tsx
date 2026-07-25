@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
+import GoogleAnalytics from '@/components/GoogleAnalytics'
 import './globals.css'
 
 const APP_URL = 'https://coduyen.net'
@@ -49,6 +51,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi">
       <body>
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
         <div className="mx-auto max-w-md min-h-screen shadow-lg bg-gray-50 relative">
           {children}
         </div>

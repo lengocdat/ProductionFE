@@ -4,6 +4,7 @@ import { useState, useRef, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, ShieldCheck } from 'lucide-react'
+import { trackEvent } from '@/lib/analytics'
 
 export default function RegisterPage() {
   return (
@@ -56,6 +57,7 @@ function RegisterForm() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Đăng ký thất bại')
       localStorage.setItem('access_token', data.access_token)
+      trackEvent('sign_up', { method: 'email' })
       router.replace('/home')
     } catch (err: any) {
       setError(err.message)
