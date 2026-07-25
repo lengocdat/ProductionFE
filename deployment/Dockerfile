@@ -6,6 +6,11 @@ RUN npm ci
 
 COPY . .
 
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time, so they
+# must be supplied here (via --build-arg), not at container runtime.
+ARG NEXT_PUBLIC_GA_ID
+ENV NEXT_PUBLIC_GA_ID=$NEXT_PUBLIC_GA_ID
+
 RUN npm run build
 
 FROM node:20-alpine AS runner

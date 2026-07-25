@@ -28,6 +28,7 @@ jobs:
         run: |
           docker build \
             -f deployment/Dockerfile \
+            --build-arg NEXT_PUBLIC_GA_ID=G-K72ZK1WYKQ \
             -t ${{ secrets.DOCKER_USERNAME }}/coduyen-fe:${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/coduyen-fe:latest \
             .
