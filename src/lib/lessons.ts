@@ -27,6 +27,7 @@ export interface Chunk {
   sentence_id?: number
   idx: number
   phrase: string
+  meaning_vi?: string
   variations?: string[]
   example?: string
   explanation?: string
@@ -56,6 +57,7 @@ export interface Lesson {
   duration_sec: number
   audio_url?: string
   speak_prompt?: string
+  sample_answer?: string
   sort_order: number
   is_published: boolean
   created_at: string

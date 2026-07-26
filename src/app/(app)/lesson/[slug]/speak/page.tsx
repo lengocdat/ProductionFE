@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Mic, Square, Play, Check, Loader2, CheckCircle2, Circle } from 'lucide-react'
+import { Mic, Square, Play, Check, Loader2, CheckCircle2, Circle, Volume2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { getLesson, completeLesson, saveSpeakAttempt, type Lesson } from '@/lib/lessons'
 import { trackEvent } from '@/lib/analytics'
@@ -124,6 +124,14 @@ export default function SpeakPage() {
     setAudioURL(null)
     setTranscript('')
     setLiveCaption('')
+  }
+
+  function speak(text: string) {
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = 'en-US'
+      speechSynthesis.speak(u)
+    }
   }
 
   const chunks = lesson?.chunks || []
@@ -261,6 +269,23 @@ export default function SpeakPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {recState === 'recorded' && lesson.sample_answer && (
+        <div className="mt-6 rounded-3xl bg-indigo-50 border border-indigo-100 p-5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles size={14} className="text-indigo-500" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-500">Nói chuẩn thì như thế này</p>
+          </div>
+          <p className="text-sm text-indigo-900 leading-relaxed mb-3">&ldquo;{lesson.sample_answer}&rdquo;</p>
+          <button
+            onClick={() => speak(lesson.sample_answer!)}
+            className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-indigo-600 shadow-sm active:bg-indigo-100"
+          >
+            <Volume2 size={14} /> Nghe mẫu
+          </button>
+          <p className="mt-3 text-xs text-indigo-400">Học thuộc câu này, lần sau gặp chủ đề tương tự bạn nói y vậy được luôn.</p>
         </div>
       )}
 

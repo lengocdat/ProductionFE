@@ -68,6 +68,10 @@ export default function ChunksPage() {
               <span className="text-lg font-extrabold text-gray-900">{c.phrase}</span>
             </button>
 
+            {c.meaning_vi && (
+              <p className="mt-1.5 pl-[46px] text-sm font-medium text-indigo-600">{c.meaning_vi}</p>
+            )}
+
             {c.variations && c.variations.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {c.variations.map((v) => (
