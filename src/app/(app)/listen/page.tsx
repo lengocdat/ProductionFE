@@ -13,6 +13,18 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// Shows now-playing info + play/pause/next controls on the lock screen /
+// notification shade, so the session is genuinely usable without looking
+// at the phone.
+function updateMediaSession(item: ListenItem) {
+  if (!('mediaSession' in navigator)) return
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: item.text,
+    artist: item.lesson_title,
+    album: 'Chunk English',
+  })
+}
+
 export default function ListenPage() {
   const router = useRouter()
   const [items, setItems] = useState<ListenItem[]>([])
@@ -25,6 +37,10 @@ export default function ListenPage() {
   const playingRef = useRef(false)
   const idxRef = useRef(0)
   const itemsRef = useRef<ListenItem[]>([])
+  // Bumped whenever the target index changes from outside the loop's own
+  // iteration (i.e. skip()); a running loop checks it after every await and
+  // bails out cleanly instead of finishing the item it was mid-way through.
+  const genRef = useRef(0)
 
   useEffect(() => {
     getListenSession(10)
@@ -42,22 +58,29 @@ export default function ListenPage() {
   async function runLoop() {
     const el = audioRef.current
     if (!el) return
+    const myGen = genRef.current
+    const stale = () => genRef.current !== myGen || !playingRef.current
 
     while (playingRef.current && idxRef.current < itemsRef.current.length) {
       const item = itemsRef.current[idxRef.current]
       setIdx(idxRef.current)
+      updateMediaSession(item)
 
       if (item.audio_url) {
         const url = assetUrl(item.audio_url)
         if (!el.src.endsWith(url)) el.src = url
 
         await playRegionUntilEnd(el, item.start_ms, item.end_ms)
-        if (!playingRef.current) break
+        if (stale()) return
+
         await sleep(REPEAT_GAP_MS)
-        if (!playingRef.current) break
+        if (stale()) return
+
         await playRegionUntilEnd(el, item.start_ms, item.end_ms)
-        if (!playingRef.current) break
+        if (stale()) return
+
         await sleep(NEXT_GAP_MS)
+        if (stale()) return
       }
 
       idxRef.current += 1
@@ -72,29 +95,38 @@ export default function ListenPage() {
   }
 
   function start() {
-    if (playingRef.current) return
     if (idxRef.current >= itemsRef.current.length) {
       idxRef.current = 0
       setFinished(false)
     }
+    if (playingRef.current) return
     playingRef.current = true
     setPlaying(true)
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing'
+      navigator.mediaSession.setActionHandler('play', start)
+      navigator.mediaSession.setActionHandler('pause', pause)
+      navigator.mediaSession.setActionHandler('nexttrack', skip)
+    }
     trackEvent('listen_session_start', { total_items: itemsRef.current.length })
     runLoop()
   }
 
   function pause() {
     playingRef.current = false
+    genRef.current += 1
     audioRef.current?.pause()
     setPlaying(false)
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
   }
 
   function skip() {
+    if (idxRef.current >= itemsRef.current.length - 1) return
+    idxRef.current += 1
+    setIdx(idxRef.current)
+    genRef.current += 1
     audioRef.current?.pause()
-    if (idxRef.current < itemsRef.current.length - 1) {
-      idxRef.current += 1
-      setIdx(idxRef.current)
-    }
+    if (playingRef.current) runLoop()
   }
 
   if (loading) {

@@ -198,35 +198,40 @@ export function playRegion(
 
 // playRegionUntilEnd is playRegion as a Promise, for sequential await-based
 // playback (the continuous listen session steps through items one at a time).
+// Uses the audio element's own "timeupdate"/"ended" events instead of
+// requestAnimationFrame — rAF is paused by the browser on hidden/background
+// tabs, which would freeze playback the moment the user switches away (e.g.
+// to their code editor) even though the audio itself keeps playing.
 export function playRegionUntilEnd(audio: HTMLAudioElement, startMs: number, endMs: number): Promise<void> {
   return new Promise((resolve) => {
     const start = startMs / 1000
     const end = endMs / 1000
-    let raf = 0
     let settled = false
 
     const finish = () => {
       if (settled) return
       settled = true
-      cancelAnimationFrame(raf)
+      audio.removeEventListener('timeupdate', onTimeUpdate)
+      audio.removeEventListener('ended', finish)
+      audio.removeEventListener('pause', onPause)
       audio.pause()
       resolve()
     }
 
-    const tick = () => {
-      if (audio.paused || audio.currentTime >= end) {
-        finish()
-        return
-      }
-      raf = requestAnimationFrame(tick)
+    const onTimeUpdate = () => {
+      if (audio.currentTime >= end) finish()
+    }
+    // Only treat an external pause as "done" — our own audio.pause() in
+    // finish() would otherwise re-enter here.
+    const onPause = () => {
+      if (!settled) finish()
     }
 
+    audio.addEventListener('timeupdate', onTimeUpdate)
+    audio.addEventListener('ended', finish)
+    audio.addEventListener('pause', onPause)
+
     audio.currentTime = start
-    audio
-      .play()
-      .then(() => {
-        raf = requestAnimationFrame(tick)
-      })
-      .catch(finish)
+    audio.play().catch(finish)
   })
 }
