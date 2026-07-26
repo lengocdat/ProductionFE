@@ -35,8 +35,8 @@ export default function PWAInstallPrompt() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  // Banner float đè lên nút cuối trang (VD nút submit form tạo trận) — tự ẩn sau 15s
-  // để không chặn thao tác; không set cờ dismissed nên lần vào sau vẫn gợi ý lại.
+  // Banner float đè lên nút cuối trang — tự ẩn sau 15s để không chặn thao tác;
+  // không set cờ dismissed nên lần vào sau vẫn gợi ý lại.
   useEffect(() => {
     if (!show) return
     const t = setTimeout(() => setShow(false), 15000)
@@ -65,9 +65,9 @@ export default function PWAInstallPrompt() {
         <X size={16} />
       </button>
       <div className="flex items-start gap-3">
-        <div className="text-2xl">🏸</div>
+        <div className="text-2xl">🎧</div>
         <div className="flex-1">
-          <p className="text-sm font-bold mb-0.5">Cài CoDuyen về máy</p>
+          <p className="text-sm font-bold mb-0.5">Cài Chunk English về máy</p>
           {isIOS ? (
             <>
               <p className="text-xs text-gray-300 leading-snug mb-3">

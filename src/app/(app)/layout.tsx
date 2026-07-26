@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/BottomNav'
+import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { Toaster } from '@/components/ui/sonner'
 import { apiFetch } from '@/lib/api'
 
@@ -48,6 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <>
       <main className="pb-20 min-h-[calc(100vh-80px)]">{children}</main>
       <BottomNav />
+      <PWAInstallPrompt />
       <Toaster position="top-center" richColors />
     </>
   )
