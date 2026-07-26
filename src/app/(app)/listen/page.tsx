@@ -59,6 +59,28 @@ export default function ListenPage() {
   // iteration (i.e. skip()); a running loop checks it after every await and
   // bails out cleanly instead of finishing the item it was mid-way through.
   const genRef = useRef(0)
+  // The phone's own auto-lock timeout suspends the whole tab — including
+  // audio that's actively playing — once the screen goes dark. Holding a
+  // wake lock keeps the screen on for the duration of the session so that
+  // never happens; released as soon as playback stops.
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request('screen')
+    } catch {
+      // Permission/support edge cases (e.g. low battery mode) — session
+      // still works, it just won't stop the screen from sleeping.
+    }
+  }
+
+  async function releaseWakeLock() {
+    try {
+      await wakeLockRef.current?.release()
+    } catch {}
+    wakeLockRef.current = null
+  }
 
   useEffect(() => {
     getListenSession(10)
@@ -68,8 +90,20 @@ export default function ListenPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+
+    // Re-acquire if the OS released it on a visibility change (e.g. brief
+    // app switch) but the session is still meant to be playing.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && playingRef.current && !wakeLockRef.current) {
+        requestWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
     return () => {
       playingRef.current = false
+      document.removeEventListener('visibilitychange', onVisibility)
+      releaseWakeLock()
     }
   }, [])
 
@@ -120,6 +154,7 @@ export default function ListenPage() {
     }
     playingRef.current = false
     setPlaying(false)
+    releaseWakeLock()
   }
 
   function start() {
@@ -130,6 +165,7 @@ export default function ListenPage() {
     if (playingRef.current) return
     playingRef.current = true
     setPlaying(true)
+    requestWakeLock()
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing'
       navigator.mediaSession.setActionHandler('play', start)
@@ -145,6 +181,7 @@ export default function ListenPage() {
     genRef.current += 1
     audioRef.current?.pause()
     setPlaying(false)
+    releaseWakeLock()
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
   }
 
@@ -189,7 +226,7 @@ export default function ListenPage() {
       </div>
 
       <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có đọc nghĩa tiếng Việt xen giữa để không nghe như &quot;vịt nghe sấm&quot;.
+        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có đọc nghĩa tiếng Việt xen giữa để không nghe như &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
       </p>
 
       {card.audio_url && <audio ref={audioRef} preload="auto" />}
