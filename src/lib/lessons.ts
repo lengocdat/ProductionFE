@@ -144,6 +144,21 @@ export function gradeReview(sentenceId: number, quality: number) {
   })
 }
 
+export interface ListenItem {
+  sentence_id: number
+  lesson_id: number
+  lesson_title: string
+  text: string
+  audio_url?: string
+  start_ms: number
+  end_ms: number
+  source: 'review' | 'upcoming' | 'preview'
+}
+
+export function getListenSession(minutes = 10) {
+  return apiFetch<{ items: ListenItem[] }>(`/listen-session?minutes=${minutes}`).then((d) => d.items || [])
+}
+
 export function mmss(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = sec % 60
@@ -179,4 +194,39 @@ export function playRegion(
     cancelAnimationFrame(raf)
     audio.pause()
   }
+}
+
+// playRegionUntilEnd is playRegion as a Promise, for sequential await-based
+// playback (the continuous listen session steps through items one at a time).
+export function playRegionUntilEnd(audio: HTMLAudioElement, startMs: number, endMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const start = startMs / 1000
+    const end = endMs / 1000
+    let raf = 0
+    let settled = false
+
+    const finish = () => {
+      if (settled) return
+      settled = true
+      cancelAnimationFrame(raf)
+      audio.pause()
+      resolve()
+    }
+
+    const tick = () => {
+      if (audio.paused || audio.currentTime >= end) {
+        finish()
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+
+    audio.currentTime = start
+    audio
+      .play()
+      .then(() => {
+        raf = requestAnimationFrame(tick)
+      })
+      .catch(finish)
+  })
 }
