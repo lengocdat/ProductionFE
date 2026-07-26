@@ -149,6 +149,7 @@ export interface ListenItem {
   lesson_id: number
   lesson_title: string
   text: string
+  meaning_vi?: string
   audio_url?: string
   start_ms: number
   end_ms: number

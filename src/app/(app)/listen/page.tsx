@@ -13,6 +13,24 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// Speaks the Vietnamese meaning aloud and resolves once done — used for
+// "preview" (never-studied) items, where English-only audio would just be
+// noise. Never rejects: if speech synthesis isn't available, resolves
+// immediately so the session keeps going.
+function speakVi(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (!('speechSynthesis' in window)) {
+      resolve()
+      return
+    }
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'vi-VN'
+    u.onend = () => resolve()
+    u.onerror = () => resolve()
+    speechSynthesis.speak(u)
+  })
+}
+
 // Shows now-playing info + play/pause/next controls on the lock screen /
 // notification shade, so the session is genuinely usable without looking
 // at the phone.
@@ -73,8 +91,18 @@ export default function ListenPage() {
         await playRegionUntilEnd(el, item.start_ms, item.end_ms)
         if (stale()) return
 
-        await sleep(REPEAT_GAP_MS)
-        if (stale()) return
+        if (item.meaning_vi) {
+          // Never-studied content: narrate the meaning before the repeat, so
+          // the second play actually lands as recognizable English instead
+          // of unexplained noise.
+          await sleep(400)
+          if (stale()) return
+          await speakVi(item.meaning_vi)
+          if (stale()) return
+        } else {
+          await sleep(REPEAT_GAP_MS)
+          if (stale()) return
+        }
 
         await playRegionUntilEnd(el, item.start_ms, item.end_ms)
         if (stale()) return
@@ -161,7 +189,7 @@ export default function ListenPage() {
       </div>
 
       <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-        Vừa làm việc khác vừa nghe được — mỗi câu phát 2 lần, tự động qua câu tiếp theo. Ưu tiên câu cần ôn trước.
+        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có đọc nghĩa tiếng Việt xen giữa để không nghe như &quot;vịt nghe sấm&quot;.
       </p>
 
       {card.audio_url && <audio ref={audioRef} preload="auto" />}
@@ -200,6 +228,7 @@ export default function ListenPage() {
             </button>
 
             <p className="mt-5 text-lg font-semibold leading-relaxed text-gray-900">{card.text}</p>
+            {card.meaning_vi && <p className="mt-2 text-sm text-amber-600">{card.meaning_vi}</p>}
           </div>
 
           <div className="mt-6 flex gap-3">
