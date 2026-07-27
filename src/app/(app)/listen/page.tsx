@@ -13,23 +13,30 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// Speaks the Vietnamese meaning aloud and resolves once done — used for
-// "preview" (never-studied) items, where English-only audio would just be
-// noise. Never rejects: if speech synthesis isn't available, resolves
-// immediately so the session keeps going.
-function speakVi(text: string): Promise<void> {
+function speak(text: string, lang: string): Promise<void> {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window)) {
       resolve()
       return
     }
     const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'vi-VN'
+    u.lang = lang
     u.onend = () => resolve()
     u.onerror = () => resolve()
     speechSynthesis.speak(u)
   })
 }
+
+// Speaks the Vietnamese meaning aloud — used for "preview" (never-studied)
+// items, where English-only audio would just be noise. Never rejects: if
+// speech synthesis isn't available, resolves immediately so the session
+// keeps going.
+const speakVi = (text: string) => speak(text, 'vi-VN')
+
+// Speaks the example sentence in English — gives a bare phrase somewhere to
+// land ("when you're about to deploy, you say...") instead of handing over
+// an isolated word pair with no situation around it.
+const speakExample = (text: string) => speak(text, 'en-US')
 
 // Shows now-playing info + play/pause/next controls on the lock screen /
 // notification shade, so the session is genuinely usable without looking
@@ -122,13 +129,20 @@ export default function ListenPage() {
         const url = assetUrl(item.audio_url)
         if (!el.src.endsWith(url)) el.src = url
 
+        // Never-studied content: set the scene before the bare phrase shows
+        // up, so it lands somewhere ("when you're about to deploy, you
+        // say...") instead of arriving as an isolated word pair.
+        if (item.example) {
+          await speakExample(item.example)
+          if (stale()) return
+          await sleep(500)
+          if (stale()) return
+        }
+
         await playRegionUntilEnd(el, item.start_ms, item.end_ms)
         if (stale()) return
 
         if (item.meaning_vi) {
-          // Never-studied content: narrate the meaning before the repeat, so
-          // the second play actually lands as recognizable English instead
-          // of unexplained noise.
           await sleep(400)
           if (stale()) return
           await speakVi(item.meaning_vi)
@@ -226,7 +240,7 @@ export default function ListenPage() {
       </div>
 
       <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có đọc nghĩa tiếng Việt xen giữa để không nghe như &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
+        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
       </p>
 
       {card.audio_url && <audio ref={audioRef} preload="auto" />}
@@ -264,7 +278,10 @@ export default function ListenPage() {
               {playing ? <Pause size={30} /> : <Play size={30} className="ml-1" />}
             </button>
 
-            <p className="mt-5 text-lg font-semibold leading-relaxed text-gray-900">{card.text}</p>
+            {card.example && (
+              <p className="mt-5 text-sm italic text-gray-400 leading-relaxed">&ldquo;{card.example}&rdquo;</p>
+            )}
+            <p className="mt-2 text-lg font-semibold leading-relaxed text-gray-900">{card.text}</p>
             {card.meaning_vi && <p className="mt-2 text-sm text-amber-600">{card.meaning_vi}</p>}
           </div>
 
