@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, SkipForward, Loader2, Headphones, PartyPopper, Sparkles, Repeat } from 'lucide-react'
+import { Play, Pause, SkipForward, Loader2, Headphones, PartyPopper, Sparkles, Repeat, MessagesSquare } from 'lucide-react'
 import { getListenSession, playRegionUntilEnd, assetUrl, TRACKS, type ListenItem } from '@/lib/lessons'
 import { getMe } from '@/lib/auth'
 import { trackEvent } from '@/lib/analytics'
 
 const REPEAT_GAP_MS = 1500
 const NEXT_GAP_MS = 800
+const DIALOGUE_GAP_MS = 500
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -172,6 +173,18 @@ export default function ListenPage() {
         const url = assetUrl(item.audio_url)
         if (!el.src.endsWith(url)) el.src = url
 
+        if (item.source === 'dialogue') {
+          // The scene tying the lesson's chunks together — a real recorded
+          // conversation, so it plays through once like natural speech
+          // instead of the phrase drill's context → play → meaning → repeat.
+          await playRegionUntilEnd(el, item.start_ms, item.end_ms)
+          if (stale()) return
+          await sleep(DIALOGUE_GAP_MS)
+          if (stale()) return
+          idxRef.current += 1
+          continue
+        }
+
         // Never-studied content: set the scene before the bare phrase shows
         // up, so it lands somewhere ("when you're about to deploy, you
         // say...") instead of arriving as an isolated word pair.
@@ -302,7 +315,13 @@ export default function ListenPage() {
   }
 
   const card = items[Math.min(idx, items.length - 1)]
-  const isPreview = card.source === 'preview'
+  const BADGES = {
+    review: { label: 'Ôn tập', icon: Repeat, className: 'bg-indigo-50 text-indigo-600' },
+    upcoming: { label: 'Ôn tập', icon: Repeat, className: 'bg-indigo-50 text-indigo-600' },
+    preview: { label: 'Làm quen', icon: Sparkles, className: 'bg-amber-50 text-amber-600' },
+    dialogue: { label: 'Hội thoại', icon: MessagesSquare, className: 'bg-emerald-50 text-emerald-600' },
+  } as const
+  const badge = BADGES[card.source]
 
   return (
     <div className="px-5 pt-8 pb-8">
@@ -314,7 +333,7 @@ export default function ListenPage() {
       {topicChips}
 
       <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
+        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, rồi nghe đoạn hội thoại thật dùng các cụm đó nối tiếp nhau thành một tình huống — không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
       </p>
 
       {card.audio_url && <audio ref={audioRef} preload="auto" />}
@@ -335,12 +354,10 @@ export default function ListenPage() {
         <>
           <div className="rounded-3xl bg-white border border-gray-100 p-8 shadow-sm text-center">
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide mb-4 ${
-                isPreview ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'
-              }`}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide mb-4 ${badge.className}`}
             >
-              {isPreview ? <Sparkles size={11} /> : <Repeat size={11} />}
-              {isPreview ? 'Làm quen' : 'Ôn tập'}
+              <badge.icon size={11} />
+              {badge.label}
             </span>
 
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">{card.lesson_title}</p>

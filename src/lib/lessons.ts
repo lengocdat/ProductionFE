@@ -154,7 +154,7 @@ export interface ListenItem {
   audio_url?: string
   start_ms: number
   end_ms: number
-  source: 'review' | 'upcoming' | 'preview'
+  source: 'review' | 'upcoming' | 'preview' | 'dialogue'
 }
 
 export function getListenSession(minutes = 10, track = '') {
