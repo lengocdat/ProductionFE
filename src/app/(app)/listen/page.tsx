@@ -14,17 +14,36 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function speak(text: string, lang: string): Promise<void> {
+// speechSynthesis is unreliable once the phone screen is actually locked
+// (as opposed to just dimmed — Wake Lock can't and shouldn't stop a user
+// from pressing the power button). Unlike <audio>, it isn't tied into the
+// browser's background-media-playback allowance, so onend/onerror can
+// simply never fire. A hard timeout guarantees the session keeps moving
+// either way — worst case the Vietnamese narration gets silently skipped
+// while the phone's locked, instead of freezing the whole queue on it.
+function speak(text: string, lang: string, timeoutMs = 7000): Promise<void> {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window)) {
       resolve()
       return
     }
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      resolve()
+    }
     const u = new SpeechSynthesisUtterance(text)
     u.lang = lang
-    u.onend = () => resolve()
-    u.onerror = () => resolve()
-    speechSynthesis.speak(u)
+    u.onend = finish
+    u.onerror = finish
+    try {
+      speechSynthesis.speak(u)
+    } catch {
+      finish()
+      return
+    }
+    setTimeout(finish, timeoutMs)
   })
 }
 
