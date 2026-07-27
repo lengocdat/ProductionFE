@@ -54,6 +54,22 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Entry point to hands-free listening — was previously buried inside
+          Ôn tập, so users doing something else with their hands never saw it. */}
+      <Link
+        href="/listen"
+        className="mb-6 flex items-center gap-3.5 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-lg shadow-emerald-200 active:scale-[0.98] transition-all"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20">
+          <Headphones size={20} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">Đang làm việc khác? Nghe liên tục</p>
+          <p className="text-xs text-emerald-50">Không cần nhìn màn hình — học trong lúc rảnh tay</p>
+        </div>
+        <ChevronRight size={18} className="text-white/70 shrink-0" />
+      </Link>
+
       {/* 1. Track Filter Tabs (Everyday, Developer, Product, Meeting, Speaking) */}
       <div className="mb-4">
         <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
