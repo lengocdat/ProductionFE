@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Play, Check, Headphones, Sparkles, ChevronRight, Layers, BarChart2 } from 'lucide-react'
-import { listLessons, mmss, TRACKS, CEFR_LEVELS, type Lesson } from '@/lib/lessons'
+import { Play, Check, Headphones, Sparkles, ChevronRight, Layers, BarChart2, Repeat, Flag } from 'lucide-react'
+import { listLessons, mmss, TRACKS, CEFR_LEVELS, getRoadmap, type Lesson, type Roadmap } from '@/lib/lessons'
 import { getMe } from '@/lib/auth'
 
 const CEFR_COLORS: Record<string, { bg: string; text: string; border: string; tag: string }> = {
@@ -19,6 +19,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [track, setTrack] = useState<string>('everyday')
   const [cefrLevel, setCefrLevel] = useState<string>('A1') // Mặc định mở phần Dễ nhất A1 trước
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
 
   // Ưu tiên chủ đề/trình độ đã chọn lúc onboarding thay vì mặc định cứng.
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function HomePage() {
         if (u.preferred_level) setCefrLevel(u.preferred_level)
       })
       .catch(() => {})
+    getRoadmap().then(setRoadmap).catch(() => {})
   }, [])
 
   // Fetch dữ liệu on-demand khi chuyển Track hoặc chuyển Cấp độ
@@ -53,6 +55,77 @@ export default function HomePage() {
           </div>
         </div>
       </header>
+
+      {/* "What do I do right now" — the whole point of the roadmap: open the
+          app, don't think, just do the next thing it shows you. */}
+      {roadmap && (
+        <div className="mb-6 rounded-3xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-4 text-white">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-200">
+                Giai đoạn {roadmap.stage.number}/3
+              </span>
+              <span className="text-[10px] font-semibold text-indigo-200">
+                {roadmap.completed_count}{roadmap.stage.max_lessons > 0 ? `/${roadmap.stage.max_lessons}` : ''} bài
+              </span>
+            </div>
+            <p className="text-base font-extrabold mb-1">{roadmap.stage.name}</p>
+            <p className="text-xs text-indigo-100 leading-relaxed">{roadmap.stage.goal}</p>
+            {roadmap.stage.max_lessons > 0 && (
+              <div className="mt-3 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-white"
+                  style={{ width: `${Math.min(100, (roadmap.completed_count / roadmap.stage.max_lessons) * 100)}%` }}
+                />
+              </div>
+            )}
+          </div>
+
+          {roadmap.next_lessons.length > 0 && (
+            <div className="p-4 space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Tiếp theo</p>
+              {roadmap.next_lessons.map((l) => (
+                <Link
+                  key={l.id}
+                  href={`/lesson/${l.slug}`}
+                  className="flex items-center gap-3 rounded-2xl bg-gray-50 p-3 active:bg-gray-100"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white">
+                    <Play size={15} fill="currentColor" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-gray-900">{l.title}</p>
+                    <p className="text-xs text-gray-400">{l.track} · {l.cefr_level}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300 shrink-0" />
+                </Link>
+              ))}
+              {roadmap.due_reviews > 0 && (
+                <Link
+                  href="/review"
+                  className="flex items-center gap-3 rounded-2xl bg-amber-50 p-3 active:bg-amber-100"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
+                    <Repeat size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-amber-900">{roadmap.due_reviews} câu cần ôn hôm nay</p>
+                    <p className="text-xs text-amber-600">Ôn trước khi học bài mới sẽ nhớ lâu hơn</p>
+                  </div>
+                  <ChevronRight size={16} className="text-amber-300 shrink-0" />
+                </Link>
+              )}
+            </div>
+          )}
+
+          {roadmap.next_lessons.length === 0 && (
+            <div className="p-4 flex items-center gap-2 text-sm text-gray-500">
+              <Flag size={16} className="text-indigo-500 shrink-0" />
+              Bạn đã học hết bài phù hợp giai đoạn này — khám phá thêm ở danh sách bên dưới.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Entry point to hands-free listening — was previously buried inside
           Ôn tập, so users doing something else with their hands never saw it. */}

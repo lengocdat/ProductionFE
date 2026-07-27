@@ -162,6 +162,25 @@ export function getListenSession(minutes = 10, track = '') {
   return apiFetch<{ items: ListenItem[] }>(`/listen-session?minutes=${minutes}${q}`).then((d) => d.items || [])
 }
 
+export interface RoadmapStage {
+  number: number
+  name: string
+  goal: string
+  min_lessons: number
+  max_lessons: number // 0 = no upper bound (final stage)
+}
+
+export interface Roadmap {
+  completed_count: number
+  due_reviews: number
+  stage: RoadmapStage
+  next_lessons: Lesson[]
+}
+
+export function getRoadmap() {
+  return apiFetch<{ roadmap: Roadmap }>('/roadmap').then((d) => d.roadmap)
+}
+
 export function mmss(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = sec % 60
