@@ -6,30 +6,10 @@ import { Mic, Square, Play, Check, Loader2, CheckCircle2, Circle, Volume2, Spark
 import { toast } from 'sonner'
 import { getLesson, completeLesson, saveSpeakAttempt, type Lesson } from '@/lib/lessons'
 import { trackEvent } from '@/lib/analytics'
+import { getSpeechRecognition, type SpeechRecognitionAlt } from '@/lib/speech'
 import DonateCard from '@/components/DonateCard'
 
 type RecState = 'idle' | 'recording' | 'recorded'
-
-// Minimal typing for the Web Speech API (no official TS lib types; prefixed on Safari/older Chrome).
-interface SpeechRecognitionAlt {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  start: () => void
-  stop: () => void
-  onresult: ((event: any) => void) | null
-  onerror: ((event: any) => void) | null
-  onend: (() => void) | null
-}
-
-function getSpeechRecognition(): (new () => SpeechRecognitionAlt) | null {
-  if (typeof window === 'undefined') return null
-  const w = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionAlt
-    webkitSpeechRecognition?: new () => SpeechRecognitionAlt
-  }
-  return w.SpeechRecognition || w.webkitSpeechRecognition || null
-}
 
 export default function SpeakPage() {
   const { slug } = useParams<{ slug: string }>()
