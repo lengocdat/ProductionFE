@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Play, Check, Headphones, Sparkles, ChevronRight, Layers, BarChart2 } from 'lucide-react'
 import { listLessons, mmss, TRACKS, CEFR_LEVELS, type Lesson } from '@/lib/lessons'
+import { getMe } from '@/lib/auth'
 
 const CEFR_COLORS: Record<string, { bg: string; text: string; border: string; tag: string }> = {
   A1: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', tag: 'bg-emerald-500' },
@@ -18,6 +19,16 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [track, setTrack] = useState<string>('everyday')
   const [cefrLevel, setCefrLevel] = useState<string>('A1') // Mặc định mở phần Dễ nhất A1 trước
+
+  // Ưu tiên chủ đề/trình độ đã chọn lúc onboarding thay vì mặc định cứng.
+  useEffect(() => {
+    getMe()
+      .then((u) => {
+        if (u.preferred_track) setTrack(u.preferred_track)
+        if (u.preferred_level) setCefrLevel(u.preferred_level)
+      })
+      .catch(() => {})
+  }, [])
 
   // Fetch dữ liệu on-demand khi chuyển Track hoặc chuyển Cấp độ
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, SkipForward, Loader2, Headphones, PartyPopper, Sparkles, Repeat } from 'lucide-react'
 import { getListenSession, playRegionUntilEnd, assetUrl, TRACKS, type ListenItem } from '@/lib/lessons'
+import { getMe } from '@/lib/auth'
 import { trackEvent } from '@/lib/analytics'
 
 const REPEAT_GAP_MS = 1500
@@ -104,6 +105,18 @@ export default function ListenPage() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }
+
+  // Default the topic filter to what the learner picked at onboarding, once,
+  // the first time this page loads (not tied to [topic] so it doesn't fight
+  // manual chip taps afterward).
+  useEffect(() => {
+    getMe()
+      .then((u) => {
+        if (u.preferred_track) setTopic(u.preferred_track)
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     loadSession(topic)

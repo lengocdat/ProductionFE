@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, Loader2 } from 'lucide-react'
+import { LogOut, Loader2, Target } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
+import { getMe, type User } from '@/lib/auth'
 import DonateCard from '@/components/DonateCard'
-
-interface User {
-  id: number
-  username: string
-  email: string
-  role: string
-}
 
 export default function MePage() {
   const router = useRouter()
@@ -19,8 +13,8 @@ export default function MePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch<{ user: User }>('/auth/me')
-      .then((d) => setUser(d.user))
+    getMe()
+      .then(setUser)
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -54,6 +48,20 @@ export default function MePage() {
           <p className="truncate text-sm text-gray-400">{user?.email}</p>
         </div>
       </div>
+
+      <button
+        onClick={() => router.push('/onboarding')}
+        className="mt-6 w-full flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 text-left active:bg-gray-50"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+          <Target size={16} className="text-indigo-500" /> Làm lại bài test xếp trình độ
+        </span>
+        {user?.preferred_level && (
+          <span className="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-extrabold text-indigo-600">
+            {user.preferred_level}
+          </span>
+        )}
+      </button>
 
       <div className="mt-6">
         <DonateCard />

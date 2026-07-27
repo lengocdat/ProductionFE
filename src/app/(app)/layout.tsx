@@ -1,21 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import BottomNav from '@/components/BottomNav'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import { Toaster } from '@/components/ui/sonner'
-import { apiFetch } from '@/lib/api'
-
-interface User {
-  id: number
-  username: string
-  email: string
-  role: string
-}
+import { getMe, type User } from '@/lib/auth'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -26,13 +20,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return
     }
 
-    apiFetch<{ user: User }>('/auth/me')
-      .then((data) => setUser(data.user))
+    getMe()
+      .then((u) => {
+        setUser(u)
+        if (!u.preferred_level && pathname !== '/onboarding') {
+          router.replace('/onboarding')
+        }
+      })
       .catch(() => {
         localStorage.removeItem('access_token')
         router.replace('/login')
       })
       .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   if (loading) {
