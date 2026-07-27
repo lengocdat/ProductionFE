@@ -2,22 +2,49 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, Loader2, Target } from 'lucide-react'
+import { LogOut, Loader2, Target, Bell } from 'lucide-react'
+import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api'
 import { getMe, type User } from '@/lib/auth'
+import { pushSupported, getPushSubscription, enableDailyReminders, disableDailyReminders } from '@/lib/push'
+import { trackEvent } from '@/lib/analytics'
 import DonateCard from '@/components/DonateCard'
 
 export default function MePage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [remindersOn, setRemindersOn] = useState(false)
+  const [remindersBusy, setRemindersBusy] = useState(false)
 
   useEffect(() => {
     getMe()
       .then(setUser)
       .catch(() => {})
       .finally(() => setLoading(false))
+    getPushSubscription().then((sub) => setRemindersOn(!!sub))
   }, [])
+
+  async function toggleReminders() {
+    if (remindersBusy) return
+    setRemindersBusy(true)
+    try {
+      if (remindersOn) {
+        await disableDailyReminders()
+        setRemindersOn(false)
+        trackEvent('reminders_disabled')
+      } else {
+        const ok = await enableDailyReminders()
+        setRemindersOn(ok)
+        trackEvent('reminders_enabled', { ok })
+        if (!ok) toast.error('Cần cho phép thông báo trong trình duyệt để bật nhắc nhở.')
+      }
+    } catch {
+      toast.error('Có lỗi xảy ra, thử lại nhé.')
+    } finally {
+      setRemindersBusy(false)
+    }
+  }
 
   async function logout() {
     try {
@@ -48,6 +75,37 @@ export default function MePage() {
           <p className="truncate text-sm text-gray-400">{user?.email}</p>
         </div>
       </div>
+
+      {pushSupported() && (
+        <button
+          onClick={toggleReminders}
+          disabled={remindersBusy}
+          className="mt-6 w-full flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 text-left active:bg-gray-50 disabled:opacity-60"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <Bell size={16} className="text-indigo-500" />
+            <span>
+              Nhắc học 7h sáng &amp; 7h tối
+              <span className="block text-xs font-normal text-gray-400">Tối chỉ nhắc nếu hôm đó chưa học bài nào</span>
+            </span>
+          </span>
+          {remindersBusy ? (
+            <Loader2 size={18} className="animate-spin text-gray-400 shrink-0" />
+          ) : (
+            <span
+              className={`shrink-0 flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${
+                remindersOn ? 'bg-indigo-500' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  remindersOn ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </span>
+          )}
+        </button>
+      )}
 
       <button
         onClick={() => router.push('/onboarding')}

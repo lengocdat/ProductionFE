@@ -61,3 +61,39 @@ self.addEventListener('fetch', (event) => {
     )
   )
 })
+
+// Daily 7am/7pm study reminders (see internal/worker/reminder.go on the
+// backend). Payload is {title, body, url} — falls back to sane defaults if
+// a push ever arrives with no body (some browsers require showing
+// *something* or they auto-generate a generic "this site was updated").
+self.addEventListener('push', (event) => {
+  let data = { title: 'Chunk English', body: 'Đến giờ học tiếng Anh rồi!', url: '/home' }
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() }
+    } catch {
+      data.body = event.data.text()
+    }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-72.png',
+      data: { url: data.url },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/home'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(url) && 'focus' in client) return client.focus()
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url)
+    })
+  )
+})
