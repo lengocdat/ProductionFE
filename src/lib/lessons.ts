@@ -157,8 +157,9 @@ export interface ListenItem {
   source: 'review' | 'upcoming' | 'preview'
 }
 
-export function getListenSession(minutes = 10) {
-  return apiFetch<{ items: ListenItem[] }>(`/listen-session?minutes=${minutes}`).then((d) => d.items || [])
+export function getListenSession(minutes = 10, track = '') {
+  const q = track ? `&track=${encodeURIComponent(track)}` : ''
+  return apiFetch<{ items: ListenItem[] }>(`/listen-session?minutes=${minutes}${q}`).then((d) => d.items || [])
 }
 
 export function mmss(sec: number): string {

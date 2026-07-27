@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, SkipForward, Loader2, Headphones, PartyPopper, Sparkles, Repeat } from 'lucide-react'
-import { getListenSession, playRegionUntilEnd, assetUrl, type ListenItem } from '@/lib/lessons'
+import { getListenSession, playRegionUntilEnd, assetUrl, TRACKS, type ListenItem } from '@/lib/lessons'
 import { trackEvent } from '@/lib/analytics'
 
 const REPEAT_GAP_MS = 1500
@@ -57,6 +57,7 @@ export default function ListenPage() {
   const [idx, setIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [finished, setFinished] = useState(false)
+  const [topic, setTopic] = useState('')
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playingRef = useRef(false)
@@ -89,14 +90,23 @@ export default function ListenPage() {
     wakeLockRef.current = null
   }
 
-  useEffect(() => {
-    getListenSession(10)
+  function loadSession(track: string) {
+    setLoading(true)
+    pause()
+    idxRef.current = 0
+    setIdx(0)
+    setFinished(false)
+    getListenSession(10, track)
       .then((data) => {
         setItems(data)
         itemsRef.current = data
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadSession(topic)
 
     // Re-acquire if the OS released it on a visibility change (e.g. brief
     // app switch) but the session is still meant to be playing.
@@ -112,7 +122,8 @@ export default function ListenPage() {
       document.removeEventListener('visibilitychange', onVisibility)
       releaseWakeLock()
     }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic])
 
   async function runLoop() {
     const el = audioRef.current
@@ -208,10 +219,38 @@ export default function ListenPage() {
     if (playingRef.current) runLoop()
   }
 
+  const topicChips = (
+    <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
+      <button
+        onClick={() => setTopic('')}
+        className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+          topic === '' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-600'
+        }`}
+      >
+        Tất cả
+      </button>
+      {TRACKS.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => setTopic(t.key)}
+          className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+            topic === t.key ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="animate-spin text-indigo-500" />
+      <div className="px-5 pt-8">
+        <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nghe liên tục</h1>
+        {topicChips}
+        <div className="flex h-[40vh] items-center justify-center">
+          <Loader2 className="animate-spin text-indigo-500" />
+        </div>
       </div>
     )
   }
@@ -219,11 +258,12 @@ export default function ListenPage() {
   if (items.length === 0) {
     return (
       <div className="px-5 pt-8">
-        <h1 className="text-xl font-extrabold text-gray-900 mb-8">Nghe liên tục</h1>
+        <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nghe liên tục</h1>
+        {topicChips}
         <div className="rounded-3xl bg-gray-50 border border-gray-100 p-10 text-center text-gray-400">
           <Headphones className="mx-auto mb-3 opacity-40" size={32} />
-          <p className="text-sm font-bold text-gray-600">Chưa có nội dung để nghe</p>
-          <p className="text-xs text-gray-400 mt-1">Học vài bài trước đã nhé.</p>
+          <p className="text-sm font-bold text-gray-600">Chưa có nội dung để nghe cho chủ đề này</p>
+          <p className="text-xs text-gray-400 mt-1">Thử chọn chủ đề khác hoặc học vài bài trước đã nhé.</p>
         </div>
       </div>
     )
@@ -234,10 +274,12 @@ export default function ListenPage() {
 
   return (
     <div className="px-5 pt-8 pb-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-extrabold text-gray-900">Nghe liên tục</h1>
         <span className="text-sm font-medium text-gray-400">{Math.min(idx + 1, items.length)}/{items.length}</span>
       </div>
+
+      {topicChips}
 
       <p className="text-xs text-gray-400 mb-4 leading-relaxed">
         Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
