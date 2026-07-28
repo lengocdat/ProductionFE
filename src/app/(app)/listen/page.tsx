@@ -11,6 +11,15 @@ const REPEAT_GAP_MS = 1500
 const NEXT_GAP_MS = 800
 const DIALOGUE_GAP_MS = 500
 
+const DURATIONS = [
+  { minutes: 10, label: '10 phút' },
+  { minutes: 20, label: '20 phút' },
+  { minutes: 30, label: '30 phút' },
+  { minutes: 60, label: '1 giờ' },
+  { minutes: 120, label: '2 giờ' },
+]
+const DURATION_KEY = 'ce_listen_minutes'
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -79,6 +88,9 @@ export default function ListenPage() {
   const [playing, setPlaying] = useState(false)
   const [finished, setFinished] = useState(false)
   const [topic, setTopic] = useState('')
+  // Persisted so the learner picks it once ("nghe lâu khi rảnh") instead of
+  // re-selecting every time they open the page.
+  const [minutes, setMinutes] = useState(10)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playingRef = useRef(false)
@@ -111,13 +123,13 @@ export default function ListenPage() {
     wakeLockRef.current = null
   }
 
-  function loadSession(track: string) {
+  function loadSession(track: string, mins: number) {
     setLoading(true)
     pause()
     idxRef.current = 0
     setIdx(0)
     setFinished(false)
-    getListenSession(10, track)
+    getListenSession(mins, track)
       .then((data) => {
         setItems(data)
         itemsRef.current = data
@@ -126,20 +138,31 @@ export default function ListenPage() {
       .finally(() => setLoading(false))
   }
 
+  function selectMinutes(m: number) {
+    setMinutes(m)
+    try {
+      localStorage.setItem(DURATION_KEY, String(m))
+    } catch {}
+  }
+
   // Default the topic filter to what the learner picked at onboarding, once,
   // the first time this page loads (not tied to [topic] so it doesn't fight
-  // manual chip taps afterward).
+  // manual chip taps afterward). Same for the saved session length.
   useEffect(() => {
     getMe()
       .then((u) => {
         if (u.preferred_track) setTopic(u.preferred_track)
       })
       .catch(() => {})
+    try {
+      const saved = Number(localStorage.getItem(DURATION_KEY))
+      if (saved && DURATIONS.some((d) => d.minutes === saved)) setMinutes(saved)
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    loadSession(topic)
+    loadSession(topic, minutes)
 
     // Re-acquire if the OS released it on a visibility change (e.g. brief
     // app switch) but the session is still meant to be playing.
@@ -156,7 +179,7 @@ export default function ListenPage() {
       releaseWakeLock()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topic])
+  }, [topic, minutes])
 
   async function runLoop() {
     const el = audioRef.current
@@ -301,11 +324,28 @@ export default function ListenPage() {
     </div>
   )
 
+  const durationChips = (
+    <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
+      {DURATIONS.map((d) => (
+        <button
+          key={d.minutes}
+          onClick={() => selectMinutes(d.minutes)}
+          className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+            minutes === d.minutes ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {d.label}
+        </button>
+      ))}
+    </div>
+  )
+
   if (loading) {
     return (
       <div className="px-5 pt-8">
         <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nghe liên tục</h1>
         {topicChips}
+        {durationChips}
         <div className="flex h-[40vh] items-center justify-center">
           <Loader2 className="animate-spin text-indigo-500" />
         </div>
@@ -318,6 +358,7 @@ export default function ListenPage() {
       <div className="px-5 pt-8">
         <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nghe liên tục</h1>
         {topicChips}
+        {durationChips}
         <div className="rounded-3xl bg-gray-50 border border-gray-100 p-10 text-center text-gray-400">
           <Headphones className="mx-auto mb-3 opacity-40" size={32} />
           <p className="text-sm font-bold text-gray-600">Chưa có nội dung để nghe cho chủ đề này</p>
@@ -344,6 +385,7 @@ export default function ListenPage() {
       </div>
 
       {topicChips}
+      {durationChips}
 
       <p className="text-xs text-gray-400 mb-4 leading-relaxed">
         Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, rồi nghe đoạn hội thoại thật dùng các cụm đó nối tiếp nhau thành một tình huống — không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
