@@ -185,10 +185,16 @@ export default function ListenPage() {
           continue
         }
 
+        // speechSynthesis doesn't reliably run once the screen is actually
+        // locked (confirmed on real devices — unlike <audio>, which does).
+        // Skip straight to the plain double-play instead of attempting it
+        // and eating a multi-second timeout on every single item.
+        const screenLikelyOff = document.visibilityState === 'hidden'
+
         // Never-studied content: set the scene before the bare phrase shows
         // up, so it lands somewhere ("when you're about to deploy, you
         // say...") instead of arriving as an isolated word pair.
-        if (item.example) {
+        if (item.example && !screenLikelyOff) {
           await speakExample(item.example)
           if (stale()) return
           await sleep(500)
@@ -198,7 +204,7 @@ export default function ListenPage() {
         await playRegionUntilEnd(el, item.start_ms, item.end_ms)
         if (stale()) return
 
-        if (item.meaning_vi) {
+        if (item.meaning_vi && !screenLikelyOff) {
           await sleep(400)
           if (stale()) return
           await speakVi(item.meaning_vi)
