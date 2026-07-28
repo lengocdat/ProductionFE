@@ -20,6 +20,13 @@ const DURATIONS = [
 ]
 const DURATION_KEY = 'ce_listen_minutes'
 
+const REPEATS = [
+  { count: 1, label: 'Không lặp' },
+  { count: 2, label: 'Lặp 2 lần' },
+  { count: 3, label: 'Lặp 3 lần' },
+]
+const REPEAT_KEY = 'ce_listen_repeats'
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -91,11 +98,18 @@ export default function ListenPage() {
   // Persisted so the learner picks it once ("nghe lâu khi rảnh") instead of
   // re-selecting every time they open the page.
   const [minutes, setMinutes] = useState(10)
+  // How many times each phrase plays back-to-back before moving on. Lower
+  // this to reach new content sooner instead of re-hearing the same phrase.
+  const [repeats, setRepeats] = useState(2)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playingRef = useRef(false)
   const idxRef = useRef(0)
   const itemsRef = useRef<ListenItem[]>([])
+  // The loop reads this via ref (not the `repeats` state directly) so a
+  // change mid-session takes effect on the very next item instead of only
+  // after the next start()/skip() re-closes over the state.
+  const repeatsRef = useRef(2)
   // Bumped whenever the target index changes from outside the loop's own
   // iteration (i.e. skip()); a running loop checks it after every await and
   // bails out cleanly instead of finishing the item it was mid-way through.
@@ -145,6 +159,14 @@ export default function ListenPage() {
     } catch {}
   }
 
+  function selectRepeats(n: number) {
+    setRepeats(n)
+    repeatsRef.current = n
+    try {
+      localStorage.setItem(REPEAT_KEY, String(n))
+    } catch {}
+  }
+
   // Default the topic filter to what the learner picked at onboarding, once,
   // the first time this page loads (not tied to [topic] so it doesn't fight
   // manual chip taps afterward). Same for the saved session length.
@@ -157,6 +179,11 @@ export default function ListenPage() {
     try {
       const saved = Number(localStorage.getItem(DURATION_KEY))
       if (saved && DURATIONS.some((d) => d.minutes === saved)) setMinutes(saved)
+      const savedRepeats = Number(localStorage.getItem(REPEAT_KEY))
+      if (savedRepeats && REPEATS.some((r) => r.count === savedRepeats)) {
+        setRepeats(savedRepeats)
+        repeatsRef.current = savedRepeats
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -244,8 +271,18 @@ export default function ListenPage() {
           if (stale()) return
         }
 
-        await playRegionUntilEnd(el, item.start_ms, item.end_ms)
-        if (stale()) return
+        // Extra plays beyond the first, per the learner's chosen repeat
+        // count — set to 1 to move on to new content right after the
+        // meaning instead of re-hearing the same phrase.
+        const extraPlays = Math.max(0, repeatsRef.current - 1)
+        for (let r = 0; r < extraPlays; r++) {
+          await playRegionUntilEnd(el, item.start_ms, item.end_ms)
+          if (stale()) return
+          if (r < extraPlays - 1) {
+            await sleep(REPEAT_GAP_MS)
+            if (stale()) return
+          }
+        }
 
         await sleep(NEXT_GAP_MS)
         if (stale()) return
@@ -340,12 +377,29 @@ export default function ListenPage() {
     </div>
   )
 
+  const repeatChips = (
+    <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
+      {REPEATS.map((r) => (
+        <button
+          key={r.count}
+          onClick={() => selectRepeats(r.count)}
+          className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+            repeats === r.count ? 'bg-amber-600 text-white shadow-md shadow-amber-200' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {r.label}
+        </button>
+      ))}
+    </div>
+  )
+
   if (loading) {
     return (
       <div className="px-5 pt-8">
         <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nghe liên tục</h1>
         {topicChips}
         {durationChips}
+        {repeatChips}
         <div className="flex h-[40vh] items-center justify-center">
           <Loader2 className="animate-spin text-indigo-500" />
         </div>
@@ -359,6 +413,7 @@ export default function ListenPage() {
         <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nghe liên tục</h1>
         {topicChips}
         {durationChips}
+        {repeatChips}
         <div className="rounded-3xl bg-gray-50 border border-gray-100 p-10 text-center text-gray-400">
           <Headphones className="mx-auto mb-3 opacity-40" size={32} />
           <p className="text-sm font-bold text-gray-600">Chưa có nội dung để nghe cho chủ đề này</p>
@@ -386,6 +441,7 @@ export default function ListenPage() {
 
       {topicChips}
       {durationChips}
+      {repeatChips}
 
       <p className="text-xs text-gray-400 mb-4 leading-relaxed">
         Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, rồi nghe đoạn hội thoại thật dùng các cụm đó nối tiếp nhau thành một tình huống — không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
