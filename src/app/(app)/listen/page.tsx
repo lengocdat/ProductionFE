@@ -152,7 +152,25 @@ export default function ListenPage() {
       .finally(() => setLoading(false))
   }
 
+  // Switching topic/duration reloads the queue from scratch (different
+  // content pool), which throws away progress in the current session. A
+  // stray tap on these chips mid-session shouldn't silently cost the
+  // learner everything they've already listened to — confirm first once
+  // there's actually something to lose.
+  function confirmRestart(message: string) {
+    if (idxRef.current === 0 && !playingRef.current) return true
+    return window.confirm(message)
+  }
+
+  function changeTopic(t: string) {
+    if (t === topic) return
+    if (!confirmRestart('Đổi chủ đề sẽ bắt đầu lại phiên nghe từ đầu. Tiếp tục?')) return
+    setTopic(t)
+  }
+
   function selectMinutes(m: number) {
+    if (m === minutes) return
+    if (!confirmRestart('Đổi thời lượng sẽ bắt đầu lại phiên nghe từ đầu. Tiếp tục?')) return
     setMinutes(m)
     try {
       localStorage.setItem(DURATION_KEY, String(m))
@@ -340,7 +358,7 @@ export default function ListenPage() {
   const topicChips = (
     <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
       <button
-        onClick={() => setTopic('')}
+        onClick={() => changeTopic('')}
         className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-bold transition-all ${
           topic === '' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-600'
         }`}
@@ -350,7 +368,7 @@ export default function ListenPage() {
       {TRACKS.map((t) => (
         <button
           key={t.key}
-          onClick={() => setTopic(t.key)}
+          onClick={() => changeTopic(t.key)}
           className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-bold transition-all ${
             topic === t.key ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-600'
           }`}
