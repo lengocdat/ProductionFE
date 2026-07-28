@@ -150,6 +150,12 @@ export interface ListenItem {
   lesson_title: string
   text: string
   meaning_vi?: string
+  // Pre-recorded audio region for meaning_vi, when the source lesson has one —
+  // play via playRegionUntilEnd() instead of speechSynthesis, which doesn't
+  // run once the phone's screen is locked. Absent on older lessons not yet
+  // regenerated with the Vietnamese narration track.
+  meaning_start_ms?: number
+  meaning_end_ms?: number
   example?: string
   audio_url?: string
   start_ms: number

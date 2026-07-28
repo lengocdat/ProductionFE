@@ -204,7 +204,14 @@ export default function ListenPage() {
         await playRegionUntilEnd(el, item.start_ms, item.end_ms)
         if (stale()) return
 
-        if (item.meaning_vi && !screenLikelyOff) {
+        if (item.meaning_start_ms != null && item.meaning_end_ms != null) {
+          // Pre-recorded real audio, in the same lesson.mp3 — plays reliably
+          // even with the screen locked, unlike speechSynthesis below.
+          await sleep(400)
+          if (stale()) return
+          await playRegionUntilEnd(el, item.meaning_start_ms, item.meaning_end_ms)
+          if (stale()) return
+        } else if (item.meaning_vi && !screenLikelyOff) {
           await sleep(400)
           if (stale()) return
           await speakVi(item.meaning_vi)
