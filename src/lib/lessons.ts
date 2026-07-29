@@ -174,11 +174,32 @@ export interface ListenItem {
   start_ms: number
   end_ms: number
   source: 'review' | 'upcoming' | 'preview' | 'dialogue'
+  // Resolved track this item's lesson belongs to — only set for 'preview'
+  // items. Send it back in saveListenProgress so progress is keyed the same
+  // way the backend resolved it (which can differ from the raw track filter
+  // when that was '' / "All").
+  track?: string
 }
 
 export function getListenSession(minutes = 10, track = '') {
   const q = track ? `&track=${encodeURIComponent(track)}` : ''
   return apiFetch<{ items: ListenItem[] }>(`/listen-session?minutes=${minutes}${q}`).then((d) => d.items || [])
+}
+
+// Records the last "preview" (never-studied) chunk the learner heard, so the
+// next continuous-listening session resumes past it instead of restarting.
+export function saveListenProgress(track: string, chunkId: number) {
+  return apiFetch<{ ok: boolean }>('/listen-session/progress', {
+    method: 'POST',
+    json: { track, chunk_id: chunkId },
+  })
+}
+
+// Clears the saved preview position — the explicit "listen from the
+// beginning" action.
+export function restartListenPreview(track: string) {
+  const q = track ? `?track=${encodeURIComponent(track)}` : ''
+  return apiFetch<{ ok: boolean }>(`/listen-session/restart${q}`, { method: 'POST' })
 }
 
 export interface RoadmapStage {

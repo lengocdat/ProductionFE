@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, SkipForward, Loader2, Headphones, PartyPopper, Sparkles, Repeat, MessagesSquare } from 'lucide-react'
-import { getListenSession, playRegionUntilEnd, assetUrl, TRACKS, type ListenItem } from '@/lib/lessons'
+import {
+  getListenSession,
+  saveListenProgress,
+  restartListenPreview,
+  playRegionUntilEnd,
+  assetUrl,
+  TRACKS,
+  type ListenItem,
+} from '@/lib/lessons'
 import { getMe } from '@/lib/auth'
 import { trackEvent } from '@/lib/analytics'
 
@@ -177,6 +185,15 @@ export default function ListenPage() {
     } catch {}
   }
 
+  // Clears the saved position in the vocabulary queue and reloads — the
+  // explicit opt-out from the default "resume where I left off" behavior.
+  function restartFromBeginning() {
+    if (!window.confirm('Nghe lại từ đầu sẽ xoá tiến độ đã nghe qua và bắt đầu lại toàn bộ từ vựng. Tiếp tục?')) return
+    restartListenPreview(topic)
+      .catch(() => {})
+      .finally(() => loadSession(topic, minutes))
+  }
+
   function selectRepeats(n: number) {
     setRepeats(n)
     repeatsRef.current = n
@@ -304,6 +321,12 @@ export default function ListenPage() {
 
         await sleep(NEXT_GAP_MS)
         if (stale()) return
+
+        // Fire-and-forget: only "preview" (never-studied) items matter for
+        // resuming — review/upcoming are already tracked via SRS due dates.
+        if (item.source === 'preview') {
+          saveListenProgress(item.track ?? topic, item.sentence_id).catch(() => {})
+        }
       }
 
       idxRef.current += 1
@@ -461,9 +484,12 @@ export default function ListenPage() {
       {durationChips}
       {repeatChips}
 
-      <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, rồi nghe đoạn hội thoại thật dùng các cụm đó nối tiếp nhau thành một tình huống — không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt.
+      <p className="text-xs text-gray-400 mb-2 leading-relaxed">
+        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, rồi nghe đoạn hội thoại thật dùng các cụm đó nối tiếp nhau thành một tình huống — không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt. Từ vựng mới sẽ tự động nối tiếp từ chỗ bạn nghe lần trước, không lặp lại từ đầu.
       </p>
+      <button onClick={restartFromBeginning} className="mb-4 text-xs font-semibold text-indigo-500 underline underline-offset-2">
+        Nghe lại từ đầu toàn bộ từ vựng
+      </button>
 
       {card.audio_url && <audio ref={audioRef} preload="auto" />}
 
