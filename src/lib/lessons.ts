@@ -113,6 +113,16 @@ export function completeLesson(slug: string) {
   return apiFetch<{ message: string; completed_count: number }>(`/lessons/${slug}/complete`, { method: 'POST' })
 }
 
+export interface GrammarIssue {
+  message: string
+  context: string
+  offset: number
+  length: number
+  replacements?: string[]
+  rule_id: string
+  category: string
+}
+
 export interface SpeakAttempt {
   id: number
   transcript: string
@@ -121,6 +131,9 @@ export interface SpeakAttempt {
   chunks_used: number
   chunks_total: number
   created_at: string
+  // Populated from a self-hosted LanguageTool check of the transcript.
+  // Absent (not empty array) if the checker was unreachable server-side.
+  grammar_issues?: GrammarIssue[]
 }
 
 export function saveSpeakAttempt(

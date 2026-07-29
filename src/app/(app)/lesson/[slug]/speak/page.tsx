@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Mic, Square, Play, Check, Loader2, CheckCircle2, Circle, Volume2, Sparkles } from 'lucide-react'
+import { Mic, Square, Play, Check, Loader2, CheckCircle2, Circle, Volume2, Sparkles, AlertCircle, PartyPopper } from 'lucide-react'
 import { toast } from 'sonner'
-import { getLesson, completeLesson, saveSpeakAttempt, type Lesson } from '@/lib/lessons'
+import { getLesson, completeLesson, saveSpeakAttempt, type Lesson, type GrammarIssue } from '@/lib/lessons'
 import { trackEvent } from '@/lib/analytics'
 import { getSpeechRecognition, type SpeechRecognitionAlt } from '@/lib/speech'
 import DonateCard from '@/components/DonateCard'
@@ -25,12 +25,15 @@ export default function SpeakPage() {
   const [transcript, setTranscript] = useState('')
   const [durationSec, setDurationSec] = useState(0)
   const [speechSupported, setSpeechSupported] = useState(true)
+  const [checkingGrammar, setCheckingGrammar] = useState(false)
+  const [grammarIssues, setGrammarIssues] = useState<GrammarIssue[] | null>(null)
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const recognitionRef = useRef<SpeechRecognitionAlt | null>(null)
   const transcriptRef = useRef('')
   const startedAtRef = useRef(0)
+  const attemptSavedRef = useRef(false)
 
   useEffect(() => {
     getLesson(slug)
@@ -50,16 +53,46 @@ export default function SpeakPage() {
       const rec = new MediaRecorder(stream)
       chunksRef.current = []
       rec.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data)
-      rec.onstop = () => {
+      rec.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        const dur = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000))
+        const text = transcriptRef.current.trim()
         setAudioURL(URL.createObjectURL(blob))
-        setDurationSec(Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)))
-        setTranscript(transcriptRef.current.trim())
+        setDurationSec(dur)
+        setTranscript(text)
         setRecState('recorded')
         stream.getTracks().forEach((t) => t.stop())
+
+        if (speechSupported && text) {
+          const wc = text.split(/\s+/).filter(Boolean).length
+          const usedCount = (lesson?.chunks || []).filter((c) => text.toLowerCase().includes(c.phrase.toLowerCase())).length
+          setCheckingGrammar(true)
+          try {
+            const attempt = await saveSpeakAttempt(slug, {
+              transcript: text,
+              duration_sec: dur,
+              word_count: wc,
+              chunks_used: usedCount,
+            })
+            attemptSavedRef.current = true
+            setGrammarIssues(attempt.grammar_issues ?? [])
+            trackEvent('speak_attempt', {
+              lesson_slug: slug,
+              word_count: wc,
+              chunks_used: usedCount,
+              chunks_total: (lesson?.chunks || []).length,
+            })
+          } catch {
+            // Fall back to saving in finish() — don't block the recording UI over it.
+          } finally {
+            setCheckingGrammar(false)
+          }
+        }
       }
 
       transcriptRef.current = ''
+      attemptSavedRef.current = false
+      setGrammarIssues(null)
       setLiveCaption('')
       setTranscript('')
       const Recognition = getSpeechRecognition()
@@ -104,6 +137,8 @@ export default function SpeakPage() {
     setAudioURL(null)
     setTranscript('')
     setLiveCaption('')
+    setGrammarIssues(null)
+    attemptSavedRef.current = false
   }
 
   function speak(text: string) {
@@ -122,7 +157,10 @@ export default function SpeakPage() {
   async function finish() {
     setFinishing(true)
     try {
-      if (speechSupported) {
+      // Normally already saved right after recording (so grammar feedback can
+      // show before the learner finishes) — this is just a fallback if that
+      // earlier save failed (e.g. a network blip).
+      if (speechSupported && !attemptSavedRef.current) {
         await saveSpeakAttempt(slug, {
           transcript,
           duration_sec: durationSec,
@@ -248,6 +286,42 @@ export default function SpeakPage() {
                 })}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {recState === 'recorded' && speechSupported && transcript && (
+        <div className="mt-6 rounded-3xl bg-gray-50 border border-gray-100 p-5">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Nhận xét ngữ pháp</p>
+          {checkingGrammar ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <Loader2 size={14} className="animate-spin" /> Đang kiểm tra...
+            </div>
+          ) : grammarIssues === null ? (
+            <p className="text-sm text-gray-400">Không kiểm tra được ngay lúc này — bạn vẫn hoàn thành bài học bình thường.</p>
+          ) : grammarIssues.length === 0 ? (
+            <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+              <PartyPopper size={16} /> Không phát hiện lỗi ngữ pháp nào!
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {grammarIssues.map((issue, i) => (
+                <div key={i} className="flex gap-2.5 text-sm">
+                  <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-gray-700">
+                      &ldquo;{issue.context}&rdquo;
+                    </p>
+                    <p className="text-gray-500 mt-0.5">{issue.message}</p>
+                    {issue.replacements && issue.replacements.length > 0 && (
+                      <p className="text-xs text-indigo-500 mt-1">
+                        Gợi ý: {issue.replacements.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
