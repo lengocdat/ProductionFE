@@ -86,6 +86,7 @@ export const TRACKS = [
   { key: 'product', label: 'Product' },
   { key: 'meeting', label: 'Meeting' },
   { key: 'speaking', label: 'Speaking' },
+  { key: 'roleplay', label: 'Role-play' },
 ] as const
 
 export const CEFR_LEVELS = [
