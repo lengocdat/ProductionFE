@@ -15,6 +15,7 @@ export default function LessonPage() {
   const [showTranscript, setShowTranscript] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [activeIdx, setActiveIdx] = useState<number | null>(null)
+  const [currentTime, setCurrentTime] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const cancelRef = useRef<(() => void) | null>(null)
 
@@ -36,12 +37,14 @@ export default function LessonPage() {
       el.pause()
     } else {
       el.currentTime = 0
+      setCurrentTime(0)
       el.play().catch(() => {})
     }
   }
 
   function onEnded() {
     setPlaying(false)
+    setCurrentTime(0)
     setListens((n) => {
       const next = n + 1
       if (next >= 3) setShowTranscript(true)
@@ -88,6 +91,7 @@ export default function LessonPage() {
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onEnded={onEnded}
+          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         />
       )}
 
@@ -99,12 +103,28 @@ export default function LessonPage() {
         >
           {playing && activeIdx === null ? <Pause size={34} fill="currentColor" /> : <Play size={34} fill="currentColor" className="ml-1" />}
         </button>
+
+        {activeIdx === null && (
+          <div className="mx-auto mt-4 h-1.5 w-full max-w-xs rounded-full bg-white/25 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-white transition-[width] duration-150"
+              style={{
+                width: `${lesson.duration_sec ? Math.min(100, (currentTime / lesson.duration_sec) * 100) : 0}%`,
+              }}
+            />
+          </div>
+        )}
+
         <p className="mt-4 text-sm text-indigo-100">
           {listens < 3
             ? `Nghe lần ${listens + 1}/3 — chưa có chữ, chỉ tập trung nghe`
             : 'Đã nghe đủ 3 lần'}
         </p>
-        <p className="text-xs text-indigo-200 mt-1">{mmss(lesson.duration_sec)}</p>
+        <p className="text-xs text-indigo-200 mt-1">
+          {activeIdx === null && (playing || currentTime > 0)
+            ? `${mmss(Math.floor(currentTime))} / ${mmss(lesson.duration_sec)}`
+            : mmss(lesson.duration_sec)}
+        </p>
       </div>
 
       {/* Reveal transcript */}
