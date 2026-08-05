@@ -43,9 +43,13 @@ function sleep(ms: number) {
 // (as opposed to just dimmed — Wake Lock can't and shouldn't stop a user
 // from pressing the power button). Unlike <audio>, it isn't tied into the
 // browser's background-media-playback allowance, so onend/onerror can
-// simply never fire. A hard timeout guarantees the session keeps moving
-// either way — worst case the Vietnamese narration gets silently skipped
-// while the phone's locked, instead of freezing the whole queue on it.
+// simply never fire. The 7s hard timeout below is only a last-resort safety
+// net for that silent-failure case — it is NOT the normal exit path, because
+// waiting it out means up to 7s of dead air on every item that hits it. The
+// visibilitychange listener is the real fix: the moment the tab backgrounds
+// mid-utterance (the learner switches to another app — exactly the "listen
+// while doing something else" use case this whole page exists for), we
+// cancel and resolve immediately instead of sitting through the timeout.
 function speak(text: string, lang: string, timeoutMs = 7000): Promise<void> {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window)) {
@@ -56,8 +60,18 @@ function speak(text: string, lang: string, timeoutMs = 7000): Promise<void> {
     const finish = () => {
       if (settled) return
       settled = true
+      document.removeEventListener('visibilitychange', onHidden)
       resolve()
     }
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        try {
+          speechSynthesis.cancel()
+        } catch {}
+        finish()
+      }
+    }
+    document.addEventListener('visibilitychange', onHidden)
     const u = new SpeechSynthesisUtterance(text)
     u.lang = lang
     u.onend = finish

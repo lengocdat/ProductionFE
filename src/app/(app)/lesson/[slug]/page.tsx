@@ -20,6 +20,19 @@ export default function LessonPage() {
   const cancelRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
+    // Next.js reuses this component across [slug] navigations (e.g. back/
+    // forward between two lesson pages) instead of remounting it — without
+    // resetting here, the previous lesson's progress/time briefly shows
+    // against the newly-loaded lesson's duration before the new audio's
+    // first timeupdate fires.
+    cancelRef.current?.()
+    setLesson(null)
+    setLoading(true)
+    setPlaying(false)
+    setActiveIdx(null)
+    setCurrentTime(0)
+    setListens(0)
+    setShowTranscript(false)
     getLesson(slug)
       .then(setLesson)
       .catch(() => {})
