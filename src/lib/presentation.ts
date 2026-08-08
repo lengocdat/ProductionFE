@@ -238,3 +238,66 @@ export function updatePresentationDeck(id: number, title: string, moduleIds: num
 export function deletePresentationDeck(id: number) {
   return apiFetch<{ ok: boolean }>(`/presentation/decks/${id}`, { method: 'DELETE' })
 }
+
+// Order modules within a phase the same way the roadmap browser groups them:
+// Toolkits, then Lessons, then Simulators, each by sort_order.
+const TYPE_ORDER: ModuleType[] = ['toolkit', 'lesson', 'simulator']
+
+function orderedPhaseModules(phase: PresentationPhase): PresentationModule[] {
+  return TYPE_ORDER.flatMap((t) =>
+    phase.modules.filter((m) => m.module_type === t).sort((a, b) => a.sort_order - b.sort_order)
+  )
+}
+
+// Flattens every phase (in phase order) into one master sequence, in the
+// same Toolkits-then-Lessons-then-Simulators order used everywhere else —
+// this is "what's next" after finishing any given module.
+function masterModuleSequence(phases: PresentationPhase[]): PresentationModule[] {
+  return [...phases]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .flatMap((p) => orderedPhaseModules(p))
+    .filter((m) => m.has_content)
+}
+
+export interface AdjacentModules {
+  prev: PresentationModule | null
+  next: PresentationModule | null
+  phase: PresentationPhase | null
+}
+
+// Finds the module immediately before/after the given slug across the whole
+// roadmap, so a learner always has a clear "what's next" after finishing one.
+export function getAdjacentModules(phases: PresentationPhase[], currentSlug: string): AdjacentModules {
+  const seq = masterModuleSequence(phases)
+  const idx = seq.findIndex((m) => m.slug === currentSlug)
+  const phase = phases.find((p) => p.modules.some((m) => m.slug === currentSlug)) || null
+  if (idx === -1) return { prev: null, next: null, phase }
+  return {
+    prev: idx > 0 ? seq[idx - 1] : null,
+    next: idx < seq.length - 1 ? seq[idx + 1] : null,
+    phase,
+  }
+}
+
+export interface CuratedDeck {
+  phaseSlug: string
+  phaseTitle: string
+  moduleIds: number[]
+  moduleCount: number
+}
+
+// One pre-built deck per phase that actually has lessons — its full lesson
+// sequence in order, ready to use immediately without manual assembly.
+// "rap sẵn cho user, cho customize nếu thích": createPresentationDeck() with
+// this moduleIds list gives an instant usable deck the user can then edit.
+export function getCuratedDecks(phases: PresentationPhase[]): CuratedDeck[] {
+  return [...phases]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((p) => {
+      const lessons = p.modules
+        .filter((m) => m.module_type === 'lesson' && m.has_content)
+        .sort((a, b) => a.sort_order - b.sort_order)
+      return { phaseSlug: p.slug, phaseTitle: p.title, moduleIds: lessons.map((m) => m.id), moduleCount: lessons.length }
+    })
+    .filter((d) => d.moduleCount > 0)
+}

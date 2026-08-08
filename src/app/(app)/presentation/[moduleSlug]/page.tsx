@@ -4,8 +4,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, PlusCircle, Sparkles, Clock, ArrowDown, CheckSquare, Volume2 } from 'lucide-react'
-import { getPresentationModule, playRegion, type PresentationModule, type VocabularyItem, type DrillLine } from '@/lib/presentation'
+import { ArrowLeft, ArrowRight, PlusCircle, Sparkles, Clock, ArrowDown, CheckSquare, Volume2, PartyPopper } from 'lucide-react'
+import {
+  getPresentationModule,
+  listPresentationPhases,
+  getAdjacentModules,
+  playRegion,
+  type PresentationModule,
+  type PresentationPhase,
+  type VocabularyItem,
+  type DrillLine,
+} from '@/lib/presentation'
 import { addToDraft, getDraftModuleIds } from '@/lib/presentationDraft'
 
 // DrillLineRow renders one shadowable phrase with a play button when audio
@@ -68,6 +77,7 @@ export default function PresentationModulePage() {
   const params = useParams<{ moduleSlug: string }>()
   const router = useRouter()
   const [module, setModule] = useState<PresentationModule | null>(null)
+  const [phases, setPhases] = useState<PresentationPhase[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [draftCount, setDraftCount] = useState(0)
@@ -85,10 +95,15 @@ export default function PresentationModulePage() {
       .then(setModule)
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
+    listPresentationPhases().then(setPhases).catch(() => setPhases([]))
     setDraftCount(getDraftModuleIds().length)
   }, [params.moduleSlug])
 
   const vocabGroups = useMemo(() => groupVocabulary(module?.vocabulary || []), [module])
+  const { next, phase } = useMemo(
+    () => (phases.length > 0 ? getAdjacentModules(phases, params.moduleSlug) : { next: null, prev: null, phase: null }),
+    [phases, params.moduleSlug]
+  )
 
   if (loading) {
     return (
@@ -116,7 +131,7 @@ export default function PresentationModulePage() {
   }
 
   return (
-    <div className="px-5 pt-6 pb-24 max-w-xl mx-auto">
+    <div className="px-5 pt-6 pb-40 max-w-xl mx-auto">
       <button
         onClick={() => router.back()}
         className="mb-4 flex items-center gap-1 text-xs font-bold text-gray-500 active:text-gray-700"
@@ -552,23 +567,44 @@ export default function PresentationModulePage() {
       )}
 
       {module.has_content && (
-        <div className="fixed bottom-20 left-0 right-0 px-5 max-w-xl mx-auto">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleAddToDraft}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-amber-200 active:scale-[0.98] transition-all"
+        <div className="fixed bottom-20 left-0 right-0 px-5 max-w-xl mx-auto space-y-2">
+          {/* Primary CTA — always tells the learner exactly what to tap next. */}
+          {next ? (
+            <Link
+              href={`/presentation/${next.slug}`}
+              className="flex items-center justify-between gap-2 rounded-2xl bg-amber-500 py-3.5 px-5 text-sm font-bold text-white shadow-lg shadow-amber-200 active:scale-[0.98] transition-all"
             >
-              <PlusCircle size={16} /> Thêm vào Deck
-            </button>
-            {draftCount > 0 && (
-              <Link
-                href="/presentation/library/new"
-                className="flex items-center gap-1.5 rounded-2xl bg-white border border-amber-200 px-4 py-3.5 text-xs font-bold text-amber-700 shadow-sm active:scale-[0.98] transition-all"
+              <span className="truncate">Tiếp theo: {next.title}</span>
+              <ArrowRight size={16} className="shrink-0" />
+            </Link>
+          ) : (
+            <Link
+              href="/presentation/library"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 px-5 text-sm font-bold text-white shadow-lg shadow-amber-200 active:scale-[0.98] transition-all"
+            >
+              <PartyPopper size={16} /> Đã xong toàn bộ lộ trình — Xem thư viện
+            </Link>
+          )}
+
+          {/* Secondary: only lesson-type modules can go into a deck script. */}
+          {module.module_type === 'lesson' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAddToDraft}
+                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-white border border-amber-200 py-2.5 text-xs font-bold text-amber-700 shadow-sm active:scale-[0.98] transition-all"
               >
-                <Sparkles size={14} /> {draftCount}
-              </Link>
-            )}
-          </div>
+                <PlusCircle size={14} /> Thêm vào Deck
+              </button>
+              {draftCount > 0 && (
+                <Link
+                  href="/presentation/library/new"
+                  className="flex items-center gap-1.5 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2.5 text-xs font-bold text-amber-700 shadow-sm active:scale-[0.98] transition-all"
+                >
+                  <Sparkles size={14} /> {draftCount}
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
