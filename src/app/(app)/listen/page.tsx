@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, SkipForward, Loader2, Headphones, PartyPopper, Sparkles, Repeat, MessagesSquare } from 'lucide-react'
+import { Play, Pause, SkipForward, Loader2, Headphones, PartyPopper, Sparkles, Repeat, MessagesSquare, SlidersHorizontal, ChevronUp, ChevronDown } from 'lucide-react'
 import {
   getListenSession,
   saveListenProgress,
@@ -123,6 +123,10 @@ export default function ListenPage() {
   // How many times each phrase plays back-to-back before moving on. Lower
   // this to reach new content sooner instead of re-hearing the same phrase.
   const [repeats, setRepeats] = useState(2)
+  // Settings (topic/duration/repeat) start collapsed so Play is the first
+  // thing a learner sees and taps — this is a "just hit play" feature, not
+  // a configuration screen. Expands on demand for anyone who wants to tune it.
+  const [showSettings, setShowSettings] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playingRef = useRef(false)
@@ -448,13 +452,34 @@ export default function ListenPage() {
     </div>
   )
 
+  const settingsToggle = (
+    <button
+      onClick={() => setShowSettings((v) => !v)}
+      className="mb-4 flex items-center gap-1.5 text-xs font-bold text-gray-400"
+    >
+      <SlidersHorizontal size={13} /> Tuỳ chỉnh
+      {showSettings ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+    </button>
+  )
+
+  const settingsPanel = (
+    <div className="mb-2">
+      {topicChips}
+      {durationChips}
+      {repeatChips}
+      <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+        Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, rồi nghe đoạn hội thoại thật dùng các cụm đó nối tiếp nhau thành một tình huống — không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt. Từ vựng mới sẽ tự động nối tiếp từ chỗ bạn nghe lần trước, không lặp lại từ đầu.
+      </p>
+      <button onClick={restartFromBeginning} className="mb-4 text-xs font-semibold text-indigo-500 underline underline-offset-2">
+        Nghe lại từ đầu toàn bộ từ vựng
+      </button>
+    </div>
+  )
+
   if (loading) {
     return (
       <div className="px-5 pt-8">
         <h1 className="text-xl font-extrabold text-gray-900 mb-6">Nghe liên tục</h1>
-        {topicChips}
-        {durationChips}
-        {repeatChips}
         <div className="flex h-[40vh] items-center justify-center">
           <Loader2 className="animate-spin text-indigo-500" />
         </div>
@@ -494,16 +519,12 @@ export default function ListenPage() {
         <span className="text-sm font-medium text-gray-400">{Math.min(idx + 1, items.length)}/{items.length}</span>
       </div>
 
-      {topicChips}
-      {durationChips}
-      {repeatChips}
-
-      <p className="text-xs text-gray-400 mb-2 leading-relaxed">
-        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình. Ưu tiên câu cần ôn trước; cụm từ mới sẽ có tình huống ví dụ + nghĩa tiếng Việt xen giữa, rồi nghe đoạn hội thoại thật dùng các cụm đó nối tiếp nhau thành một tình huống — không phát trần trụi để tránh &quot;vịt nghe sấm&quot;. Màn hình sẽ giữ sáng khi đang phát để âm thanh không bị ngắt. Từ vựng mới sẽ tự động nối tiếp từ chỗ bạn nghe lần trước, không lặp lại từ đầu.
+      <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+        Vừa làm việc khác vừa nghe được — không cần nhìn màn hình.
       </p>
-      <button onClick={restartFromBeginning} className="mb-4 text-xs font-semibold text-indigo-500 underline underline-offset-2">
-        Nghe lại từ đầu toàn bộ từ vựng
-      </button>
+
+      {settingsToggle}
+      {showSettings && settingsPanel}
 
       {card.audio_url && <audio ref={audioRef} preload="auto" />}
 

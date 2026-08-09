@@ -146,6 +146,10 @@ export interface PresentationModule {
   simulator_categories?: string[]
   simulator_difficulty?: SimulatorDifficulty
   has_content: boolean
+  // True once the requesting user has marked this module done — separate
+  // from has_content (which just means the content itself exists). false
+  // for a logged-out request, same as has_content would be for stub content.
+  completed: boolean
   is_published: boolean
   created_at: string
 }
@@ -237,6 +241,14 @@ export function updatePresentationDeck(id: number, title: string, moduleIds: num
 
 export function deletePresentationDeck(id: number) {
   return apiFetch<{ ok: boolean }>(`/presentation/decks/${id}`, { method: 'DELETE' })
+}
+
+export function markPresentationModuleComplete(slug: string) {
+  return apiFetch<{ ok: boolean }>(`/presentation/modules/${slug}/complete`, { method: 'POST' })
+}
+
+export function unmarkPresentationModuleComplete(slug: string) {
+  return apiFetch<{ ok: boolean }>(`/presentation/modules/${slug}/complete`, { method: 'DELETE' })
 }
 
 // Order modules within a phase the same way the roadmap browser groups them:

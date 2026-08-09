@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronRight, Library, Lock, CheckCircle2, Presentation } from 'lucide-react'
+import { ChevronDown, ChevronRight, Library, Lock, CheckCircle2, Circle, Presentation } from 'lucide-react'
 import { listPresentationPhases, type PresentationPhase, type PresentationModule, type ModuleType } from '@/lib/presentation'
 
 const TYPE_GROUPS: { type: ModuleType; label: string; emoji: string }[] = [
@@ -65,6 +65,7 @@ export default function PresentationRoadmapPage() {
           {phases.map((phase) => {
             const isOpen = expanded === phase.slug
             const authoredCount = phase.modules.filter((m) => m.has_content).length
+            const completedCount = phase.modules.filter((m) => m.completed).length
             return (
               <div key={phase.slug} className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
                 <button
@@ -77,7 +78,9 @@ export default function PresentationRoadmapPage() {
                       <p className="text-xs text-gray-400 truncate mt-0.5">{phase.description}</p>
                     )}
                     <p className="text-[11px] font-semibold text-amber-600 mt-1">
-                      {authoredCount}/{phase.modules.length} module đã có nội dung
+                      {authoredCount > 0
+                        ? `${completedCount}/${authoredCount} module đã hoàn thành`
+                        : `${authoredCount}/${phase.modules.length} module đã có nội dung`}
                     </p>
                   </div>
                   {isOpen ? (
@@ -97,7 +100,7 @@ export default function PresentationRoadmapPage() {
                           </p>
                         )}
                         <div className="space-y-1">
-                          {group.modules.map((m) => (
+                          {group.modules.map((m, i) => (
                             <Link
                               key={m.slug}
                               href={`/presentation/${m.slug}`}
@@ -110,13 +113,15 @@ export default function PresentationRoadmapPage() {
                                   m.has_content ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-400'
                                 }`}
                               >
-                                {m.sort_order}
+                                {i + 1}
                               </span>
                               <p className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800">{m.title}</p>
-                              {m.has_content ? (
+                              {!m.has_content ? (
+                                <Lock size={14} className="text-gray-300 shrink-0" />
+                              ) : m.completed ? (
                                 <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
                               ) : (
-                                <Lock size={14} className="text-gray-300 shrink-0" />
+                                <Circle size={14} className="text-gray-200 shrink-0" />
                               )}
                             </Link>
                           ))}

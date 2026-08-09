@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, ArrowRight, PlusCircle, Sparkles, Clock, ArrowDown, CheckSquare, Volume2, PartyPopper } from 'lucide-react'
+import { ArrowLeft, ArrowRight, PlusCircle, Sparkles, Clock, ArrowDown, CheckSquare, Volume2, PartyPopper, CheckCircle2, Circle } from 'lucide-react'
 import {
   getPresentationModule,
   listPresentationPhases,
   getAdjacentModules,
+  markPresentationModuleComplete,
+  unmarkPresentationModuleComplete,
   playRegion,
   type PresentationModule,
   type PresentationPhase,
@@ -43,9 +45,9 @@ function DrillLineRow({
   )
 }
 
-function Section({ emoji, title, children }: { emoji: string; title: string; children: React.ReactNode }) {
+function Section({ id, emoji, title, children }: { id: string; emoji: string; title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-5">
+    <div id={id} className="mb-5 scroll-mt-16">
       <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
         <span>{emoji}</span> {title}
       </p>
@@ -105,6 +107,55 @@ export default function PresentationModulePage() {
     [phases, params.moduleSlug]
   )
 
+  // Quick-nav chips for whichever sections this specific module actually
+  // has — the template has 20+ possible sections and no single module uses
+  // them all, so this only ever lists what's really on the page.
+  const sectionNav = useMemo(() => {
+    if (!module) return []
+    const all: { id: string; emoji: string; label: string; show: boolean }[] = [
+      { id: 'goal', emoji: '🎯', label: 'Goal', show: !!module.goal },
+      { id: 'scenario', emoji: '🎬', label: 'Scenario', show: !!module.scenario },
+      { id: 'roles', emoji: '🎭', label: 'Roles', show: !!(module.ai_role || module.user_role) },
+      { id: 'steps', emoji: '💬', label: 'Steps', show: !!module.simulator_steps?.length },
+      { id: 'thinking', emoji: '🧠', label: 'Thinking', show: !!module.thinking_in_english },
+      { id: 'patterns', emoji: '🧩', label: 'Patterns', show: !!module.blocks?.length },
+      { id: 'structure', emoji: '🧭', label: 'Cấu trúc', show: !!module.formula_steps?.length },
+      { id: 'timing', emoji: '⏱', label: 'Timing', show: !!module.timing_table?.length },
+      { id: 'examples', emoji: '🎤', label: 'Examples', show: !!module.worked_examples?.length },
+      { id: 'transitions', emoji: '🔄', label: 'Transitions', show: !!module.transitions?.length },
+      { id: 'vocabulary', emoji: '📚', label: 'Vocab', show: !!module.vocabulary?.length },
+      { id: 'native-tip', emoji: '💬', label: 'Native Tip', show: !!module.native_tips?.length },
+      { id: 'mistakes', emoji: '❌', label: 'Mistakes', show: !!module.common_mistakes?.length },
+      { id: 'drill', emoji: '🗣', label: 'Drill', show: !!module.speaking_drill?.length },
+      { id: 'challenge', emoji: '🎯', label: 'Challenge', show: !!module.presentation_challenge },
+      { id: 'homework', emoji: '📝', label: 'Homework', show: !!module.homework },
+      { id: 'ai-prompt', emoji: '🤖', label: 'AI Prompt', show: !!module.ai_prompt },
+      { id: 'checklist', emoji: '✅', label: 'Checklist', show: !!module.completion_checklist?.length },
+    ]
+    return all.filter((s) => s.show)
+  }, [module])
+
+  const [togglingComplete, setTogglingComplete] = useState(false)
+  const handleToggleComplete = async () => {
+    if (!module || togglingComplete) return
+    const nextCompleted = !module.completed
+    setTogglingComplete(true)
+    setModule({ ...module, completed: nextCompleted })
+    try {
+      if (nextCompleted) await markPresentationModuleComplete(module.slug)
+      else await unmarkPresentationModuleComplete(module.slug)
+    } catch {
+      setModule((m) => (m ? { ...m, completed: !nextCompleted } : m))
+      toast.error('Không lưu được, thử lại nhé')
+    } finally {
+      setTogglingComplete(false)
+    }
+  }
+
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   if (loading) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center gap-3">
@@ -141,7 +192,37 @@ export default function PresentationModulePage() {
 
       {module.audio_url && <audio ref={audioRef} src={module.audio_url} preload="none" />}
 
-      <h1 className="text-2xl font-extrabold text-gray-900 mb-1">{module.title}</h1>
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h1 className="text-2xl font-extrabold text-gray-900">{module.title}</h1>
+        {module.has_content && (
+          <button
+            onClick={handleToggleComplete}
+            disabled={togglingComplete}
+            className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-95 disabled:opacity-60 ${
+              module.completed
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                : 'bg-gray-100 border border-gray-200 text-gray-500'
+            }`}
+          >
+            {module.completed ? <CheckCircle2 size={13} /> : <Circle size={13} />}
+            {module.completed ? 'Đã học xong' : 'Đánh dấu xong'}
+          </button>
+        )}
+      </div>
+
+      {sectionNav.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1 mb-5 scrollbar-none -mx-5 px-5">
+          {sectionNav.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => scrollToSection(s.id)}
+              className="shrink-0 flex items-center gap-1 rounded-xl bg-white border border-gray-100 px-2.5 py-1.5 text-[11px] font-semibold text-gray-500 active:bg-gray-50 shadow-sm"
+            >
+              <span>{s.emoji}</span> {s.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!module.has_content ? (
         <div className="mt-6 rounded-3xl bg-gray-50 border border-gray-100 p-8 text-center text-gray-400">
@@ -152,7 +233,7 @@ export default function PresentationModulePage() {
       ) : (
         <>
           {module.goal && (
-            <Section emoji="🎯" title="Goal">
+            <Section id="goal" emoji="🎯" title="Goal">
               <p className="text-sm text-gray-700 leading-relaxed rounded-2xl bg-amber-50 border border-amber-100 p-4">
                 {module.goal}
               </p>
@@ -160,7 +241,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.scenario && (
-            <Section emoji="🎬" title="Scenario">
+            <Section id="scenario" emoji="🎬" title="Scenario">
               <p className="text-sm text-gray-700 leading-relaxed rounded-2xl bg-violet-50 border border-violet-100 p-4 whitespace-pre-line">
                 {module.scenario}
               </p>
@@ -168,7 +249,7 @@ export default function PresentationModulePage() {
           )}
 
           {(module.ai_role || module.user_role) && (
-            <Section emoji="🎭" title="Roles">
+            <Section id="roles" emoji="🎭" title="Roles">
               <div className="grid grid-cols-2 gap-2">
                 {module.ai_role && (
                   <div className="rounded-2xl bg-white border border-gray-100 p-3">
@@ -194,7 +275,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.simulator_steps && module.simulator_steps.length > 0 && (
-            <Section emoji="💬" title="Conversation Flow">
+            <Section id="steps" emoji="💬" title="Conversation Flow">
               <ol className="space-y-2">
                 {module.simulator_steps.map((s, i) => (
                   <li key={i} className="flex items-start gap-2 rounded-xl bg-white border border-gray-100 p-3">
@@ -209,7 +290,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.detect_keywords && module.detect_keywords.length > 0 && (
-            <Section emoji="🔎" title="Detect">
+            <Section id="detect" emoji="🔎" title="Detect">
               <div className="flex flex-wrap gap-1.5">
                 {module.detect_keywords.map((k, i) => (
                   <span key={i} className="rounded-full bg-violet-50 border border-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">
@@ -221,7 +302,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.evaluation_rubric && module.evaluation_rubric.length > 0 && (
-            <Section emoji="📊" title="Evaluation">
+            <Section id="evaluation" emoji="📊" title="Evaluation">
               <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden divide-y divide-gray-100">
                 {module.evaluation_rubric.map((c, i) => (
                   <div key={i} className="flex items-center justify-between px-4 py-2.5">
@@ -234,7 +315,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.simulator_categories && module.simulator_categories.length > 0 && (
-            <Section emoji="🗂" title="Categories">
+            <Section id="categories" emoji="🗂" title="Categories">
               <div className="flex flex-wrap gap-1.5">
                 {module.simulator_categories.map((c, i) => (
                   <span key={i} className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700">
@@ -246,7 +327,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.simulator_difficulty && (
-            <Section emoji="🎚" title="Difficulty">
+            <Section id="difficulty" emoji="🎚" title="Difficulty">
               {module.simulator_difficulty.summary && (
                 <p className="text-sm font-semibold text-gray-800">{module.simulator_difficulty.summary}</p>
               )}
@@ -270,7 +351,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.thinking_in_english && (
-            <Section emoji="🧠" title="Thinking in English">
+            <Section id="thinking" emoji="🧠" title="Thinking in English">
               <p className="text-sm text-gray-700 leading-relaxed rounded-2xl bg-indigo-50 border border-indigo-100 p-4 whitespace-pre-line">
                 {module.thinking_in_english}
               </p>
@@ -278,7 +359,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.blocks && module.blocks.length > 0 && (
-            <Section emoji="🧩" title="Patterns">
+            <Section id="patterns" emoji="🧩" title="Patterns">
               <div className="space-y-3">
                 {module.blocks.map((b, i) => (
                   <div key={i} className="rounded-2xl bg-white border border-gray-100 p-4">
@@ -319,7 +400,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.formula_steps && module.formula_steps.length > 0 && (
-            <Section emoji="🧭" title="Cấu trúc">
+            <Section id="structure" emoji="🧭" title="Cấu trúc">
               <div className="space-y-3">
                 {module.formula_steps.map((flow, fi) => (
                   <div key={fi} className="rounded-2xl bg-gray-50 border border-gray-100 p-4">
@@ -341,7 +422,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.timing_table && module.timing_table.length > 0 && (
-            <Section emoji="⏱" title="Suggested Timing">
+            <Section id="timing" emoji="⏱" title="Suggested Timing">
               <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden divide-y divide-gray-100">
                 {module.timing_table.map((row, i) => (
                   <div key={i} className="flex items-center justify-between px-4 py-2.5">
@@ -354,7 +435,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.worked_examples && module.worked_examples.length > 0 && (
-            <Section emoji="🎤" title="Worked Examples">
+            <Section id="examples" emoji="🎤" title="Worked Examples">
               <div className="space-y-3">
                 {module.worked_examples.map((ex, i) => (
                   <div key={i} className="rounded-2xl bg-gray-50 border border-gray-100 p-4">
@@ -367,7 +448,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.transitions && module.transitions.length > 0 && (
-            <Section emoji="🔄" title="Transition Library">
+            <Section id="transitions" emoji="🔄" title="Transition Library">
               <div className="space-y-2">
                 {module.transitions.map((t, i) => (
                   <div key={i} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
@@ -380,7 +461,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.vocabulary && module.vocabulary.length > 0 && (
-            <Section emoji="📚" title={`Vocabulary (${module.vocabulary.length})`}>
+            <Section id="vocabulary" emoji="📚" title={`Vocabulary (${module.vocabulary.length})`}>
               <div className="space-y-3">
                 {vocabGroups.map((group, gi) => (
                   <div key={gi}>
@@ -402,7 +483,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.native_tips && module.native_tips.length > 0 && (
-            <Section emoji="💬" title="Native Tip">
+            <Section id="native-tip" emoji="💬" title="Native Tip">
               <div className="space-y-2">
                 {module.native_tips.map((n, i) => (
                   <div key={i} className="rounded-xl bg-violet-50 border border-violet-100 p-3 space-y-1">
@@ -418,7 +499,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.common_mistakes && module.common_mistakes.length > 0 && (
-            <Section emoji="❌" title="Common Mistakes">
+            <Section id="mistakes" emoji="❌" title="Common Mistakes">
               <div className="space-y-2">
                 {module.common_mistakes.map((m, i) => (
                   <div key={i} className="rounded-xl bg-rose-50 border border-rose-100 p-3">
@@ -431,7 +512,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.speaking_drill && module.speaking_drill.length > 0 && (
-            <Section emoji="🗣" title="Speaking Drill">
+            <Section id="drill" emoji="🗣" title="Speaking Drill">
               <p className="text-xs text-gray-400 mb-2">Đọc to mỗi câu 5 lần, không cần quá nhanh.</p>
               <ol className="space-y-1.5 list-decimal list-inside">
                 {module.speaking_drill.map((s, i) => (
@@ -448,7 +529,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.presentation_challenge && (
-            <Section emoji="🎯" title="Presentation Challenge">
+            <Section id="challenge" emoji="🎯" title="Presentation Challenge">
               <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 space-y-3">
                 <p className="text-sm text-gray-700 leading-relaxed">
                   {module.presentation_challenge.instruction}
@@ -500,7 +581,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.homework && (
-            <Section emoji="📝" title="Homework">
+            <Section id="homework" emoji="📝" title="Homework">
               <div className="rounded-2xl bg-white border border-gray-100 p-4 space-y-3">
                 <p className="text-sm text-gray-700 leading-relaxed">{module.homework.instruction}</p>
                 {module.homework.example_topics && module.homework.example_topics.length > 0 && (
@@ -528,7 +609,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.ai_prompt && (
-            <Section emoji="🤖" title="AI Practice Prompt">
+            <Section id="ai-prompt" emoji="🤖" title="AI Practice Prompt">
               <p className="text-xs text-gray-600 leading-relaxed rounded-2xl bg-indigo-50 border border-indigo-100 p-4 font-mono whitespace-pre-line">
                 {module.ai_prompt}
               </p>
@@ -536,7 +617,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.readiness_checklist && module.readiness_checklist.length > 0 && (
-            <Section emoji="📌" title="Before You Present">
+            <Section id="readiness" emoji="📌" title="Before You Present">
               <div className="space-y-1.5">
                 {module.readiness_checklist.map((q, i) => (
                   <div key={i} className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
@@ -548,7 +629,7 @@ export default function PresentationModulePage() {
           )}
 
           {module.completion_checklist && module.completion_checklist.length > 0 && (
-            <Section emoji="✅" title="Completion Checklist">
+            <Section id="checklist" emoji="✅" title="Completion Checklist">
               <div className="space-y-1.5">
                 {module.completion_checklist.map((c, i) => (
                   <div key={i} className="flex items-start gap-2 rounded-xl bg-white border border-gray-100 px-3 py-2">
