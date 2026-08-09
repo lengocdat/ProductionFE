@@ -171,6 +171,10 @@ export interface ListenItem {
   meaning_start_ms?: number
   meaning_end_ms?: number
   example?: string
+  // Pre-recorded audio region for example, same rationale/fallback as
+  // meaning_start_ms/meaning_end_ms above.
+  example_start_ms?: number
+  example_end_ms?: number
   audio_url?: string
   start_ms: number
   end_ms: number

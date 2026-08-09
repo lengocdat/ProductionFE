@@ -297,7 +297,14 @@ export default function ListenPage() {
         // Never-studied content: set the scene before the bare phrase shows
         // up, so it lands somewhere ("when you're about to deploy, you
         // say...") instead of arriving as an isolated word pair.
-        if (item.example && !screenLikelyOff) {
+        if (item.example_start_ms != null && item.example_end_ms != null) {
+          // Pre-recorded real audio — plays reliably even with the screen
+          // locked, unlike speechSynthesis below.
+          await playRegionUntilEnd(el, item.example_start_ms, item.example_end_ms)
+          if (stale()) return
+          await sleep(500)
+          if (stale()) return
+        } else if (item.example && !screenLikelyOff) {
           await speakExample(item.example)
           if (stale()) return
           await sleep(500)
