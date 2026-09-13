@@ -40,8 +40,6 @@ Trong Tông môn & giang hồ, **Ẩn bản tin** (`social.mute`, `social.unmute
 
 ## Production
 
-Image build từ `deployment/Dockerfile`; CI publish commit tag và báo immutable digest, không tự deploy. Dùng workflow deploy thủ công phía BE với cả hai digest.
-
-Runtime: `API_INTERNAL_URL=http://coduyen-api:8080`, `APP_PUBLIC_URL=https://coduyen.net`. Nginx phải chuyển `/api/v1/` tới frontend **không bỏ prefix** để áp dụng origin/cookie adapter; không chuyển tuyến này thẳng tới Go. Secrets ở backend, không bake vào bundle.
+Runtime: `API_INTERNAL_URL=http://coduyen-api:8080`, `APP_PUBLIC_URL=https://coduyen.net`. Nginx phải chuyển `/api/v1/` tới frontend **không bỏ prefix** để áp dụng origin/cookie adapter; không chuyển tuyến này thẳng tới Go. Secrets ở backend, không bake vào bundle. Bản đang chạy tại `https://coduyen.net` dùng đúng cấu hình này; cookie refresh được ghi `Secure`, `HttpOnly`, phạm vi `/api/v1/auth`.
 
 Cửa hàng và quyền quản trị nhận trạng thái thật từ backend. Thanh toán bị đóng khi merchant configuration chưa đủ hoặc `GAME_PAYMENTS_ENABLED=false`. Không coi trang xem trước/kiểm thử webhook tổng hợp là bằng chứng đã thu hoặc hoàn tiền thật. Điều kiện pháp lý, danh tính merchant và truy cập production phải do operator cung cấp và xác minh trước khi mở thu tiền.
