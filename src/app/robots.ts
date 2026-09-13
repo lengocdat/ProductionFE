@@ -1,14 +1,4 @@
-import type { MetadataRoute } from 'next'
-
-const APP_URL = 'https://coduyen.net'
-
+import type { MetadataRoute } from "next";
 export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: {
-      userAgent: '*',
-      allow: '/',
-      disallow: ['/home', '/lesson', '/review', '/me', '/auth/callback', '/api/'],
-    },
-    sitemap: `${APP_URL}/sitemap.xml`,
-  }
+  return { rules: { userAgent: "*", allow: "/", disallow: ["/admin", "/api/"] }, sitemap: `${process.env.APP_PUBLIC_URL || "https://coduyen.net"}/sitemap.xml` };
 }

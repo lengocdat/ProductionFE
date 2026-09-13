@@ -1,45 +1,39 @@
 name: CI - Build & Push
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
         run: npm ci
-
       - name: Type check
         run: npx tsc --noEmit
-
-      - name: Build Docker image
-        run: |
-          docker build \
-            -f deployment/Dockerfile \
-            --build-arg NEXT_PUBLIC_GA_ID=G-K72ZK1WYKQ \
-            --build-arg NEXT_PUBLIC_VAPID_PUBLIC_KEY=BP45QtQt478eQSTqtrlmM864NbQlQKXMBqmdv30CFMQ_tkecwqsC9p1uLGgGxZ1rBTTQjawr1ALzPb29mmpPAuA \
-            -t ${{ secrets.DOCKER_USERNAME }}/coduyen-fe:${{ github.sha }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/coduyen-fe:latest \
-            .
-
-      - name: Login to Docker Hub
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-      - name: Push Docker image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/coduyen-fe:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/coduyen-fe:latest
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Build image; publish commit tag only on main
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deployment/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ secrets.DOCKER_USERNAME || 'local' }}/coduyen-fe:${{ github.sha }}
+      - name: Record immutable image digest
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: printf 'Frontend image digest: %s\n' "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"

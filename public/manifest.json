@@ -1,27 +1,16 @@
 {
-  "name": "Chunk English – Học nói tiếng Anh theo phương pháp shadowing",
-  "short_name": "Chunk English",
-  "description": "Nghe, nhại, học cụm từ và luyện nói tiếng Anh theo quy trình Input → Shadow → Chunk → Speak.",
   "id": "/",
-  "start_url": "/",
-  "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
-  "background_color": "#f9fafb",
-  "theme_color": "#4f46e5",
-  "orientation": "portrait-primary",
+  "name": "Cẩu Đạo Ký — Một đời tự tại",
+  "short_name": "Cẩu Đạo Ký",
+  "description": "Tu luyện nhàn nhã, kết giao người hữu duyên và viết nên đạo đồ của riêng bạn.",
   "lang": "vi",
-  "categories": ["education", "lifestyle"],
-  "prefer_related_applications": false,
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b171b",
+  "theme_color": "#0b171b",
   "icons": [
-    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/icon-72.png",  "sizes": "72x72",   "type": "image/png", "purpose": "any" },
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ],
-  "shortcuts": [
-    { "name": "Học tiếp",  "url": "/home",   "description": "Vào danh sách bài học",     "icons": [{ "src": "/icon-72.png", "sizes": "72x72" }] },
-    { "name": "Ôn tập",    "url": "/review", "description": "Ôn tập theo lịch SRS",       "icons": [{ "src": "/icon-72.png", "sizes": "72x72" }] }
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ]
 }

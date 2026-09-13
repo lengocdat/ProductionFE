@@ -1,79 +1,17 @@
-import type { Metadata, Viewport } from 'next'
-import { Suspense } from 'react'
-import GoogleAnalytics from '@/components/GoogleAnalytics'
-import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
-import './globals.css'
-
-const APP_URL = 'https://coduyen.net'
-const APP_NAME = 'Chunk English'
-const TITLE = 'Chunk English – Học nói tiếng Anh theo phương pháp shadowing'
-const DESCRIPTION =
-  'Chunk English dạy tiếng Anh giao tiếp theo quy trình Input → Shadow → Chunk → Speak. ' +
-  'Nghe audio người bản xứ, nhại theo từng câu, học các cụm collocations và luyện nói. ' +
-  'Dành cho Developer và Product Owner muốn giao tiếp tự nhiên trong công việc.'
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(APP_URL),
-  title: {
-    default: TITLE,
-    template: `%s | ${APP_NAME}`,
-  },
-  description: DESCRIPTION,
-  keywords: [
-    'học tiếng Anh giao tiếp', 'shadowing tiếng Anh', 'luyện nói tiếng Anh',
-    'English for developers', 'English for product managers', 'collocations',
-    'chunk English', 'luyện nghe tiếng Anh', 'phương pháp shadowing',
-  ],
-  applicationName: APP_NAME,
+  metadataBase: new URL(process.env.APP_PUBLIC_URL || "https://coduyen.net"),
+  title: { default: "Cẩu Đạo Ký — Một đời tự tại", template: "%s | Cẩu Đạo Ký" },
+  description: "Một giang hồ, nhiều con đường thành tiên. Tu luyện nhàn nhã, gặp gỡ người hữu duyên và viết nên đạo đồ của riêng bạn. Không bán sức mạnh.",
+  applicationName: "Cẩu Đạo Ký",
+  manifest: "/manifest.json",
+  icons: { icon: "/favicon.svg", apple: "/apple-touch-icon.png" },
+  openGraph: { type: "website", locale: "vi_VN", siteName: "Cẩu Đạo Ký", title: "Cẩu Đạo Ký — Một đời tự tại", description: "Sống đủ lâu. Viết nên huyền thoại." },
   robots: { index: true, follow: true },
-  openGraph: {
-    type: 'website',
-    locale: 'vi_VN',
-    url: APP_URL,
-    siteName: APP_NAME,
-    title: TITLE,
-    description: DESCRIPTION,
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: TITLE }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: TITLE,
-    description: DESCRIPTION,
-    images: ['/og-image.png'],
-  },
-  icons: {
-    icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    apple: '/apple-touch-icon.png',
-  },
-  manifest: '/manifest.json',
-  alternates: {
-    canonical: APP_URL,
-    languages: { 'vi-VN': APP_URL },
-  },
-}
-
-export const viewport: Viewport = {
-  themeColor: '#4f46e5',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-}
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="vi">
-      <body>
-        <Suspense fallback={null}>
-          <GoogleAnalytics />
-        </Suspense>
-        <ServiceWorkerRegister />
-        <div className="mx-auto max-w-md min-h-screen shadow-lg bg-gray-50 relative">
-          {children}
-        </div>
-      </body>
-    </html>
-  )
+};
+export const viewport: Viewport = { themeColor: "#0b171b", width: "device-width", initialScale: 1 };
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="vi"><body><a href="#main-content" className="skip-link">Đi tới nội dung</a>{children}</body></html>;
 }
