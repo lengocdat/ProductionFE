@@ -770,10 +770,10 @@ export default function RoomView() {
             <h2 className="dt-title" style={{ fontSize: 24 }}>Chuyển sang máy khác</h2>
             <p className="dt-sub">Tu vi của bạn lưu trên máy này. Mở liên kết dưới đây trên máy khác để chơi tiếp ở đó.</p>
             <p className="dt-error">Ai có liên kết này đều dùng được tu vi của bạn. Chỉ gửi cho chính mình.</p>
-            <input className="dt-input" readOnly value={`${location.origin}/dao-trang${TOKEN_HASH}${storedToken() ?? ""}`} aria-label="Liên kết đạo tịch" onFocus={ev => ev.currentTarget.select()} />
+            <input className="dt-input" readOnly value={`${location.origin}/${TOKEN_HASH}${storedToken() ?? ""}`} aria-label="Liên kết đạo tịch" onFocus={ev => ev.currentTarget.select()} />
             <div className="dt-actions">
               <button type="button" className="dt-btn dt-btn--gold" onClick={() => {
-                void navigator.clipboard.writeText(`${location.origin}/dao-trang${TOKEN_HASH}${storedToken() ?? ""}`)
+                void navigator.clipboard.writeText(`${location.origin}/${TOKEN_HASH}${storedToken() ?? ""}`)
                   .then(() => showToast("Đã chép liên kết đạo tịch."), () => showToast("Không chép được, hãy chọn và chép thủ công."));
               }}>Chép liên kết</button>
             </div>

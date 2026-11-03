@@ -75,9 +75,9 @@ Runtime: `API_INTERNAL_URL=http://coduyen-api:8080`, `APP_PUBLIC_URL=https://cod
 
 Cửa hàng và quyền quản trị nhận trạng thái thật từ backend. Thanh toán bị đóng khi merchant configuration chưa đủ hoặc `GAME_PAYMENTS_ENABLED=false`. Không coi trang xem trước/kiểm thử webhook tổng hợp là bằng chứng đã thu hoặc hoàn tiền thật. Điều kiện pháp lý, danh tính merchant và truy cập production phải do operator cung cấp và xác minh trước khi mở thu tiền.
 
-## Đạo Tràng Online (`/dao-trang`)
+## Đạo Tràng Online (trang chủ `/`)
 
-Phòng tu luyện chung 2.5D (Three.js, camera nghiêng cố định). Không cần đăng nhập: khách nhận vé một lần qua `POST /api/v1/room/guest`, sau đó mở WebSocket `/v1/room/ws?ticket=…`. Giao thức chính thức: `BE/internal/room/README.md`.
+Phòng tu luyện chung 2.5D (Three.js, camera nghiêng cố định) là **trang chủ**: không cần đăng nhập/đăng ký, khách nhận vé một lần qua `POST /api/v1/room/guest`, sau đó mở WebSocket `/v1/room/ws?ticket=…`; tiến độ gắn với đạo tịch lưu trên máy. Giao thức chính thức: `BE/internal/room/README.md`. `/dao-trang` chuyển hướng 308 về `/` (giữ phần `#dt=` của liên kết chuyển máy cũ). Game idle cũ có tài khoản đã đóng băng: không còn route công khai, `src/game` chỉ còn phục vụ `/admin`.
 
 - Code: `src/room/` (`RoomClient` socket + trạng thái, `RoomScene` Three.js, `RoomView` giao diện).
 - Next route handler **không proxy được WebSocket**. Dev: đặt `NEXT_PUBLIC_ROOM_WS_URL=ws://localhost:8080/v1/room/ws` (xem `.env.example`). Production: Nginx phải route `/v1/room/ws` thẳng tới dịch vụ Go (kèm `Upgrade`/`Connection`, `proxy_read_timeout` đủ dài) trên cùng origin; khi đó không cần đặt biến.

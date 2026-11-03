@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-import RoomEntry from "./RoomEntry";
+import { permanentRedirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Đạo Tràng Online",
-  description: "Cùng các đạo hữu tĩnh toạ trong một đạo tràng chung: thấy nhau, trò chuyện, hấp thụ linh khí.",
-};
-
+// The room now lives at "/". Browsers keep the URL fragment across redirects, so old
+// transfer links (/dao-trang#dt=…) still carry the đạo tịch to the new address.
 export default function Page() {
-  return <RoomEntry />;
+  permanentRedirect("/");
 }
