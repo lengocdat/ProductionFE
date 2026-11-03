@@ -1,0 +1,14 @@
+.build-workshop .build-attribute-grid,.build-workshop .build-slot-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr)); gap:16px; }
+.build-workshop .build-stepper { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:auto; }
+.build-stepper output { font-size:24px; font-variant-numeric:tabular-nums; color:#edd39f; }
+.build-workshop .build-stepper button { min-width:44px; min-height:44px; font-size:20px; }
+.build-preview { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0; }
+.build-preview>div { padding:15px; border:1px solid #466154; border-radius:10px; background:#102d2c; }
+.build-preview dt { font-size:12px; color:#b8cdc0; }.build-preview dd { margin:8px 0 0; font-size:25px; color:#f0dca9; font-variant-numeric:tabular-nums; }
+.build-slot-grid label,.build-slot-grid select { min-width:0; max-width:100%; }.build-slot-grid label>span { font-size:12px; }
+.build-equipment-summary { display:flex; flex-direction:column; gap:6px; font-size:12px; }
+.build-mastery { padding:10px 12px; border-left:2px solid #c5b477; background:#50614a25; font-size:12px; }
+.build-workshop .build-skill-order { gap:12px; flex-wrap:wrap; }.build-skill-order>strong { flex:1; min-width:140px; }
+.build-materials summary { cursor:pointer; color:#e5d29e; }.build-materials p { margin:12px 0; line-height:1.7; }
+.build-workshop .card,.build-workshop .panel { min-width:0; }.build-workshop .button { white-space:normal; overflow-wrap:anywhere; }
+@media(max-width:600px) { .build-preview { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }.build-preview>div { padding:12px; }.build-workshop .build-slot-grid { grid-template-columns:minmax(0,1fr); }.build-workshop .tabs { flex-wrap:wrap; }.build-workshop .tabs .tab { flex:1 1 140px; white-space:normal; }.build-workshop .build-skill-order .actions { width:100%; } }

@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'caudao-static-v2';
+const STATIC_CACHE = 'caudao-static-v5';
 const BOOT_ASSETS = ['/offline.html', '/manifest.json', '/favicon.svg', '/icon-192.png', '/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.addAll(BOOT_ASSETS)).then(() => self.skipWaiting()));

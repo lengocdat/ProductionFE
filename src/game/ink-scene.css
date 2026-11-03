@@ -1,0 +1,37 @@
+.ink-scene { position:relative; width:100%; aspect-ratio:5/3; overflow:hidden; isolation:isolate; container-type:inline-size; background:#142d32; --scene-floor:21%; --hero-position:26%; --foe-position:74%; }
+.ink-scene-battle { min-height:340px; }
+.scene-landscape { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 35%; }
+.scene-atmosphere { position:absolute; inset:0; background:linear-gradient(180deg,#122d3500 10%,#153b3830 45%,#071c2bbb 100%); }
+.scene-platform { position:absolute; width:112%; max-width:none; height:78%; left:-6%; bottom:-12%; object-fit:fill; }
+.scene-unit { position:absolute; bottom:var(--scene-floor); width:0; height:0; z-index:2; --actor-size:clamp(166px,25cqw,246px); }
+.scene-unit-hero { left:50%; }
+.ink-scene-battle .scene-unit-hero { left:var(--hero-position); }
+.scene-unit-foe { left:var(--foe-position); --actor-size:clamp(172px,28cqw,274px); }
+.scene-face-left { transform:scaleX(-1); }
+.sprite-actor { position:absolute; overflow:visible; filter:drop-shadow(0 3px 2px #06171560); }
+.sprite-strip { image-rendering:pixelated; }
+.sprite-strip.is-animated { animation:sprite-frames var(--sprite-duration) steps(var(--sprite-steps),end) var(--sprite-repeat) both; }
+.scene-contact-shadow { position:absolute; width:calc(var(--actor-size)*.55); height:calc(var(--actor-size)*.09); left:calc(var(--actor-size)*-.275); bottom:calc(var(--actor-size)*-.035); border-radius:50%; background:#061b21; opacity:.45; filter:blur(3px); }
+.scene-cultivation-light { position:absolute; width:40%; height:16%; left:30%; bottom:15%; border-radius:50%; background:radial-gradient(ellipse,#c3e5b855,#83c8a022 50%,transparent 72%); }
+.scene-fx { position:absolute; z-index:3; bottom:calc(var(--scene-floor) - 12px); width:clamp(150px,27cqw,280px); height:clamp(155px,29cqw,280px); transform:translateX(-50%); overflow:visible; pointer-events:none; }
+.scene-fx-hero,.scene-damage-hero { left:var(--hero-position); }
+.scene-fx-foe,.scene-damage-foe { left:var(--foe-position); }
+.scene-fx-frost { height:clamp(72px,14cqw,136px); }
+.scene-fx-impact,.scene-fx-slash { bottom:calc(var(--scene-floor) + 42px); }
+.scene-fx-lightning { height:clamp(100px,18cqw,170px); bottom:calc(var(--scene-floor) + 50px); }
+.scene-damage { position:absolute; z-index:4; bottom:67%; transform:translateX(-50%); color:#fff2d2; text-shadow:0 2px 2px #142127,1px 0 #142127,-1px 0 #142127; font:bold clamp(24px,3cqw,37px)/1 Georgia,serif; pointer-events:none; animation:scene-damage calc(.85s / var(--event-speed)) ease-out both; }
+.scene-vitals { position:absolute; z-index:4; bottom:8%; width:clamp(92px,17cqw,170px); height:7px; border:1px solid #adc5a953; border-radius:5px; background:#102c33; transform:translateX(-50%); box-shadow:0 2px 5px #071b2855; }
+.scene-vitals-hero { left:var(--hero-position); }
+.scene-vitals-foe { left:var(--foe-position); }
+.scene-vitals>span { display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,#6a9c76,#c1d792); transition:width .15s linear; }
+.scene-vitals-foe>span { background:linear-gradient(90deg,#a9744d,#e5bd75); }
+.scene-vitals small { display:block; color:#e8ead8; font:10px/1.8 system-ui,sans-serif; text-align:center; text-shadow:0 1px 3px #0a1724; }
+.ink-portrait { display:block; width:100%; height:100%; overflow:hidden; background:radial-gradient(ellipse at 50% 70%,#4a797366,transparent 68%); }
+.skill-art { width:46px; height:46px; flex:none; image-rendering:pixelated; filter:drop-shadow(0 2px 3px #07141c55); }
+.skill-art-heading { display:flex; align-items:center; gap:12px; }
+.skill-art-heading h3 { margin:0; }
+.ink-paused * { animation-play-state:paused!important; }
+@keyframes sprite-frames { from { transform:translateX(0); } to { transform:translateX(var(--sprite-end)); } }
+@keyframes scene-damage { 0% { opacity:0; margin-bottom:-8px; } 18% { opacity:1; } 75% { opacity:1; } 100% { opacity:0; margin-bottom:30px; } }
+@media(max-width:700px) { .ink-scene-battle { --hero-position:25%; --foe-position:75%; }.scene-platform { width:145%; left:-22.5%; height:68%; bottom:-7%; }.scene-vitals { bottom:7%; }.scene-unit { --actor-size:158px; }.scene-unit-foe { --actor-size:172px; }.ink-scene-cultivation .scene-unit { --actor-size:184px; } }
+@media(prefers-reduced-motion:reduce) { .ink-scene *,.sprite-strip { animation:none!important; }.scene-fx,.scene-damage { display:none; }.scene-vitals>span { transition:none; } }

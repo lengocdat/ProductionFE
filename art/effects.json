@@ -1,0 +1,10 @@
+[
+  {"id":"fx-slash","group":"fx","source":"fx_crossslash","actions":{"play":"default"}},
+  {"id":"fx-impact","group":"fx","source":"fx_collision","actions":{"play":"collisionsparks"}},
+  {"id":"fx-ward","group":"fx","source":"fx_defense","actions":{"play":"forcefield"}},
+  {"id":"fx-flame","group":"fx","source":"fx_f2_phoenixfire","actions":{"play":"default"}},
+  {"id":"fx-frost","group":"fx","source":"f6_flashfreeze","actions":{"play":"appear"}},
+  {"id":"fx-shadow","group":"fx","source":"fx_f4_shadowreflection","actions":{"play":"default"}},
+  {"id":"fx-heal","group":"fx","source":"fx_heal","actions":{"play":"default"}},
+  {"id":"fx-lightning","group":"fx","source":"fx_chainlightning","actions":{"play":"default"}}
+]

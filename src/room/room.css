@@ -1,0 +1,386 @@
+/* Đạo Tràng Online — everything is prefixed dt- so it never touches the old game's styles. */
+.dt-root {
+  --dt-bg: #0a1519;
+  --dt-glass: rgba(14, 30, 34, 0.72);
+  --dt-glass-strong: rgba(10, 22, 26, 0.92);
+  --dt-line: rgba(146, 197, 172, 0.22);
+  --dt-jade: #92c5ac;
+  --dt-gold: #e3c27a;
+  --dt-ink: #ebeee4;
+  --dt-muted: #9babaa;
+  --dt-danger: #f0a49d;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--dt-bg);
+  color: var(--dt-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.4;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.dt-root button { font-family: inherit; }
+
+/* ---- scene layer ---- */
+.dt-stage { position: absolute; inset: 0; z-index: 0; isolation: isolate; }
+.dt-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+.dt-tags { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.dt-tag { position: absolute; left: 0; top: 0; will-change: transform; }
+.dt-tag-inner {
+  position: absolute; left: 0; bottom: 0; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 3px; white-space: nowrap;
+}
+.dt-name {
+  font-size: 12px; padding: 1px 8px; border-radius: 99px; color: #f4f1e3;
+  background: rgba(8, 18, 21, 0.62); border: 1px solid rgba(255, 255, 255, 0.12);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+}
+.dt-name--you { color: var(--dt-gold); border-color: rgba(227, 194, 122, 0.55); }
+.dt-name { max-width: 270px; }
+.dt-name .dt-rank { margin-right: 5px; }
+.dt-name .dt-patron { margin-right: 4px; filter: drop-shadow(0 0 4px rgba(255, 215, 120, 0.9)); }
+/* Sect rank colours: tạp dịch grey → ngoại môn jade → nội môn azure → chân truyền violet → trưởng lão gold → thái thượng crimson-gold. */
+.dt-rank { font-size: 10.5px; letter-spacing: 0.02em; padding: 0 5px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+.dt-rank--0 { color: #c9c2b4; background: rgba(120, 110, 96, 0.45); }
+.dt-rank--1 { color: #bff0dc; background: rgba(63, 154, 130, 0.5); }
+.dt-rank--2 { color: #d4e6ff; background: rgba(74, 123, 189, 0.6); }
+.dt-rank--3 { color: #ecdcff; background: rgba(132, 103, 184, 0.65); }
+.dt-rank--4 { color: #2a1f08; background: linear-gradient(180deg, #f1d894, #d3a94f); }
+.dt-rank--5 { color: #fff3d0; background: linear-gradient(180deg, #c0392b, #8e1f14); box-shadow: 0 0 8px rgba(255, 200, 90, 0.7); }
+.dt-tag--promoted .dt-name { animation: dt-promote 0.9s ease-in-out 4; border-color: rgba(255, 215, 120, 0.9); }
+@keyframes dt-promote { 0%, 100% { box-shadow: 0 0 0 rgba(255, 215, 120, 0); } 50% { box-shadow: 0 0 18px rgba(255, 215, 120, 0.95); } }
+.dt-tags--far .dt-name:not(.dt-name--you) { opacity: 0; }
+.dt-bubble {
+  display: none; max-width: 200px; white-space: normal; text-align: center; font-size: 13px; line-height: 1.3;
+  padding: 6px 10px; border-radius: 12px; color: #1d2a24; background: rgba(248, 245, 230, 0.96);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); overflow-wrap: anywhere; position: relative;
+}
+.dt-bubble::after {
+  content: ""; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; margin-left: -5px;
+  background: inherit; transform: rotate(45deg);
+}
+.dt-bubble.is-on { display: block; animation: dt-pop 0.18s ease-out; }
+.dt-bubble.is-fading { opacity: 0; transition: opacity 0.6s ease; }
+.dt-emote { display: none; font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+.dt-emote.is-on { display: block; animation: dt-float 2s ease-out forwards; }
+@keyframes dt-pop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes dt-float { 0% { transform: translateY(6px) scale(0.6); opacity: 0; } 15% { transform: translateY(0) scale(1.1); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+
+/* ---- shared glass ---- */
+.dt-glass {
+  background: var(--dt-glass); border: 1px solid var(--dt-line); border-radius: 14px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.dt-btn {
+  min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--dt-line); cursor: pointer;
+  color: var(--dt-ink); background: rgba(146, 197, 172, 0.12); font-size: 15px; transition: background 0.15s, transform 0.1s;
+}
+.dt-btn:hover { background: rgba(146, 197, 172, 0.22); }
+.dt-btn:active { transform: scale(0.97); }
+.dt-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.dt-btn--gold {
+  color: #2a1f08; border-color: rgba(227, 194, 122, 0.8); font-weight: 600;
+  background: linear-gradient(180deg, #f1d894, #d3a94f);
+}
+.dt-btn--gold:hover { background: linear-gradient(180deg, #f6e1a8, #dcb360); }
+.dt-btn--ghost { background: transparent; }
+
+/* ---- join screen & overlays ---- */
+.dt-overlay {
+  position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom)); padding-top: max(20px, env(safe-area-inset-top));
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(63, 154, 130, 0.22), transparent 60%),
+    radial-gradient(ellipse at 50% 100%, rgba(227, 194, 122, 0.12), transparent 55%),
+    var(--dt-bg);
+  overflow-y: auto; touch-action: pan-y; -webkit-user-select: text; user-select: text;
+}
+.dt-overlay--dim { background: rgba(5, 12, 14, 0.78); backdrop-filter: blur(4px); }
+.dt-card { width: min(420px, 100%); padding: 28px 24px; text-align: center; }
+.dt-title { font-size: clamp(28px, 7vw, 38px); font-weight: 500; letter-spacing: -0.02em; color: var(--dt-gold); margin: 0 0 4px; }
+.dt-sub { color: var(--dt-muted); font-size: 14px; margin: 0 0 22px; }
+.dt-field { display: block; text-align: left; margin-bottom: 18px; }
+.dt-field > span { display: block; font-size: 13px; color: var(--dt-muted); margin-bottom: 6px; }
+.dt-input {
+  width: 100%; min-height: 46px; padding: 0 14px; font-size: 16px; color: var(--dt-ink); border-radius: 12px;
+  background: rgba(5, 14, 17, 0.7); border: 1px solid var(--dt-line); outline: none; font-family: inherit;
+}
+.dt-input:focus { border-color: var(--dt-jade); box-shadow: 0 0 0 3px rgba(146, 197, 172, 0.2); }
+.dt-swatches { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.dt-swatch {
+  width: 42px; height: 42px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0;
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.25); transition: transform 0.12s;
+}
+.dt-swatch:hover { transform: scale(1.08); }
+.dt-swatch[aria-checked="true"] { border-color: var(--dt-gold); box-shadow: 0 0 0 3px rgba(227, 194, 122, 0.3), inset 0 0 0 3px rgba(0, 0, 0, 0.25); }
+.dt-look-name { margin-top: 8px; font-size: 13px; color: var(--dt-muted); min-height: 18px; }
+.dt-error { color: var(--dt-danger); font-size: 14px; margin: 0 0 14px; }
+.dt-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.dt-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--dt-line); border-top-color: var(--dt-gold); margin: 0 auto 14px; animation: dt-rot 0.9s linear infinite; }
+@keyframes dt-rot { to { transform: rotate(360deg); } }
+
+/* ---- HUD ---- */
+.dt-hud { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+.dt-hud > * { pointer-events: auto; }
+/* Top HUD. Desktop: room bar + master + board on the left, status card on the right.
+   Phones (see media query): one stack — room bar, status, master, board. */
+.dt-top {
+  position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+.dt-top-left { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.dt-top-left > *, .dt-top > .dt-status { pointer-events: auto; }
+.dt-roombar { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; font-size: 14px; white-space: nowrap; }
+.dt-roombar b { color: var(--dt-gold); font-weight: 600; }
+.dt-roombar-actions { display: flex; gap: 4px; margin-left: 4px; }
+.dt-chip-btn { min-height: 36px; min-width: 36px; padding: 0 10px; font-size: 14px; }
+.dt-status { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 10px 14px; min-width: 220px; text-align: right; }
+.dt-status small { color: var(--dt-muted); font-size: 12px; }
+.dt-status .dt-rank { font-size: 12px; padding: 1px 7px; }
+.dt-status .dt-rate { color: var(--dt-jade); }
+.dt-qi-num { font-size: 22px; color: var(--dt-gold); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.dt-qi-num small { font-size: 12px; }
+.dt-status.is-active .dt-qi-num { animation: dt-glow 1.6s ease-in-out infinite; }
+@keyframes dt-glow { 0%, 100% { text-shadow: 0 0 0 rgba(227, 194, 122, 0); } 50% { text-shadow: 0 0 14px rgba(227, 194, 122, 0.85); } }
+.dt-progress { width: 100%; min-width: 160px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; margin: 3px 0 1px; }
+.dt-progress > div { height: 100%; background: linear-gradient(90deg, var(--dt-jade), var(--dt-gold)); transition: width 0.6s ease; }
+.dt-banner {
+  position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); z-index: 25; pointer-events: none; text-align: center;
+  font-size: clamp(22px, 6vw, 34px); color: var(--dt-gold); padding: 14px 28px; border-radius: 16px; width: max-content; max-width: 92vw; white-space: pre-line;
+  background: radial-gradient(ellipse, rgba(10, 22, 26, 0.85), rgba(10, 22, 26, 0));
+  text-shadow: 0 0 18px rgba(255, 215, 120, 0.9), 0 2px 4px rgba(0, 0, 0, 0.8); animation: dt-banner 4.5s ease forwards;
+}
+@keyframes dt-banner { 0% { opacity: 0; transform: translate(-50%, -40%) scale(0.85); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } 20% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+/* Cúng dường: the red scroll banner; slicing keeps the rolled ends and gold corners unstretched. */
+.dt-banner--offering {
+  background: none; border-radius: 0; padding: 4px 18px; color: #ffe9b8; font-size: clamp(20px, 5.2vw, 30px);
+  border: solid transparent; border-width: 34px 58px; border-image: url("/chanh-dien/bang-ron-tu-khi.png") 42 74 fill / 34px 58px stretch;
+  text-shadow: 0 0 12px rgba(255, 200, 90, 0.7), 0 2px 3px rgba(40, 0, 60, 0.9);
+}
+
+/* Chưởng môn chip + Phong Vân bảng */
+.dt-master {
+  display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; text-align: left; cursor: pointer;
+  padding: 6px 12px; color: var(--dt-ink); font-family: inherit; min-height: 44px; border-color: rgba(213, 140, 255, 0.45);
+}
+.dt-master-crown { grid-row: span 2; font-size: 22px; filter: drop-shadow(0 0 6px rgba(255, 210, 120, 0.8)); }
+.dt-master small { color: var(--dt-muted); font-size: 11px; }
+.dt-master b { color: #e9c8ff; font-size: 14px; }
+.dt-board { width: min(340px, 100%); max-height: 46vh; overflow-y: auto; padding: 12px 14px; touch-action: pan-y; }
+
+/* Cúng dường */
+.dt-offer-cta {
+  min-height: 36px; padding: 6px 12px; cursor: pointer; color: #ffe9b8; font-family: inherit; font-size: 13px; text-align: left;
+  border-color: rgba(242, 210, 122, 0.55); animation: dt-cta-glow 3.2s ease-in-out infinite;
+}
+.dt-offer-cta small { color: var(--dt-muted); }
+@keyframes dt-cta-glow { 0%, 100% { box-shadow: 0 0 0 rgba(242, 210, 122, 0); } 50% { box-shadow: 0 0 14px rgba(242, 210, 122, 0.45); } }
+.dt-offer { width: min(520px, 100%); max-height: 88vh; overflow-y: auto; text-align: left; touch-action: pan-y; }
+.dt-offer .dt-title, .dt-offer .dt-sub { text-align: center; }
+.dt-offer-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.dt-offer-list li { display: flex; gap: 12px; align-items: center; padding: 10px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.dt-offer-emoji { font-size: 34px; width: 44px; text-align: center; }
+.dt-offer-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dt-offer-body b { color: var(--dt-ink); }
+.dt-offer-body small { color: var(--dt-muted); font-size: 12.5px; line-height: 1.4; }
+.dt-offer-body small b { color: var(--dt-gold); }
+.dt-offer-price { color: var(--dt-gold); font-variant-numeric: tabular-nums; }
+.dt-offer-list .dt-btn { flex: 0 0 auto; }
+.dt-offer-note { font-size: 12px; color: var(--dt-muted); margin: 6px 0 12px; }
+.dt-offer-recent h3 { font-size: 14px; color: var(--dt-gold); margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
+.dt-offer-recent h3 img { width: 30px; height: auto; }
+.dt-offer-incense { display: block; margin: -6px auto 0; width: 54px; height: auto; filter: drop-shadow(0 0 10px rgba(255, 190, 120, 0.45)); }
+.dt-offer-recent ol { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.dt-offer-recent li { padding: 3px 0; }
+.dt-offer-qr { display: block; margin: 6px auto 10px; width: 220px; height: 220px; border-radius: 12px; background: #fff; }
+.dt-offer-bank { margin: 0 0 10px; font-size: 14px; }
+.dt-offer-bank div { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); align-items: center; }
+.dt-offer-bank dt { width: 110px; color: var(--dt-muted); flex: 0 0 auto; }
+.dt-offer-bank dd { margin: 0; overflow-wrap: anywhere; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.dt-offer-bank code { font-size: 13px; color: var(--dt-gold); }
+.dt-offer-wait { display: flex; gap: 10px; align-items: center; justify-content: center; color: var(--dt-muted); font-size: 14px; }
+.dt-offer-wait .dt-spin { margin: 0; width: 20px; height: 20px; }
+.dt-offer-done { font-size: 72px; text-align: center; animation: dt-twist-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.dt-rain { position: absolute; inset: 0; z-index: 23; overflow: hidden; pointer-events: none; }
+.dt-rain span, .dt-rain img { position: absolute; top: -48px; animation: dt-rain 2.6s ease-in forwards; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+@keyframes dt-rain { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(110vh) rotate(260deg); opacity: 0.9; } }
+.dt-board h3 { font-size: 15px; color: var(--dt-gold); margin: 0 0 2px; }
+.dt-board-note { font-size: 12px; color: var(--dt-muted); margin: 0 0 8px; }
+.dt-board ol { list-style: none; margin: 0; padding: 0; }
+.dt-board li { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: 13px; }
+.dt-board li.is-me { background: rgba(227, 194, 122, 0.12); border-radius: 6px; }
+.dt-board-pos { width: 22px; text-align: center; color: var(--dt-muted); }
+.dt-board-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-board-qi { color: var(--dt-gold); font-variant-numeric: tabular-nums; }
+.dt-tag--master .dt-name { border-color: rgba(213, 140, 255, 0.9); box-shadow: 0 0 10px rgba(213, 140, 255, 0.6); }
+.dt-tag--master .dt-name::before { content: "👑 "; }
+
+/* Thiên Cơ Bất Ngờ */
+.dt-bubble--twist {
+  max-width: 260px; font-size: 14px; color: #3a2400; font-weight: 600;
+  background: linear-gradient(180deg, #fff3c4, #f3cf6e); box-shadow: 0 0 22px rgba(255, 210, 100, 0.85);
+}
+.dt-bubble--twist.is-on { animation: dt-twist-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes dt-twist-pop { 0% { transform: scale(0.3) rotate(-8deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+.dt-flash { position: absolute; inset: 0; z-index: 24; pointer-events: none; background: #f4f8ff; animation: dt-flash 0.75s ease-out forwards; }
+@keyframes dt-flash { 0% { opacity: 0.6; } 100% { opacity: 0; } }
+.dt-log .dt-log-twist { color: #ffe39a; font-weight: 600; }
+.dt-log .dt-log-offering { color: #ffd27a; font-weight: 600; text-shadow: 0 0 8px rgba(255, 200, 90, 0.35); }
+.dt-transfer .dt-input { font-size: 13px; }
+.dt-transfer .dt-error { font-size: 13px; }
+.dt-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+  padding: 0 max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+.dt-bottom > * { pointer-events: auto; }
+.dt-dock { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.dt-row { display: flex; gap: 8px; align-items: center; }
+.dt-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; touch-action: pan-x; flex: 1; min-width: 0; }
+.dt-scroll::-webkit-scrollbar { display: none; }
+.dt-chipbtn {
+  flex: 0 0 auto; min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--dt-line); cursor: pointer;
+  color: var(--dt-ink); background: rgba(146, 197, 172, 0.1); font-size: 14px; white-space: nowrap;
+}
+.dt-chipbtn:hover { background: rgba(146, 197, 172, 0.22); }
+.dt-emobtn { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--dt-line); background: rgba(146, 197, 172, 0.1); font-size: 22px; cursor: pointer; padding: 0; }
+.dt-emobtn:hover { background: rgba(146, 197, 172, 0.22); }
+.dt-sit { flex: 0 0 auto; }
+.dt-chatform { display: flex; gap: 8px; }
+.dt-chatform .dt-input { min-height: 44px; }
+.dt-chatlock {
+  min-height: 44px; width: 100%; padding: 0 14px; border-radius: 12px; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px;
+  color: var(--dt-muted); background: rgba(5, 14, 17, 0.55); border: 1px dashed rgba(242, 210, 122, 0.45);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dt-chatlock:hover { color: var(--dt-ink); border-color: rgba(242, 210, 122, 0.8); }
+.dt-log {
+  align-self: flex-start; width: min(340px, 100%); max-height: 168px; overflow-y: auto; padding: 8px 12px; font-size: 13px;
+  touch-action: pan-y; -webkit-user-select: text; user-select: text; scrollbar-width: thin;
+}
+.dt-log p { margin: 2px 0; overflow-wrap: anywhere; }
+.dt-log b { color: var(--dt-jade); font-weight: 600; }
+.dt-log .dt-log-you b { color: var(--dt-gold); }
+.dt-log .dt-log-system { color: var(--dt-gold); font-style: italic; }
+.dt-log .dt-log-system b { color: var(--dt-gold); }
+.dt-logtoggle { align-self: flex-start; min-height: 32px; padding: 0 12px; font-size: 13px; }
+/* Errors/explanations sit mid-screen so they never hide the top cards or the dock. */
+.dt-toast {
+  /* `translate` (not `transform`) so the dt-pop entrance animation cannot undo the centring */
+  position: absolute; left: 50%; top: 46%; translate: -50% 0;
+  z-index: 20; padding: 10px 16px; font-size: 14px; color: #ffe0c8; pointer-events: none; animation: dt-pop 0.18s ease-out;
+  width: max-content; max-width: min(420px, calc(100% - 24px)); text-align: center;
+}
+
+/* First-visit coach: a card above the dock plus a pulsing ring on the control it explains. */
+.dt-coach {
+  position: absolute; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px); transform: translateX(-50%); z-index: 15;
+  width: min(380px, calc(100% - 24px)); padding: 14px 16px; border-color: rgba(227, 194, 122, 0.6); animation: dt-pop 0.25s ease-out;
+}
+.dt-coach small { color: var(--dt-muted); font-size: 12px; }
+.dt-coach h3 { margin: 2px 0 4px; font-size: 17px; color: var(--dt-gold); }
+.dt-coach p { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
+.dt-coach-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dt-coach-target { position: relative; z-index: 16; outline: 2px solid rgba(242, 210, 122, 0.95); outline-offset: 3px; animation: dt-coach-ring 1.3s ease-in-out infinite; }
+@keyframes dt-coach-ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(242, 210, 122, 0.9); } 50% { box-shadow: 0 0 0 7px rgba(242, 210, 122, 0); } }
+
+/* Cách chơi */
+.dt-help { width: min(520px, 100%); max-height: 86vh; overflow-y: auto; text-align: left; touch-action: pan-y; }
+.dt-help section { margin: 0 0 14px; }
+.dt-help h3 { font-size: 15px; color: var(--dt-gold); margin: 0 0 3px; }
+.dt-help p { margin: 0 0 6px; font-size: 14px; line-height: 1.5; }
+.dt-help b { color: var(--dt-ink); }
+.dt-help-ranks { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dt-help-ranks th, .dt-help-ranks td { padding: 5px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; }
+.dt-help-ranks th { color: var(--dt-muted); font-weight: 400; font-size: 12px; }
+
+/* Linh mạch label floating over the inner ring */
+.dt-zone {
+  position: absolute; left: 0; top: 0; translate: -50% -50%; white-space: nowrap; pointer-events: none;
+  font-size: 12px; padding: 2px 9px; border-radius: 99px; color: #fff3c4; background: rgba(40, 30, 6, 0.6); border: 1px solid rgba(242, 210, 122, 0.6);
+}
+.dt-zone.is-locked { color: #d8d2c4; border-color: rgba(255, 255, 255, 0.25); background: rgba(8, 18, 21, 0.6); }
+
+/* Join screen pitch */
+.dt-intro { list-style: none; margin: 4px 0 6px; padding: 0; text-align: left; }
+.dt-intro li { display: flex; gap: 10px; align-items: center; padding: 5px 0; font-size: 15px; }
+.dt-intro li span { font-size: 20px; width: 26px; text-align: center; }
+.dt-intro-note { color: var(--dt-muted); font-size: 12px; margin: 0 0 18px; }
+.dt-count { font-variant-numeric: tabular-nums; color: var(--dt-gold); font-size: 30px; margin: 4px 0 14px; }
+
+/* Linh mạch tụ khí: compact bar inside the status card; glows during the blessing. */
+.dt-gather { display: flex; flex-direction: column; align-items: inherit; gap: 2px; width: 100%; margin-top: 4px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 12.5px; color: #bfe7f2; }
+.dt-gather-bar { margin: 0; }
+.dt-gather-bar > div { background: linear-gradient(90deg, #5fb6c9, #c5f1ff); }
+.dt-gather.is-bless {
+  color: #fff1c4; font-weight: 600; padding: 5px 8px; border: 1px solid rgba(255, 215, 120, 0.7); border-radius: 8px;
+  background: linear-gradient(90deg, rgba(227, 194, 122, 0.22), rgba(255, 240, 190, 0.1)); animation: dt-bless 2s ease-in-out infinite;
+}
+@keyframes dt-bless { 0%, 100% { box-shadow: 0 0 0 rgba(255, 215, 120, 0); } 50% { box-shadow: 0 0 16px rgba(255, 215, 120, 0.75); } }
+
+/* Thiên Đạo hỏi: phones stack it above the chat log; desktop floats it centred above the bottom bar. */
+.dt-poll { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; border-color: rgba(190, 220, 255, 0.55); animation: dt-pop 0.25s ease-out; }
+.dt-poll-head { display: flex; flex-direction: column; gap: 1px; }
+.dt-poll-head small { color: #bcd6ff; font-size: 12px; }
+.dt-poll-head b { color: var(--dt-ink); font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.dt-poll-opts { display: flex; gap: 8px; }
+.dt-poll-opt {
+  flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-radius: 12px; border: 1px solid var(--dt-line); background: rgba(146, 197, 172, 0.12); color: var(--dt-ink); font-size: 14px; cursor: pointer;
+}
+.dt-poll-opt span { overflow-wrap: anywhere; line-height: 1.25; }
+.dt-poll-opt b { color: var(--dt-gold); font-size: 13px; font-variant-numeric: tabular-nums; }
+.dt-poll-opt:hover { background: rgba(146, 197, 172, 0.24); }
+.dt-poll-opt[aria-pressed="true"] { border-color: var(--dt-gold); background: rgba(227, 194, 122, 0.25); box-shadow: 0 0 0 2px rgba(227, 194, 122, 0.35); }
+.dt-poll-time { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.dt-poll-time > div { height: 100%; background: linear-gradient(90deg, #8fb8ff, var(--dt-gold)); transition: width 0.25s linear; }
+.dt-poll-hint { color: var(--dt-muted); font-size: 11.5px; }
+
+/* Reconnect notice: small and non-blocking. */
+.dt-reconnect {
+  position: absolute; left: 50%; top: 24%; translate: -50% 0; z-index: 26; pointer-events: none; padding: 8px 14px; font-size: 13.5px; color: #ffe0c8;
+  width: max-content; max-width: calc(100% - 24px); text-align: center; border-color: rgba(240, 164, 157, 0.55); animation: dt-pop 0.2s ease-out;
+}
+
+/* Chặn & báo cáo */
+.dt-log-name { all: unset; color: var(--dt-jade); font-weight: 600; cursor: pointer; text-decoration: underline dotted rgba(146, 197, 172, 0.6); text-underline-offset: 2px; }
+.dt-log-name:focus-visible { outline: 2px solid var(--dt-gold); outline-offset: 1px; }
+.dt-log .dt-log-event { color: #cfe6ff; font-weight: 600; }
+.dt-modmenu {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 22; width: min(300px, calc(100% - 24px));
+  padding: 12px; display: flex; flex-direction: column; gap: 8px; text-align: center; animation: dt-pop 0.18s ease-out;
+}
+.dt-modmenu-name { color: var(--dt-gold); font-size: 15px; overflow-wrap: anywhere; }
+.dt-modmenu small { color: var(--dt-muted); font-size: 12.5px; }
+.dt-modmenu-actions { display: flex; flex-direction: column; gap: 6px; }
+.dt-chatnote { margin: 0; font-size: 12.5px; color: var(--dt-danger); overflow-wrap: anywhere; }
+
+@media (min-width: 720px) {
+  .dt-bottom { flex-direction: row; align-items: flex-end; justify-content: space-between; }
+  .dt-bottom > .dt-poll { position: absolute; left: 50%; bottom: calc(100% + 10px); translate: -50% 0; width: min(380px, calc(100% - 24px)); }
+  .dt-dock { width: min(640px, 100%); }
+  .dt-bottom .dt-logwrap { order: -1; }
+}
+@media (max-width: 719px) {
+  .dt-top { flex-direction: column; align-items: stretch; gap: 6px; }
+  .dt-top-left { display: contents; }
+  .dt-roombar { order: 0; justify-content: space-between; padding-left: 12px; }
+  .dt-roombar-actions { margin-left: auto; }
+  .dt-status { order: 1; min-width: 0; align-items: stretch; text-align: left; padding: 8px 12px; }
+  .dt-status .dt-rank { align-self: flex-start; }
+  .dt-qi-num { font-size: 19px; }
+  .dt-master { order: 2; align-self: flex-start; }
+  .dt-offer-cta { order: 3; align-self: flex-start; }
+  .dt-board { order: 4; }
+  .dt-poll { padding: 8px 10px; gap: 6px; }
+  .dt-poll-opt { min-height: 44px; font-size: 13px; }
+  .dt-gather.is-bless { padding: 4px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-status.is-active .dt-qi-num, .dt-spin, .dt-coach-target, .dt-gather.is-bless, .dt-poll, .dt-reconnect, .dt-modmenu { animation: none; }
+  .dt-poll-time > div { transition: none; }
+  .dt-coach-target { outline: 3px solid #f2d27a; outline-offset: 3px; }
+  .dt-flash, .dt-rain { display: none; }
+  .dt-offer-cta { animation: none; }
+}

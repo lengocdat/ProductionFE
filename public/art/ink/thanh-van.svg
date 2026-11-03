@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" fill="none">
+ <defs>
+  <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e9e2cc"/><stop offset="1" stop-color="#f7efdb"/></linearGradient>
+  <linearGradient id="mountain" x2=".3" y2="1"><stop stop-color="#597f74"/><stop offset="1" stop-color="#c8d2bc" stop-opacity=".2"/></linearGradient>
+  <linearGradient id="mist" x2="0" y2="1"><stop stop-color="#f8f1df" stop-opacity="0"/><stop offset=".55" stop-color="#f8f1df" stop-opacity=".95"/><stop offset="1" stop-color="#f8f1df" stop-opacity="0"/></linearGradient>
+  <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".67" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".07"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter>
+ </defs>
+ <g filter="url(#paper)">
+ <path fill="url(#sky)" d="M0 0h1200v720H0z"/>
+ <circle cx="823" cy="149" r="69" fill="#d9a57b" opacity=".43"/><circle cx="823" cy="149" r="76" stroke="#ba8d60" stroke-opacity=".13"/>
+ <path d="M-40 391 35 271 82 281 133 142 163 113 190 159 231 143 268 231 327 186 359 132 409 202 432 180 469 287 526 313 548 232 581 217 612 144 650 205 680 182 712 289 776 374 835 260 866 268 904 198 923 219 946 291 978 255 1019 302 1067 179 1091 196 1135 113 1178 189 1240 344v169H-40z" fill="#a8bca8" opacity=".4"/>
+ <path d="M-60 487 15 393 44 350 77 364 98 290 120 277 157 176 189 148 209 177 221 264 248 279 281 365 317 391 332 342 366 377 398 452 448 488Z" fill="url(#mountain)"/>
+ <path d="m157 176 7 85-31 55 2 57-54 66m108-291-3 125 30 57-8 74m-10-81 26 30 7 67M112 302l-9 82-32 49" stroke="#446b62" stroke-opacity=".3" stroke-width="3"/>
+ <path d="m172 201 8-20-4 56m23-50 3 40-7 20m-40 80-4 28-11 20m67-18 6 28 14 26m-99-13-8 25-16 9" stroke="#e7e8d1" stroke-width="5" opacity=".58"/>
+ <path d="m794 481 66-142 32-5 32-138 25-24 20 39 31 141 30 18 39-92 31-13 40 106 60 77v87Z" fill="url(#mountain)"/>
+ <path d="m949 186-10 95-33 107m60-173 6 109 29 66m69-98-15 89-30 43m-116-37-19 49" stroke="#486b60" stroke-width="3" opacity=".3"/>
+ <path d="M0 366q133-43 246 24t263-1q162-25 333 14t358-36v108H0Z" fill="url(#mist)"/>
+ <path d="M0 525q188-93 370-49t314-13q226-70 516 39v218H0Z" fill="#bcc9ae"/>
+ <path d="M0 556q229-45 398 8 165 27 321-23 187-61 481 14v165H0Z" fill="#d9dcca"/>
+ <path d="M435 720c-52-46-78-72-63-99s82-38 104-63 41-38 93-42c-37 15-36 31-54 46s-76 32-71 56 68 46 111 102" fill="#f6eed8"/>
+ <path d="m397 633 45 3m-32 18 51 6m-29 18 57 8m-41 18 65 8m-119-89 45 1m-29-18 47 2m-29-18 37 2" stroke="#9ea893" stroke-width="2" opacity=".7"/>
+ <!-- Mountain bell pavilion, built into the ridge. -->
+ <g stroke="#536758" stroke-linejoin="round">
+  <path d="M856 454h152l12 12H846Z" fill="#aaa98d"/>
+  <path d="M873 443v-74h9v74m88 0v-74h9v74" fill="#796e53" stroke-width="3"/>
+  <path d="M856 378q31-11 44-37h54q20 27 47 37-67-10-145 0Z" fill="#536557" stroke-width="2"/>
+  <path d="M866 364q30-4 60-33 33 30 66 33-61-8-126 0Z" fill="#394f46"/>
+  <path d="M922 330v-11m-26 62h65m-39-1v17" stroke-width="3"/>
+  <path d="M913 402q11-15 23 0l4 18h-31Z" fill="#a18f5c"/>
+  <path d="M924 419v12m-44 12h92" stroke-width="2"/>
+  <path d="M839 468h185m-194 8h208m-216 9h226" stroke="#8c9880" stroke-width="3"/>
+ </g>
+ <!-- Pine: an asymmetric, wind-worked trunk and brush-shaped needle fans. -->
+ <g fill="#2c493d">
+  <path d="M0 720h73C42 619 27 537 42 448c8-51 39-86 71-125-37 20-67 46-84 85 1-48 9-83 21-122-30 47-44 99-50 150Z"/>
+  <path d="M28 455c39-45 68-75 142-83l93-35-62 10-42 14-67 7-48 34Zm8-36-12-80 14-58-27 48 4 85ZM35 514c31-43 76-62 130-51l57-7-51-8-69-1-55 32Z"/>
+  <path d="m76 341 21-18-1 12 28-24-7 16 35-9-16 13 47-3-24 12 29 4-37 9-14-6-29 10-8-9-36 10 13-13-30 5Z"/>
+  <path d="m159 367 31-27-5 17 38-24-11 20 37-12-8 12 41-2-22 10 45 8-26 6-15-4-27 10-19-6-31 9-13-7-34 6Z"/>
+  <path d="m1 289 30-19-7 12 31-18-9 15 37-4-19 9 39 7-18 6-20-2-19 10-18-6-28 5Z"/>
+  <path d="m117 447 25-19-6 14 34-17-10 17 36-7-13 12 42 1-23 8 40 6-20 7-29-2-26 8-17-8-34 4-25-5Z"/>
+ </g>
+ <g stroke="#71816a" stroke-width="2" opacity=".7"><path d="M16 685C8 588 7 542 24 478m-2-31 35-57m-29 94 56-29m-35-44 54-31"/></g>
+ <g fill="#617755" opacity=".72"><path d="M1200 627c-67-23-123-10-165 13 56-5 79 6 106 21l59 13Z"/><path d="m1118 629 5-30 6 21 17-18-7 27m22 7 5-27 7 22 18-10-12 19"/></g>
+ <g stroke="#526956" stroke-width="2" opacity=".65"><path d="m674 194 9-4 10 4m17-17 9-4 10 4m-2 27 7-3 8 3"/></g>
+ </g>
+</svg>

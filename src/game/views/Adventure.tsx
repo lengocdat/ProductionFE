@@ -1,37 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { GameProps, NPC } from "../types";
+import type { GameProps } from "../types";
+import "./adventure-scene.css";
+import InkScene, { InkPortrait } from "../InkScene";
 
 const gifts: Record<string, string> = { herb: "Dược thảo", tea: "Trà núi", ore: "Quặng tốt", paper: "Giấy tuyên", silk: "Lụa", wood: "Gỗ thơm" };
 const bonds = [{ id: "companion", label: "Đồng hành" }, { id: "confidant", label: "Tri kỷ" }, { id: "partner", label: "Đạo lữ" }, { id: "rival", label: "Đối thủ đáng trọng" }];
 const alignments = [{ id: "neutral", label: "Tự tại", text: "Giữ đường lui, xét từng việc, không trao lời thề cho một phe." }, { id: "righteous", label: "Chính Đạo", text: "Đặt lời hứa và việc bảo vệ người khác trước lợi ích riêng." }, { id: "demonic", label: "Ma Đạo", text: "Tự quyết, phá lệ và chịu trách nhiệm về phương cách của mình." }];
-
-function Landscape({ region, color }: { region: string; color: string }) {
- return <svg viewBox="0 0 480 160" aria-hidden="true" focusable="false" style={{ display: "block", width: "100%", height: 130, color }}>
-  <circle cx="367" cy="43" r="25" fill="currentColor" opacity=".28" />
-  <path d="M0 145 73 59 120 109 207 19 293 115 362 65 480 141V160H0Z" fill="currentColor" opacity=".15" />
-  <path d="M0 157 70 109 119 138 194 78 262 139 326 113 404 147 480 116V160Z" fill="currentColor" opacity=".32" />
-  {region === "thanh-van" && <path d="M34 147Q166 107 270 146M102 127v-21h49v17m-61-17 38-24 39 24m-39-24V70" fill="none" stroke="currentColor" strokeWidth="3" />}
-  {region === "van-truc" && <g stroke="currentColor" strokeWidth="3" fill="none"><path d="M55 150 61 31m-4 78-22-18m24-18 20-19m-19-7L45 37M96 150 87 47m4 39 25-17m-23 45-21-12M413 150 420 65m-4 39-21-15" /><path d="m52 57 15 1m-17 61 14 1m22-30 14-2m-8 43 14-2" /></g>}
-  {region === "hac-phong" && <path d="m45 146 39-39 19 32 25-14 30 31m167-7 24-67 9 30 19-61 30 101M208 100q32-15 67-4m-104 19q40-17 86-7" fill="none" stroke="currentColor" strokeWidth="3" />}
-  {region === "van-tuong" && <g fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 146h450M36 134h76v-29H36Zm17-29V79h41v26m-49-26 29-15 28 15m208 50h88v-21h-88m13-1V84h60v23m-68-23 39-19 38 19" /><path d="m185 148 37-32 37 32m-43-16v16m13-16v16" /></g>}
- </svg>;
-}
-
-function Portrait({ npc, index }: { npc: NPC; index: number }) {
- return <svg viewBox="0 0 100 110" aria-hidden="true" focusable="false" style={{ width: 76, height: 84, color: npc.color, flexShrink: 0 }}>
-  <circle cx="50" cy="48" r="40" fill="currentColor" opacity=".12" />
-  <path d={index % 2 ? "M27 58V37Q28 12 50 16Q75 15 75 41L79 74 60 62H39L23 75Z" : "M28 60V37Q31 18 51 20Q74 21 73 42V63L61 69H37Z"} fill="currentColor" opacity=".65" />
-  <ellipse cx="50" cy="45" rx="15" ry="21" fill="currentColor" opacity=".36" />
-  <path d="M13 108q1-32 25-39l12 16 12-16q25 7 25 39M38 69l12 30 12-30" fill="none" stroke="currentColor" strokeWidth="3" />
-  <path d="m38 39 7-1m10 0 7 1M45 56q5 3 10 0" stroke="currentColor" strokeWidth="2" fill="none" />
-  {index % 3 === 0 && <path d="m33 26 37-9M50 16v-8" stroke="currentColor" strokeWidth="3" />}
- </svg>;
-}
+const npcBackdrops: Record<string, string> = { "lan-chi": "thanh-van", "mac-ngon": "hac-phong", "tram-yen": "van-truc", "kha-phong": "hac-phong", "to-anh": "van-tuong", "bach-lien": "van-truc" };
 
 export default function Adventure({ snapshot, act, busy }: GameProps) {
  const [tab, setTab] = useState("regions");
+ const [regionID, setRegionID] = useState("");
  const [npcID, setNpcID] = useState("");
  const [clock, setClock] = useState(() => Date.parse(snapshot.server_time));
  useEffect(() => {
@@ -46,6 +27,11 @@ export default function Adventure({ snapshot, act, busy }: GameProps) {
  const perform = async (type: string, payload: Record<string, unknown>) => { try { await act(type, payload); } catch { /* The shared shell presents the authoritative error and retry state. */ } };
  const remaining = (at: string, seconds: number) => Math.max(0, Math.ceil((Date.parse(at) + seconds * 1000 - clock) / 1000)) || 0;
  const exploreWait = remaining(p.last_adventure, 60);
+ const region = snapshot.catalog.regions.find(item => item.id === regionID) ?? snapshot.catalog.regions[0];
+ const regionLocked = !!region && p.realm < region.realm;
+ const visited = region ? p.stats[`region:${region.id}`] ?? 0 : 0;
+ const complete = visited >= 30 && !p.encounter;
+ const encounterRegion = snapshot.catalog.regions.find(item => item.id === p.encounter?.region);
  const npc = snapshot.catalog.npcs.find(item => item.id === npcID) ?? snapshot.catalog.npcs[0];
  const relation = npc ? p.relations[npc.id] : undefined;
  const stage = relation?.stage ?? 0;
@@ -59,38 +45,81 @@ export default function Adventure({ snapshot, act, busy }: GameProps) {
  const pending = Object.entries(p.flags).filter(([key, value]) => key.startsWith("adventure:due:") && value > 0 && !p.flags[`adventure:seen:${key.slice("adventure:due:".length)}`]);
  const nextDue = pending.length ? Math.min(...pending.map(([, value]) => value)) : 0;
  const pendingWait = Math.max(0, Math.ceil(nextDue - clock / 1000));
- return <div className="game-view stack">
-  <header className="page-heading"><div><p className="eyebrow">Một bước, một nhân duyên</p><h1>Giang hồ</h1><p className="muted">Bốn miền đất. Bốn mươi câu chuyện. Người qua đường rồi cũng để lại dấu chân.</p></div><span className="badge">{p.stats.chains_completed ?? 0}/40 truyện đã khép</span></header>
-  <div className="tabs" aria-label="Nội dung giang hồ"><button className={`tab ${tab === "regions" ? "active" : ""}`} aria-pressed={tab === "regions"} onClick={() => setTab("regions")}>Sơn hà & cơ duyên</button><button className={`tab ${tab === "people" ? "active" : ""}`} aria-pressed={tab === "people"} onClick={() => setTab("people")}>Người hữu duyên</button></div>
+ const localPeople = snapshot.catalog.npcs.filter(person => npcBackdrops[person.id] === region?.id);
+ const landmarks = [
+  ...localPeople.map(person => ({ id: `npc:${person.id}`, label: person.name })),
+  { id: "combat", label: "Bí cảnh & luyện công" },
+ ];
+ const visit = (id: string) => {
+  if (id === "combat") { window.location.hash = "combat"; return; }
+  if (id.startsWith("npc:")) { setNpcID(id.slice(4)); setTab("people"); window.scrollTo({ top: 0, behavior: "instant" }); }
+ };
+ return <div className="game-view adventure-view">
+  <header className="page-heading adventure-heading"><div><p className="eyebrow">Một bước, một nhân duyên</p><h1>Giang hồ</h1><p className="muted">Bốn miền đất. Bốn mươi câu chuyện. Một hành trình của riêng bạn.</p></div><span className="badge">{p.stats.chains_completed ?? 0}/40 truyện đã khép</span></header>
+  <div className="adventure-tabs" aria-label="Nội dung giang hồ">
+   <button aria-pressed={tab === "regions"} onClick={() => setTab("regions")}><span>01</span> Sơn hà & cơ duyên</button>
+   <button aria-pressed={tab === "people"} onClick={() => setTab("people")}><span>02</span> Người hữu duyên</button>
+  </div>
   {tab === "regions" ? <>
-   {p.encounter && <section className="panel stack" aria-labelledby="encounter-title">
-    <div className="section-heading"><span className="eyebrow">Cơ duyên đang gặp</span><span className="badge">{snapshot.catalog.regions.find(region => region.id === p.encounter?.region)?.name}</span></div>
-    <h2 id="encounter-title">{p.encounter.title}</h2><p style={{ whiteSpace: "pre-line", lineHeight: 1.85 }}>{p.encounter.text}</p>
-    <div className="stack">{p.encounter.choices.map(choice => <button key={choice.id} disabled={busy} className="button secondary" style={{ display: "block", textAlign: "left", whiteSpace: "normal" }} onClick={() => void perform("adventure.choose", { id: choice.id })}><strong>{choice.label}</strong><span className="muted" style={{ display: "block", marginTop: 6 }}>{choice.hint}</span></button>)}</div>
-    <p className="muted">Quyết định được lưu vĩnh viễn. Hậu truyện mở sau 5 phút, không cần ở lại màn hình này.</p>
+   {p.encounter && <section className="adventure-encounter" aria-labelledby="encounter-title">
+    <div className="adventure-encounter-art" key={p.encounter.region}>
+     <InkScene mode="journey" region={p.encounter.region} heroPath={p.path} paused />
+     <div className="adventure-mist" aria-hidden="true" />
+     <div className="adventure-art-caption"><span className="adventure-kicker">Cơ duyên đang gặp</span><strong>{encounterRegion?.name}</strong><span>Dừng chân. Lắng nghe. Rồi lựa chọn.</span></div>
+    </div>
+    <div className="adventure-dialogue">
+     <p className="eyebrow">Một ngã rẽ trong hành trình</p><h2 id="encounter-title">{p.encounter.title}</h2>
+     <p className="adventure-prose">{p.encounter.text}</p>
+     <div className="adventure-choices">{p.encounter.choices.map((choice, index) => <button key={choice.id} disabled={busy} className="adventure-choice" onClick={() => void perform("adventure.choose", { id: choice.id })}><span className="adventure-choice-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><span aria-hidden="true">↗</span></button>)}</div>
+     <p className="adventure-footnote">Quyết định được lưu vĩnh viễn. Hậu truyện mở sau 5 phút, không cần ở lại màn hình này.</p>
+    </div>
    </section>}
-   {pending.length > 0 && <p className="notice">{pending.length} hậu truyện đang chờ. {pendingWait ? `Tin sớm nhất đến sau ${Math.floor(pendingWait / 60)} phút ${pendingWait % 60} giây.` : "Đã có tin mới; trở lại miền đất của câu chuyện để tiếp tục."} Bạn vẫn có thể khám phá chuyện khác.</p>}
-   <div className="card-grid">{snapshot.catalog.regions.map(region => {
-    const locked = p.realm < region.realm;
-    const visited = p.stats[`region:${region.id}`] ?? 0;
-    const complete = visited >= 30 && !p.encounter;
-    return <article className="card stack" key={region.id}><Landscape region={region.id} color={region.color} /><div className="section-heading"><h2>{region.name}</h2><span className="badge">{visited}/30 cơ duyên</span></div><p className="muted">{region.description}</p><button className="button primary" disabled={busy || locked || !!p.encounter || exploreWait > 0 || complete} onClick={() => void perform("adventure.explore", { region: region.id })}>{locked ? `Mở ở ${snapshot.catalog.realms.find(realm => realm.id === region.realm)?.name ?? "cảnh giới cao hơn"}` : complete ? "Đã đi hết những câu chuyện" : p.encounter ? "Giải quyết cơ duyên trước" : exploreWait ? `Nghỉ chân · ${exploreWait}s` : "Lên đường"}</button></article>;
-   })}</div>
-   <section className="panel stack"><div><p className="eyebrow">Không phải thiện và ác</p><h2>Đạo tâm của bạn</h2><p className="muted">Lựa chọn trong truyện có thể đổi lập trường. Đổi lời nguyện không xóa quá khứ, không mất đồ và không khóa công pháp.</p></div><div className="card-grid">{alignments.map(alignment => <article className="card stack" key={alignment.id}><h3>{alignment.label}</h3><p className="muted">{alignment.text}</p><button className={`button ${p.alignment === alignment.id ? "primary" : "secondary"}`} disabled={busy || p.alignment === alignment.id || ((p.flags["adventure:alignment-at"] ?? 0) + 60) * 1000 > clock} onClick={() => void perform("alignment.choose", { id: alignment.id })}>{p.alignment === alignment.id ? "Đang giữ lời nguyện" : `Chọn ${alignment.label}`}</button></article>)}</div></section>
+   {pending.length > 0 && <p className="adventure-notice"><strong>{pending.length} hậu truyện đang chờ.</strong> {pendingWait ? `Tin sớm nhất đến sau ${Math.floor(pendingWait / 60)} phút ${pendingWait % 60} giây.` : "Đã có tin mới; trở lại miền đất của câu chuyện để tiếp tục."} Bạn vẫn có thể khám phá chuyện khác.</p>}
+   {region && <section className="adventure-atlas" aria-labelledby="adventure-region-title">
+    <div className="adventure-world-scene">
+     <InkScene mode="journey" region={region.id} heroPath={p.path} />
+     <div className="adventure-atlas-top"><span className="adventure-kicker">Sơn hà đồ · {String(snapshot.catalog.regions.indexOf(region) + 1).padStart(2, "0")} / 04</span><span className="adventure-scene-badge">{regionLocked ? "Chưa đủ cảnh giới" : complete ? "Đã khép hành trình" : "Miền đất đã mở"}</span></div>
+     <div className="adventure-destination">
+      <div><p className="adventure-kicker">Đang xem miền đất</p><h2 id="adventure-region-title">{region.name}</h2><p>{region.description}</p></div>
+      <div className="adventure-departure"><span>{visited}/30 cơ duyên</span><progress aria-label={`Cơ duyên tại ${region.name}`} value={Math.min(visited, 30)} max={30} /><button className="button primary" disabled={busy || regionLocked || !!p.encounter || exploreWait > 0 || complete} onClick={() => void perform("adventure.explore", { region: region.id })}>{regionLocked ? `Mở ở ${snapshot.catalog.realms.find(realm => realm.id === region.realm)?.name ?? "cảnh giới cao hơn"}` : complete ? "Đã đi hết những câu chuyện" : p.encounter ? "Giải quyết cơ duyên trước" : exploreWait ? `Nghỉ chân · ${exploreWait}s` : "Lên đường →"}</button></div>
+     </div>
+    </div>
+    <div className="adventure-region-picker" aria-label="Chọn miền đất để xem">{snapshot.catalog.regions.map((item, index) => {
+     const locked = p.realm < item.realm;
+     const count = p.stats[`region:${item.id}`] ?? 0;
+     return <button className={`adventure-region${locked ? " adventure-region-locked" : ""}`} key={item.id} aria-pressed={item.id === region.id} onClick={() => setRegionID(item.id)}>
+      <span className="adventure-region-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><span className="adventure-region-label"><strong>{item.name}</strong><small>{locked ? `Mở ở ${snapshot.catalog.realms.find(realm => realm.id === item.realm)?.name ?? "cảnh giới cao hơn"}` : `${count}/30 cơ duyên`}</small></span><span className="adventure-region-marker">{item.id === region.id ? "Đang xem" : locked ? "Chưa mở" : "Xem miền"}</span>
+     </button>;
+    })}</div>
+    <p className="adventure-map-note">Chọn miền đất để ngắm cảnh; “Lên đường” mở một cơ duyên. Người hữu duyên ở đây:</p>
+    <div className="actions adventure-map-actions" aria-label="Gặp người hữu duyên">{landmarks.map(landmark => <button className="button secondary" key={landmark.id} onClick={() => visit(landmark.id)}>{landmark.label}</button>)}</div>
+   </section>}
+   <section className="adventure-oath" aria-labelledby="adventure-oath-title"><div><p className="eyebrow">Không phải thiện và ác</p><h2 id="adventure-oath-title">Đạo tâm của bạn</h2><p className="muted">Lựa chọn trong truyện có thể đổi lập trường. Đổi lời nguyện không xóa quá khứ, không mất đồ và không khóa công pháp.</p></div><div className="adventure-oath-options">{alignments.map(alignment => <article key={alignment.id}><h3>{alignment.label}</h3><p>{alignment.text}</p><button className={`button ${p.alignment === alignment.id ? "primary" : "secondary"}`} disabled={busy || p.alignment === alignment.id || ((p.flags["adventure:alignment-at"] ?? 0) + 60) * 1000 > clock} onClick={() => void perform("alignment.choose", { id: alignment.id })}>{p.alignment === alignment.id ? "Đang giữ lời nguyện" : `Chọn ${alignment.label}`}</button></article>)}</div></section>
   </> : <>
-   <p className="notice">Sáu người trưởng thành, sáu con đường riêng. Có thể hoàn thành mọi câu chuyện bằng trò chuyện; quà tặng không phải phí để được yêu mến. Không mất tình cảm khi nghỉ game.</p>
-   <div className="card-grid">{snapshot.catalog.npcs.map((person, index) => <button key={person.id} className={`card button ${person.id === npc?.id ? "primary" : "secondary"}`} style={{ display: "flex", textAlign: "left", whiteSpace: "normal" }} aria-pressed={person.id === npc?.id} onClick={() => setNpcID(person.id)}><Portrait npc={person} index={index} /><span><strong>{person.name}</strong><span className="muted" style={{ display: "block" }}>{person.title}</span><span className="badge">{p.relations[person.id]?.stage ?? 0}/{person.scenes.length} chương</span></span></button>)}</div>
-   {npc && <section className="panel stack" aria-labelledby="npc-title"><div><p className="eyebrow">{npc.title}</p><h2 id="npc-title">{npc.name}</h2><p>{npc.description}</p><p className="muted">{npc.personality}</p></div>
-    <div className="stat-grid"><div className="stat"><span>Tin tưởng</span><strong>{trust}</strong></div><div className="stat"><span>Thân thiết</span><strong>{relation?.affection ?? 0}</strong></div><div className="stat"><span>Tôn trọng</span><strong>{relation?.respect ?? 0}</strong></div><div className="stat"><span>Quan hệ</span><strong>{bonds.find(bond => bond.id === relation?.bond)?.label ?? "Hữu duyên"}</strong></div></div>
-    {scene ? <div className="card stack"><span className="eyebrow">Chương {stage + 1} / {npc.scenes.length}</span><h3>{scene.title}</h3><p style={{ whiteSpace: "pre-line", lineHeight: 1.85 }}>{scene.text}</p>{trust < scene.required_trust && <p className="notice">Cần {scene.required_trust} tin tưởng để nói tiếp.</p>}<div className="stack">{scene.choices.map(choice => <button key={choice.id} className="button secondary" style={{ whiteSpace: "normal", textAlign: "left" }} disabled={busy || relationWait > 0 || trust < scene.required_trust} onClick={() => void perform("relation.talk", { npc_id: npc.id, choice_id: choice.id })}>{choice.label}</button>)}</div></div> : <div className="success"><h3>Đã đi qua một đoạn đời cùng nhau</h3><p>Câu chuyện của {npc.name} đã khép. Lời bạn nói và những mối quan hệ đã chọn vẫn còn trong tiểu sử.</p></div>}
-    {relationWait > 0 && <p className="muted">Để câu chuyện lắng lại · {relationWait}s trước lần tương tác tiếp.</p>}
-    <div className="split-grid"><div className="card stack"><h3>Một món quà, không một món nợ</h3><p className="muted">{gifts[npc.gift] ?? npc.gift} tìm được từ lựa chọn cơ duyên. Mỗi người nhận tối đa một món trong 24 giờ, sau lần trò chuyện đầu.</p><span className="badge">Hành trang: {giftCount}</span><button className="button secondary" disabled={busy || stage < 1 || giftCount < 1 || relationWait > 0 || giftWait > 0} onClick={() => void perform("relation.gift", { npc_id: npc.id })}>{giftWait ? `Có thể tặng sau ${Math.ceil(giftWait / 3600)} giờ` : `Tặng 1 ${gifts[npc.gift] ?? npc.gift}`}</button></div>
-    <div className="card stack"><h3>Gọi tên mối quan hệ</h3><p className="muted">Hoàn thành câu chuyện và đạt 60 tin tưởng. Tri kỷ, đạo lữ cần 30 thân thiết; đối thủ cần 30 tôn trọng. Được đổi quan hệ, không tốn tài nguyên.</p><div className="actions">{bonds.map(bond => {
-     const enough = (bond.id === "confidant" || bond.id === "partner") ? (relation?.affection ?? 0) >= 30 : bond.id === "rival" ? (relation?.respect ?? 0) >= 30 : true;
-     return <button key={bond.id} className={`button ${relation?.bond === bond.id ? "primary" : "secondary"}`} disabled={busy || !arcComplete || trust < 60 || !enough || relationWait > 0 || relation?.bond === bond.id} onClick={() => void perform("relation.bond", { npc_id: npc.id, bond: bond.id })}>{bond.label}</button>;
-    })}</div></div></div>
+   <p className="adventure-notice">Sáu người trưởng thành, sáu con đường riêng. Có thể hoàn thành mọi câu chuyện bằng trò chuyện; quà tặng không phải phí để được yêu mến. Không mất tình cảm khi nghỉ game.</p>
+   <div className="adventure-cast" aria-label="Chọn người trò chuyện">{snapshot.catalog.npcs.map(person => <button key={person.id} className="adventure-cast-member" aria-pressed={person.id === npc?.id} onClick={() => setNpcID(person.id)}><InkPortrait kind="npc" id={person.id} /><span><strong>{person.name}</strong><small>{person.title}</small><span className="adventure-cast-chapter">{p.relations[person.id]?.stage ?? 0}/{person.scenes.length} chương</span></span></button>)}</div>
+   {npc && <section className="adventure-relationship" aria-labelledby="npc-title">
+    <div className="adventure-novel">
+     <div className="adventure-npc-stage" key={npc.id}>
+      <img className="adventure-landscape" src={`/art/scenes/${npcBackdrops[npc.id] ?? "thanh-van"}.webp`} alt="" />
+      <div className="adventure-mist" aria-hidden="true" />
+      <div className="adventure-npc-figure adventure-arrival"><InkPortrait kind="npc" id={npc.id} /></div>
+      <div className="adventure-art-caption"><span className="adventure-kicker">{npc.title}</span><h2 id="npc-title">{npc.name}</h2></div>
+     </div>
+     <div className="adventure-dialogue" key={`${npc.id}-${stage}`}>
+      {scene ? <><p className="eyebrow">Chương {stage + 1} / {npc.scenes.length} · {npc.name}</p><h3>{scene.title}</h3><p className="adventure-prose">{scene.text}</p>{trust < scene.required_trust && <p className="adventure-notice">Cần {scene.required_trust} tin tưởng để nói tiếp.</p>}<div className="adventure-choices">{scene.choices.map((choice, index) => <button key={choice.id} className="adventure-choice" disabled={busy || relationWait > 0 || trust < scene.required_trust} onClick={() => void perform("relation.talk", { npc_id: npc.id, choice_id: choice.id })}><span className="adventure-choice-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><strong>{choice.label}</strong><span aria-hidden="true">↗</span></button>)}</div></> : <div className="adventure-completed"><p className="eyebrow">Câu chuyện đã khép</p><h3>Đã đi qua một đoạn đời cùng nhau</h3><p>Câu chuyện của {npc.name} đã khép. Lời bạn nói và những mối quan hệ đã chọn vẫn còn trong tiểu sử.</p></div>}
+      {relationWait > 0 && <p className="adventure-footnote">Để câu chuyện lắng lại · {relationWait}s trước lần tương tác tiếp.</p>}
+      <details className="adventure-lore"><summary>Về {npc.name}</summary><p>{npc.description}</p><p>{npc.personality}</p></details>
+     </div>
+    </div>
+    <dl className="adventure-relation-stats"><div><dt>Tin tưởng</dt><dd>{trust}</dd></div><div><dt>Thân thiết</dt><dd>{relation?.affection ?? 0}</dd></div><div><dt>Tôn trọng</dt><dd>{relation?.respect ?? 0}</dd></div><div><dt>Quan hệ</dt><dd>{bonds.find(bond => bond.id === relation?.bond)?.label ?? "Hữu duyên"}</dd></div></dl>
+    <div className="adventure-relationship-actions"><section><p className="eyebrow">Trao đi một điều nhỏ</p><h3>Một món quà, không một món nợ</h3><p className="muted">{gifts[npc.gift] ?? npc.gift} tìm được từ lựa chọn cơ duyên. Mỗi người nhận tối đa một món trong 24 giờ, sau lần trò chuyện đầu.</p><div className="actions"><span className="badge">Hành trang: {giftCount}</span><button className="button secondary" disabled={busy || stage < 1 || giftCount < 1 || relationWait > 0 || giftWait > 0} onClick={() => void perform("relation.gift", { npc_id: npc.id })}>{giftWait ? `Có thể tặng sau ${Math.ceil(giftWait / 3600)} giờ` : `Tặng 1 ${gifts[npc.gift] ?? npc.gift}`}</button></div></section>
+     <section><p className="eyebrow">Không cần một lời thề vội</p><h3>Gọi tên mối quan hệ</h3><p className="muted">Hoàn thành câu chuyện và đạt 60 tin tưởng. Tri kỷ, đạo lữ cần 30 thân thiết; đối thủ cần 30 tôn trọng. Được đổi quan hệ, không tốn tài nguyên.</p><div className="actions">{bonds.map(bond => {
+      const enough = (bond.id === "confidant" || bond.id === "partner") ? (relation?.affection ?? 0) >= 30 : bond.id === "rival" ? (relation?.respect ?? 0) >= 30 : true;
+      return <button key={bond.id} className={`button ${relation?.bond === bond.id ? "primary" : "secondary"}`} disabled={busy || !arcComplete || trust < 60 || !enough || relationWait > 0 || relation?.bond === bond.id} onClick={() => void perform("relation.bond", { npc_id: npc.id, bond: bond.id })}>{bond.label}</button>;
+     })}</div></section></div>
    </section>}
   </>}
-  {recent && <section className="panel stack" aria-live="polite"><p className="eyebrow">Dòng mực vừa khô</p><h2>{recent.title}</h2><p style={{ whiteSpace: "pre-line" }}>{recent.text}</p><time className="muted" dateTime={recent.at}>{new Date(recent.at).toLocaleString("vi-VN")}</time></section>}
+  {recent && <section className="adventure-journal" aria-live="polite"><p className="eyebrow">Dòng mực vừa khô</p><h2>{recent.title}</h2><p className="adventure-prose">{recent.text}</p><time className="muted" dateTime={recent.at}>{new Date(recent.at).toLocaleString("vi-VN")}</time></section>}
  </div>;
 }

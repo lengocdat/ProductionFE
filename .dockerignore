@@ -7,3 +7,6 @@ node_modules
 .backups
 backups
 npm-debug.log*
+art-source
+._*
+**/._*

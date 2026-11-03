@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" fill="none">
+ <defs>
+  <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#dce3db"/><stop offset="1" stop-color="#f7ebd0"/></linearGradient>
+  <linearGradient id="island" x2=".2" y2="1"><stop stop-color="#718b82"/><stop offset="1" stop-color="#c5cdbb" stop-opacity=".2"/></linearGradient>
+  <linearGradient id="fall" x2="0" y2="1"><stop stop-color="#f8f5e8"/><stop offset="1" stop-color="#f8f5e8" stop-opacity="0"/></linearGradient>
+  <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".67" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".07"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter>
+ </defs>
+ <g filter="url(#paper)">
+ <path d="M0 0h1200v720H0Z" fill="url(#sky)"/>
+ <circle cx="658" cy="168" r="109" fill="#f3db9e" opacity=".55"/><circle cx="658" cy="168" r="123" stroke="#b99c60" opacity=".26"/><circle cx="658" cy="168" r="129" stroke="#b99c60" opacity=".13"/>
+ <path d="m0 377 56-44 39 10 23-87 39-31 27 48 14 87 29-14 25 47 30-104 42-16 42 130 36-51 57 45 51-16 49 48 45-51 56 34 71-60 39 12 72-55 46 21 26-94 36-15 25 81 40 20 39-102 41 33 29 112 41-50 40 13 26 38v175H0Z" fill="#a5bdb0" opacity=".3"/>
+ <!-- Floating, eroded islands rather than repeated triangular peaks. -->
+ <path d="M57 281q40-38 111-14l58 13-12 44-32 22-14 80-30-57-20 17-19-71-32-4Z" fill="url(#island)"/>
+ <path d="m87 301 17 21 15 39m62-56-19 46-4 40m-30-89 12 43" stroke="#617e74" opacity=".5" stroke-width="3"/>
+ <path d="M57 281q62-33 168-1-54 18-168 1" fill="#8da489"/>
+ <path d="M789 288q106-47 245 5l-32 46-43 18-31 135-30-52-39 31-17-102-33-28Z" fill="url(#island)"/>
+ <path d="m828 324 31 41 15 69m105-105-35 63-10 76m-13-135 2 59m-31-36-2 45" stroke="#5d7a71" stroke-width="3" opacity=".5"/>
+ <path d="M790 288q111-48 244 5-127 23-244-5Z" fill="#95aa8b"/>
+ <path d="M898 300c-8 64 13 132-2 208h21c19-89-4-139 2-207Z" fill="url(#fall)"/>
+ <path d="M153 284c-13 61 8 84-9 147h12c18-49 3-108 9-144Z" fill="url(#fall)"/>
+ <g stroke="#657b6d" stroke-linejoin="round">
+  <path d="M862 283v-52h13v51m85 0v-52h13v52" fill="#c4bd99" stroke-width="2"/>
+  <path d="M845 232q46-14 69-40 24 26 73 40-62-8-142 0Z" fill="#566f64"/>
+  <path d="M876 210q23-9 39-29 19 23 39 29-44-5-78 0Z" fill="#647e6a"/>
+  <path d="M914 181v-16m-19 18h39" stroke-width="2"/>
+  <path d="M894 280v-40h39v40" fill="#d2c7a3"/><path d="M905 279v-30h16v30" fill="#7d8b73"/>
+  <path d="M848 285h139m-124-33h17m76 0h20" stroke-width="3"/>
+ </g>
+ <!-- Long ribbons of cloud give the islands their negative space. -->
+ <path d="M-30 472q142-48 248-18t233 2q113-51 239-13t261 0q130-40 279 8v89H-30Z" fill="#f3edda" opacity=".86"/>
+ <path d="M0 496q147-29 248-6m112-15q109-20 191-3m293 18q122-24 273-3" stroke="#fff8e8" stroke-width="5" opacity=".65"/>
+ <path d="M-40 618q124-93 263-35t242-8q159-60 299-5t265-11q99-37 211 17v144H-40Z" fill="#d0d7bf"/>
+ <path d="M0 663q170-49 291-9t259-6q153-30 266 4t384-3v71H0Z" fill="#e8e3cb"/>
+ <path d="M0 720v-61l107-16 28-35 57 12 58 67 96 33Zm1200 0v-75l-68-15-27-60-61-13-20 62-89 54-96 47Z" fill="#647f6b"/>
+ <path d="m1050 575 13 47-30 49m91-26-29 40-72 21M147 623l27 50 45 20" stroke="#c0c9a7" stroke-width="3" opacity=".65"/>
+ <!-- White crane pair, each an intentional brush silhouette. -->
+ <g fill="#f9f1dd" stroke="#5f786b" stroke-width="1.5"><path d="M413 204q-35-39-59-27 28 8 39 29-31 8-47 29 32-14 57-15 15 8 29 4l11-7 14 2-12-6q-9-9-19-1Z"/><path d="M311 257q-25-30-45-22 24 10 32 25-22 2-38 20 26-10 44-12 14 8 23-2l14 1-11-5q-6-7-13-1Z"/></g>
+ <path d="m432 224 24 10m-134 35 20 9" stroke="#5f786b" stroke-width="1.5"/>
+ <g stroke="#a9935b" opacity=".44"><path d="M96 107h39m-20-20v40m917 16h25m-12-12v25m-65-58h16m-8-8v16"/></g>
+ </g>
+</svg>

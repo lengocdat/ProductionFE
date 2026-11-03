@@ -120,7 +120,7 @@ dialog::backdrop { background:#02090bd9; }
 .mobile-menu,.bottom-nav,.menu-scrim { display:none; }
 .shell-alert { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px; }
 .shell-alert p { margin-top:5px; }
-.cultivation-hero { min-height:390px; display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:24px; padding:32px; border:1px solid #3e544a; border-radius:16px; position:relative; overflow:hidden; background:linear-gradient(90deg,#0c2126eb 0%,#10262c88 50%,#0a191bb3 100%),url('/art/immortal-mountains.svg') center 46%/cover; }
+.cultivation-hero { min-height:390px; display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:24px; padding:32px; border:1px solid #3e544a; border-radius:16px; position:relative; overflow:hidden; background:linear-gradient(90deg,#0c2126eb 0%,#10262c88 50%,#0a191bb3 100%),url('/art/scenes/thanh-van.webp') center 46%/cover; }
 .hero-copy { padding:14px 0; display:flex; flex-direction:column; align-items:flex-start; }
 .hero-copy h2 { font-size:clamp(30px,3.1vw,44px); line-height:1.35; margin:21px 0 15px; color:#ececdf; }
 .hero-copy h2 em { font-style:normal; color:#c6d1ac; }
@@ -158,7 +158,7 @@ dialog::backdrop { background:#02090bd9; }
 .loading-screen { min-height:100vh; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:22px; padding:24px; text-align:center; }
 .spin { animation:spin 1.5s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
-.landing { min-height:100vh; background:linear-gradient(90deg,#0a171ceb,#0a191c85 58%,#0b171bf0),url('/art/immortal-mountains.svg') center/cover fixed; padding:36px 6vw 26px; }
+.landing { min-height:100vh; background:linear-gradient(90deg,#0a171ceb,#0a191c85 58%,#0b171bf0),url('/art/scenes/thanh-van.webp') center/cover fixed; padding:36px 6vw 26px; }
 .landing-header { display:flex; align-items:center; justify-content:space-between; padding-bottom:40px; border-bottom:1px solid #68837035; }
 .landing-grid { max-width:1280px; margin:0 auto; display:grid; grid-template-columns:1.4fr 1fr; align-items:center; gap:8vw; min-height:72vh; padding:48px 0; }
 .landing-story { padding:20px 0; }

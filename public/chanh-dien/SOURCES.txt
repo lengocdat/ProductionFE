@@ -1,0 +1,24 @@
+Tài nguyên phái sinh từ dự án "Chánh Điện Tịnh Tâm" (github.com/kentjuno/chanh-dien-online)
+của Kent Juno, giấy phép MIT — xem LICENSE trong thư mục này (BẮT BUỘC giữ kèm khi phát hành).
+Bản gốc: commit bee578d267c52940da08bc16171cfe8392b69d17 (2026-10-31), thư mục assets/.
+Dựng lại: FE/scripts/build_art.sh (tự tải đúng commit trên, chỉnh sửa rồi ghi đè các file dưới).
+
+File                 Gốc                    Đã sửa                                          Dùng ở
+bang-ron-tu-khi.png  fx_banner.png          nền đỏ → tím "tử khí", giữ viền vàng            nền banner khi có người cúng dường
+linh-lien.png        fx_lotus.png           sen hồng → "linh liên" xanh băng, nhuỵ vàng    rơi khi phát lộc
+la-ngoc.png          fx_petal.png           cánh vàng → lá ngọc xanh, lật ngang             rơi khi phát lộc
+nhang-linh-khi.png   fx_incense.png         khói tím hồng → khói linh khí xanh ngọc         đầu bảng Cúng dường Thiên Đạo
+cuon-so.png          fx_scroll.png          ruy băng đỏ → tím, lật ngang                    tiêu đề Sổ Công Đức
+dong-phu-1.mp3       music/music1.mp3       chậm 6% (trầm ~1 cung), vang hang động,         nhạc nền phòng
+                     "Trăng trên rừng trúc" lọc dịu, trộn tiếng gió tự tổng hợp, chuẩn hoá
+dong-phu-2.mp3       music/music2.mp3       như trên                                         nhạc nền phòng
+                     "Hơi thở ban mai"
+
+Theo README gốc: ảnh tạo bằng Google Flow, nhạc tạo bằng Gemini; tác giả dặn kiểm tra điều khoản
+của các dịch vụ đó trước khi dùng thương mại. Bản đã sửa VẪN là phái sinh của các file đó.
+CHƯA kiểm chứng điều khoản thương mại của Flow/Gemini: phải xác nhận (hoặc thay bằng tài nguyên
+tự làm) trước khi bật nhận tiền (GAME_PAYMENTS_ENABLED).
+Gỡ toàn bộ: xoá thư mục này, scripts/build_art.sh và các chỗ tham chiếu "/chanh-dien/" trong FE/src/room.
+
+Cố ý KHÔNG lấy: hall.jpg (tượng Phật, khổ dọc 9:16), nhân vật sư/ni/phật tử, mõ, chuông — mang tính
+tôn giáo, không hợp với nội dung hài của game và không dùng được trong cảnh 3D đi lại tự do.

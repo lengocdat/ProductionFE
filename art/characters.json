@@ -1,0 +1,12 @@
+[
+  {"id":"hero-sword","source":"f2_grandmasterzendo","palette":"ivory"},
+  {"id":"hero-body","source":"f2_godpalmblacktiger","palette":"bronze"},
+  {"id":"hero-spell","source":"f2_mage4winds","palette":"jade"},
+  {"id":"hero-hidden","source":"f2_katara","palette":"violet"},
+  {"id":"npc-lan-chi","source":"f3_aymarahealer","palette":"jade"},
+  {"id":"npc-mac-ngon","source":"f2_ogremonk02","palette":"bronze"},
+  {"id":"npc-tram-yen","source":"f2_paperdropper","palette":"violet"},
+  {"id":"npc-kha-phong","source":"f2_eternitypainter","palette":"jade"},
+  {"id":"npc-to-anh","source":"f2_caligrapher","palette":"bronze"},
+  {"id":"npc-bach-lien","source":"f1_sunriser","palette":"ivory"}
+]

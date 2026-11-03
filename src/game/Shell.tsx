@@ -16,11 +16,12 @@ import Admin from "./views/Admin";
 import Onboarding from "./Onboarding";
 import PWA from "./PWA";
 import CosmeticArt from "./CosmeticArt";
+import ProgressFeedback from "./ProgressFeedback";
 
 const tabs = [
   { id: "home", label: "Động phủ", icon: HomeIcon, component: Home },
   { id: "adventure", label: "Giang hồ", icon: Compass, component: Adventure },
-  { id: "combat", label: "Đấu pháp", icon: Swords, component: Combat },
+  { id: "combat", label: "Bí cảnh", icon: Swords, component: Combat },
   { id: "social", label: "Tông môn", icon: Users, component: Social },
   { id: "collection", label: "Đạo đồ", icon: BookOpen, component: Collection },
 ];
@@ -161,7 +162,7 @@ export default function Shell({ admin = false }: { admin?: boolean }) {
     catch (failure) { setError(errorMessage(failure)); }
     finally { locked.current = false; setBusy(false); }
   };
-  const alert = error && <div className="error shell-alert" role="alert"><div><strong>Chưa thể hoàn tất</strong><p>{error}</p>{pending && <p>Kết quả chưa xác định. Kiểm tra lại đúng mã yêu cầu sẽ không nhận thưởng hoặc trừ tài nguyên hai lần.</p>}</div>{pending ? <button className="button secondary" disabled={busy} onClick={() => void execute(pending).catch(() => {})}><RefreshCw size={16} /> Kiểm tra yêu cầu</button> : <button className="icon-button" onClick={() => setError("")} aria-label="Đóng thông báo"><X size={18} /></button>}</div>;
+  const alert = <><ProgressFeedback snapshot={snapshot} />{error && <div className="error shell-alert" role="alert"><div><strong>Chưa thể hoàn tất</strong><p>{error}</p>{pending && <p>Kết quả chưa xác định. Kiểm tra lại đúng mã yêu cầu sẽ không nhận thưởng hoặc trừ tài nguyên hai lần.</p>}</div>{pending ? <button className="button secondary" disabled={busy} onClick={() => void execute(pending).catch(() => {})}><RefreshCw size={16} /> Kiểm tra yêu cầu</button> : <button className="icon-button" onClick={() => setError("")} aria-label="Đóng thông báo"><X size={18} /></button>}</div>}</>;
 
   if (loading) return <div className="loading-screen"><span className="brand-seal">道</span><LoaderCircle className="spin" size={24} /><h1>Đang mở đạo đồ</h1><p className="muted">Kết nối với thế giới của bạn…</p></div>;
   if (!user) return <><PWA /><main className="landing"><header className="landing-header"><Link href="/" className="brand"><span className="brand-seal">道</span><span>Cẩu Đạo Ký<small>Một đời tự tại</small></span></Link><span className="badge">Tu tiên nhàn nhã · Việt ngữ</span></header>{alert}<div className="landing-grid"><section className="landing-story"><p className="eyebrow"><span className="tiny-line" /> KHÔNG TRANH NHẤT THỜI</p><h1>Sống đủ lâu.<br />Viết nên <em>huyền thoại.</em></h1><p>Giang hồ rộng lớn, không chỉ có một con đường thành tiên. Tu luyện khi vắng mặt, kết giao người hữu duyên, giữ lấy đạo tâm của riêng mình.</p><div className="landing-values"><span><Compass size={18} /> Sơn hà có chuyện</span><span><Users size={18} /> Nhân duyên có thật</span><span><ShieldCheck size={18} /> Không bán sức mạnh</span></div><div className="landscape-caption"><span>THANH VÂN SƠN</span><span>Gió vẫn thổi. Đạo vẫn dài.</span></div></section><Auth onSession={authenticate} admin={admin} /></div><footer className="landing-footer"><span>Chơi thong thả. Dừng lại bất cứ lúc nào.</span><span>Tích lũy ngoại tuyến tối đa 24 giờ · Vật phẩm trả phí chỉ mang tính thẩm mỹ</span></footer>{error && !user && <button className="button secondary" onClick={() => void load()}><RefreshCw size={16} /> Kết nối lại</button>}</main></>;

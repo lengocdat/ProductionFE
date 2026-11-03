@@ -1,0 +1,28 @@
+Âm thanh Thiên Cơ Bất Ngờ — nguồn và giấy phép (kiểm tra ngày 2026-11-02)
+
+Bản ghi gốc đều phát hành theo Creative Commons Zero 1.0 (CC0, public domain):
+dùng thương mại, chỉnh sửa, không bắt buộc ghi công. https://creativecommons.org/publicdomain/zero/1.0/
+Giấy phép được kiểm tra trực tiếp trên trang của từng âm thanh.
+
+set.mp3   — tiếng sét: "Thunderstorm lightning strike" của foad
+            https://freesound.org/people/foad/sounds/243614/  (CC0)
+            + tiếng "ting" tự tổng hợp
+ga.mp3    — tiếng gà: "Chicken Single Alarm Call" của Rudmer_Rotteveel
+            https://freesound.org/people/Rudmer_Rotteveel/sounds/316920/  (CC0)
+            + tiếng "boing" lò xo tự tổng hợp
+occ.mp3   — bụng ọc ọc: "stomach growl-PiSh_01" của XxBirdoxX
+            https://freesound.org/people/XxBirdoxX/sounds/52293/  (CC0)
+bep.mp3   — ấm nước réo: "whistling_kettle1.mp3" của 3bagbrew
+            https://freesound.org/people/3bagbrew/sounds/59571/  (CC0)
+            + tiếng "ding" tự tổng hợp
+vet.mp3   — vẹt kêu: "Macaw Parrot screaming in a park" của felix.blume
+            https://freesound.org/people/felix.blume/sounds/504988/  (CC0)
+
+Tự tổng hợp hoàn toàn bằng công thức (không dùng bản ghi của bên thứ ba):
+truot.mp3   — còi trượt + tiếng ngã "bịch"
+lonnhao.mp3 — tiếng gió "vụt" + "póc" tiếp đất
+bikip.mp3   — lật trang + chuỗi nốt lấp lánh
+daingoc.mp3 — kèn buồn "wà-wà-wà-wàaa" (mô-típ hài phổ thông, tự tổng hợp)
+chieng.mp3  — chiêng "boong… BOONG~" khi có người cúng dường (tần số không điều hoà của chiêng, tự tổng hợp)
+
+Cách cắt/ghép: FE/scripts/build_sfx.sh (chạy lại để dựng lại các file).

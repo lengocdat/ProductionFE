@@ -1,0 +1,9 @@
+[
+  {"id":"slash","group":"icons","source":"icon_f2_killingedge","palette":"jade","actions":{"idle":"killingedge"}},
+  {"id":"ward","group":"icons","source":"icon_f1_aegisbarrier","actions":{"idle":"aegisbarrier"}},
+  {"id":"flame","group":"icons","source":"icon_f2_phoenixfire","actions":{"idle":"phoenixfire"}},
+  {"id":"frost","group":"icons","source":"icon_f6_flashfreeze","actions":{"idle":"flashfreeze"}},
+  {"id":"shadow","group":"icons","source":"icon_f2_mistdragonseal","palette":"violet","actions":{"idle":"mistdragonseal"}},
+  {"id":"heal","group":"icons","source":"icon_f5_increasinghealth","actions":{"idle":"increasinghealth"}},
+  {"id":"lightning","group":"icons","source":"icon_f2_ghost_lightning","palette":"ivory","actions":{"idle":"lightning"}}
+]

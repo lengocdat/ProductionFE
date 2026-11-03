@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "../game/world.css";
+import "../game/idle-cultivation.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_PUBLIC_URL || "https://coduyen.net"),

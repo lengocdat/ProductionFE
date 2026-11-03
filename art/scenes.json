@@ -1,0 +1,30 @@
+{
+  "revision": "9fd0a16b611be8c9b991806ec5a6f602aa981823",
+  "images": {
+    "thanh-van": {
+      "source": "maps/battlemap1_background.png",
+      "sourceSHA256": "046f3705ccb80e024f72b53e7d7a2f7c8e9c73bf7fae6b70821e49157c63eb2a",
+      "adaptation": "1280x720 crop, matte and 72% saturation; forest uses left 58% of parallax layer"
+    },
+    "van-truc": {
+      "source": "scenes/shimzar/midground.png",
+      "sourceSHA256": "6cdc73d3a7615cf55ed1db005cd326d8854bd2621f01830cb45908b2252ba8da",
+      "adaptation": "1280x720 crop, matte and 72% saturation; forest uses left 58% of parallax layer"
+    },
+    "hac-phong": {
+      "source": "maps/battlemap3_background.png",
+      "sourceSHA256": "4195214c8dc01a6189a802dc2c9cf7d1c561d00e74502fd82624660f40598f51",
+      "adaptation": "1280x720 crop, matte and 72% saturation; forest uses left 58% of parallax layer"
+    },
+    "van-tuong": {
+      "source": "maps/battlemap7_background.png",
+      "sourceSHA256": "a9e0a5c58aa91f7e83ce1ba23050520e3eb50bdcc78589c3b4e6b309124ec6f5",
+      "adaptation": "1280x720 crop, matte and 72% saturation; forest uses left 58% of parallax layer"
+    },
+    "arena": {
+      "source": "maps/shimzar/midground.png",
+      "sourceSHA256": "e2af61b51fa8875dd5c6b4efd7c49d43c41f08af123973a42b7be5928800220b",
+      "adaptation": "resized to 1100x712, transparent WebP"
+    }
+  }
+}

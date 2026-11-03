@@ -1,0 +1,165 @@
+/* Ink landscapes sit in warm paper panels; the existing jade shell remains the frame. */
+.idle-page-heading,.idle-section-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.idle-page-heading h1 { font-size:34px; margin-top:8px; }
+.idle-realm-seal { padding:9px 15px; border:1px solid #a99462; color:#ddc699; border-radius:3px; font-family:Georgia,serif; font-size:15px; }
+.cultivation-layout { display:grid; grid-template-columns:minmax(0,1.9fr) minmax(265px,1fr); gap:22px; align-items:start; }
+.cultivation-sanctuary { position:relative; isolation:isolate; overflow:hidden; border:1px solid #b2ae91; border-radius:4px; background:#f3eedf; color:#263e36; box-shadow:0 16px 48px #0002; }
+.cultivation-sanctuary>.ink-scene { height:440px; }
+.sanctuary-title { position:absolute; z-index:2; top:25px; left:27px; right:27px; pointer-events:none; }
+.sanctuary-title h2 { font-size:28px; margin:10px 0 5px; }
+.sanctuary-title p { color:#637464; font-size:12px; }
+.idle-running { display:inline-flex; align-items:center; gap:7px; font-size:11px; letter-spacing:.035em; }
+.idle-running i { width:5px; height:5px; background:#538966; border-radius:50%; box-shadow:0 0 0 4px #75a37b1c; }
+.sanctuary-inscription { position:absolute; z-index:2; top:152px; right:24px; writing-mode:vertical-rl; line-height:2; font:17px/2 Georgia,serif; letter-spacing:.14em; color:#7a847266; pointer-events:none; }
+.sanctuary-motion { position:absolute; z-index:2; top:21px; right:22px; background:#efe9d5c9; color:#596957; border:1px solid #9b9f824f; border-radius:3px; min-height:34px; padding:5px 9px; font-size:10px; }
+.sanctuary-cultivation { position:relative; z-index:2; padding:23px 28px 22px; background:linear-gradient(165deg,#f6f0e4,#e8e4d3); border-top:1px solid #a1a4876b; }
+.sanctuary-cultivation .idle-section-heading { font-size:11px; color:#67745f; }
+.cultivation-total { display:flex; align-items:baseline; gap:12px; margin:8px 0 12px; font:38px/1.15 Georgia,serif; color:#294e42; font-variant-numeric:tabular-nums; }
+.cultivation-total small { font:12px Arial,sans-serif; color:#7c806d; }
+.sanctuary-cultivation progress { display:block; appearance:none; height:5px; border:0; background:#d4d7c4; border-radius:0; }
+.sanctuary-cultivation progress::-webkit-progress-bar { background:#d4d7c4; }
+.sanctuary-cultivation progress::-webkit-progress-value { background:linear-gradient(90deg,#537d66,#93ac76); }
+.sanctuary-cultivation progress::-moz-progress-bar { background:#537d66; }
+.cultivation-accrual { display:flex; justify-content:space-between; gap:10px; margin:9px 0 19px; font-size:11px; color:#5f735c; }
+.cultivation-primary-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.cultivation-sanctuary .button,.idle-paper-panel .button,.idle-site-rewards .button,.idle-boss .button { border-radius:3px; min-height:43px; white-space:normal; }
+.cultivation-sanctuary .button.primary,.idle-paper-panel .button.primary,.idle-site-rewards .button.primary,.idle-boss .button.primary { background:#315d4d; color:#f5eedb; border-color:#315d4d; }
+.cultivation-sanctuary .button.primary:hover:not(:disabled),.idle-paper-panel .button.primary:hover:not(:disabled),.idle-site-rewards .button.primary:hover:not(:disabled),.idle-boss .button.primary:hover:not(:disabled) { background:#416f5b; }
+.cultivation-sanctuary .button.secondary { background:transparent; color:#3f6550; border-color:#9aaa8a; }
+.cultivation-sanctuary .text-button,.idle-paper-panel .text-button { color:#47715b; }
+.cultivation-sanctuary .breakthrough-ready { background:#97623e!important; border-color:#97623e!important; color:#fff3d6!important; box-shadow:0 0 0 3px #af8b5214; }
+.idle-fine-print { font-size:10px; color:#94aa9c; line-height:1.8; }
+.sanctuary-cultivation .idle-fine-print { color:#77816c; margin-top:13px; }
+.cultivation-companion { display:flex; flex-direction:column; gap:18px; }
+.idle-paper-panel { padding:23px; border:1px solid #b2ae90; border-radius:4px; color:#354c3b; background:linear-gradient(140deg,#f3eedf,#e6e3d0); display:flex; flex-direction:column; align-items:flex-start; gap:14px; }
+.idle-paper-panel .eyebrow { color:#7b8768; }
+.idle-paper-panel h2 { font-size:25px; line-height:1.35; }
+.idle-paper-panel p:not(.eyebrow) { font-size:12px; line-height:1.9; }
+.idle-paper-panel .muted { color:#78816b; }
+.idle-paper-panel .button { width:100%; }
+.idle-route { background:#173029; border-color:#3c5746; color:#d7dfc5; }
+.idle-route .eyebrow { color:#a9b991; }
+.idle-route ol { display:flex; flex-direction:column; gap:18px; list-style:none; margin:3px 0 0; padding:0; }
+.idle-route li { display:flex; gap:14px; }
+.idle-route li>span { color:#b4a377; font:22px Georgia,serif; }
+.idle-route strong { font-size:12px; font-weight:500; }
+.idle-route li p { color:#97ad97; font-size:11px!important; margin-top:4px; }
+.idle-home-links { display:flex; flex-direction:column; gap:8px; }
+.idle-home-links button { display:flex; align-items:center; gap:12px; text-align:left; padding:13px 4px; border:0; border-bottom:1px solid #345144; background:none; color:#c2d2b4; }
+.idle-home-links button>span { flex:1; }
+.idle-home-links strong { display:block; font-size:12px; font-weight:500; }
+.idle-home-links small { display:block; color:#8aa38c; font-size:10px; margin-top:5px; }
+.breakthrough-message { position:absolute; z-index:5; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; text-align:center; padding:35px; background:#eee7d4ed; backdrop-filter:blur(7px); }
+.breakthrough-message>span { font-size:10px; letter-spacing:.25em; color:#926b3f; }
+.breakthrough-message h2 { font-size:45px; color:#93633f; }
+.breakthrough-message p { max-width:300px; font-size:13px; line-height:1.9; }
+.idle-region-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+.idle-region-tabs button { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:5px; padding:14px 17px; background:#18312c; border:1px solid #3b5647; border-radius:3px; color:#bdcbb4; text-align:left; }
+.idle-region-tabs button[aria-pressed="true"] { background:#ebe5d4; color:#395642; border-color:#c1b28c; }
+.idle-region-tabs button>span { font:11px Georgia,serif; opacity:.6; }
+.idle-region-tabs strong { font:19px Georgia,serif; }
+.idle-region-tabs small { font-size:9px; opacity:.8; }
+.idle-expedition-scene { position:relative; overflow:hidden; border:1px solid #969f80; border-radius:4px; background:#eee8d8; }
+.idle-expedition-scene>.ink-scene { height:480px; }
+.idle-site-caption { position:absolute; top:25px; left:28px; right:25px; max-width:430px; color:#324b3b; pointer-events:none; }
+.idle-site-caption .eyebrow { color:#718267; }
+.idle-site-caption h2 { font-size:35px; margin:9px 0; }
+.idle-site-caption p:not(.eyebrow) { font-size:12px; line-height:1.8; color:#697662; max-width:340px; }
+.idle-site-rewards { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:21px 27px; color:#38523c; background:#eee8d8; border-top:1px solid #aaa98a55; }
+.idle-site-rewards>div { display:flex; flex-direction:column; gap:5px; }
+.idle-site-rewards span { color:#7f846b; font-size:10px; }
+.idle-site-rewards strong { font-size:13px; font-weight:500; }
+.idle-site-rewards small { color:#7b8069; font-size:10px; }
+.idle-expedition-status { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:18px 25px; padding:22px 25px; border:1px solid #547454; border-left:3px solid #a9bd84; border-radius:3px; background:linear-gradient(110deg,#213f31,#152c2a); }
+.idle-expedition-status h2 { font-size:24px; margin:7px 0; color:#e4e6c7; }
+.idle-expedition-status p { font-size:12px; color:#a7bea4; }
+.idle-expedition-status>.idle-fine-print,.idle-expedition-status>details,.idle-return-confirm { width:100%; }
+.idle-expedition-status>details { padding-top:8px; border-top:1px solid #4a65484d; font-size:11px; color:#bac9a4; }
+.idle-expedition-status summary,.idle-battle-log summary { cursor:pointer; min-height:30px; }
+.idle-return-confirm { padding-top:15px; border-top:1px solid #6c7850; display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; }
+.idle-return-confirm p { width:100%; }
+.idle-trials { display:flex; flex-direction:column; gap:18px; }
+.idle-trials h2 { margin-top:6px; }
+.idle-combat-policy { display:flex; flex-direction:column; gap:5px; padding:13px 17px; border:1px solid #324c41; background:#142923; border-radius:3px; }
+.idle-combat-policy label { display:flex; gap:9px; align-items:center; font-size:12px; cursor:pointer; }
+.idle-combat-policy input { width:15px; height:15px; }
+.idle-combat-policy small { font-size:10px; color:#8ca38e; padding-left:24px; }
+.idle-boss-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.idle-boss { position:relative; display:grid; grid-template-columns:115px minmax(0,1fr); gap:10px 17px; padding:19px; border:1px solid #a8ab8e; border-radius:3px; color:#3d523d; background:linear-gradient(130deg,#ece7d8,#e2dfca); }
+.idle-boss>.ink-portrait { width:115px; height:180px; grid-row:1/3; align-self:center; }
+.idle-boss>div:not(.ink-portrait) { display:flex; flex-direction:column; gap:7px; }
+.idle-boss .eyebrow { color:#7b805e; font-size:8px; }
+.idle-boss h3 { font:23px Georgia,serif; color:#384e39; }
+.idle-boss p { font-size:11px; line-height:1.8; }
+.idle-boss small { font-size:9px; color:#76816a; }
+.idle-boss .idle-boss-loot { color:#8d734c; font-size:10px; }
+.idle-boss>.button { grid-column:2; font-size:11px; justify-self:start; }
+.auto-battle { display:flex; flex-direction:column; gap:0; border:1px solid #8f9c80; border-radius:4px; overflow:hidden; background:#eee8d9; color:#344a38; scroll-margin-top:20px; }
+.auto-battle>.idle-section-heading { padding:23px 27px 16px; }
+.auto-battle .eyebrow { color:#8b7852; margin-bottom:7px; }
+.auto-battle .icon-button { color:#64705b; }
+.auto-battle>.ink-scene { height:470px; }
+.auto-battle-health { display:flex; justify-content:space-between; gap:30px; padding:0 27px 15px; font-size:11px; }
+.auto-battle-health>span { display:flex; gap:12px; align-items:center; }
+.auto-battle-health b { font-size:10px; color:#778563; font-weight:400; font-variant-numeric:tabular-nums; }
+.auto-battle-caption { padding:16px 27px 0; min-height:50px; font-size:12px; line-height:1.8; color:#5d7056; }
+.auto-battle-controls { padding:17px 27px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:13px; border-bottom:1px solid #9aa88255; }
+.auto-battle-controls small { font-size:9px; color:#7b836a; }
+.auto-battle-controls .button.secondary { color:#3d634c; background:#dce1ca; border-color:#9fac88; border-radius:3px; }
+.auto-battle-controls .text-button { color:#537358; }
+.idle-battle-result { display:flex; align-items:center; gap:20px; padding:25px 27px; }
+.idle-result-seal { display:grid; place-items:center; width:57px; height:64px; flex-shrink:0; border:1px solid #927e65; border-radius:2px 8px 3px 5px; color:#927e65; font:17px Georgia,serif; transform:rotate(-5deg); }
+.is-victory .idle-result-seal { color:#a6553f; border-color:#a6553f; }
+.idle-battle-result h3 { font:22px Georgia,serif; margin-bottom:9px; }
+.idle-battle-result p { font-size:12px; color:#6e7358; }
+.idle-battle-result small { display:block; font-size:10px; color:#81866e; margin-top:8px; }
+.idle-battle-log { padding:17px 27px; font-size:11px; color:#66765c; border-top:1px solid #9aa88255; }
+.idle-battle-log>p { margin:10px 0; }
+.idle-battle-log ol { max-height:300px; overflow:auto; padding-left:22px; margin:15px 0; }
+.idle-battle-log li { margin-bottom:11px; }
+.idle-battle-log strong { font-size:10px; color:#385b43; }
+.combat-path-card>.ink-portrait { width:100%; height:190px; background:#e8e5d4; border-radius:3px; }
+.path-card>.ink-portrait { width:100%; height:190px; background:#e8e5d4; border-radius:3px; }
+@media(max-width:1200px) {
+ .cultivation-layout { grid-template-columns:minmax(0,1.5fr) minmax(240px,1fr); gap:16px; }
+ .idle-paper-panel { padding:19px; }
+ .idle-boss-list { grid-template-columns:1fr; }
+ .idle-boss { grid-template-columns:130px minmax(0,1fr) auto; align-items:center; }
+ .idle-boss>.ink-portrait { grid-row:auto; width:130px; height:150px; }
+ .idle-boss>.button { grid-column:3; }
+}
+@media(max-width:1000px) and (min-width:901px) { .cultivation-layout { grid-template-columns:1fr; }.cultivation-companion { display:grid; grid-template-columns:1fr 1fr; }.idle-home-links { grid-column:1/-1; } }
+@media(max-width:700px) {
+ .idle-page-heading h1 { font-size:29px; }.idle-realm-seal { font-size:12px; padding:7px 10px; }
+ .cultivation-layout { grid-template-columns:1fr; gap:20px; }.cultivation-sanctuary>.ink-scene { height:360px; }
+ .sanctuary-title { top:21px; left:21px; }.sanctuary-title h2 { font-size:25px; }.sanctuary-motion { top:17px; right:15px; font-size:9px; }
+ .sanctuary-inscription { right:16px; top:140px; font-size:14px; }.sanctuary-cultivation { padding:21px; }
+ .cultivation-total { font-size:34px; }.cultivation-primary-actions { gap:8px; }.cultivation-primary-actions .button { font-size:10px; padding:10px 8px; }
+ .cultivation-companion { gap:16px; }.idle-paper-panel { padding:23px; }.idle-paper-panel h2 { font-size:24px; }
+ .idle-region-tabs { gap:6px; }.idle-region-tabs button { padding:12px 8px; }.idle-region-tabs strong { font-size:15px; }.idle-region-tabs small { font-size:8px; }
+ .idle-expedition-scene>.ink-scene { height:340px; }.idle-site-caption { top:22px; left:20px; }.idle-site-caption h2 { font-size:30px; }.idle-site-caption p:not(.eyebrow) { max-width:230px; font-size:10px; }
+ .idle-site-rewards { padding:19px; flex-direction:column; align-items:stretch; gap:15px; }.idle-site-rewards>.button { width:100%; }
+ .idle-expedition-status { padding:20px; gap:16px; }.idle-expedition-status h2 { font-size:22px; }.idle-expedition-status>.actions { width:100%; }.idle-expedition-status>.actions .button { flex:1; }
+ .idle-trials>.idle-section-heading { align-items:flex-start; flex-direction:column; gap:10px; }.idle-trials h2 { font-size:25px; }
+ .idle-boss { grid-template-columns:95px minmax(0,1fr); gap:12px; padding:16px; }.idle-boss>.ink-portrait { grid-row:1/3; width:95px; height:180px; }.idle-boss>.button { grid-column:2; }.idle-boss h3 { font-size:22px; }
+ .auto-battle>.ink-scene { height:300px; }.auto-battle>.idle-section-heading { padding:20px; }.auto-battle-health { padding:0 20px 13px; }.auto-battle-health>span { flex-direction:column; align-items:flex-start; gap:3px; }.auto-battle-health>span:last-child { align-items:flex-end; }
+ .auto-battle-caption,.auto-battle-controls,.idle-battle-result,.idle-battle-log { padding-left:20px; padding-right:20px; }.idle-battle-result { gap:15px; }.idle-battle-result h3 { font-size:20px; }
+ .path-card>.ink-portrait { height:150px; }
+}
+.trial-feedback { display:flex; flex-direction:column; gap:15px; padding:0 27px 25px; color:#425b42; }
+.trial-feedback h3 { font:23px Georgia,serif; }
+.trial-feedback>dl { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0; }
+.trial-feedback>dl>div { padding:13px 11px; background:#dfe2ce; border:1px solid #9ca98455; border-radius:3px; }
+.trial-feedback dt { font-size:10px; color:#6c785b; }
+.trial-feedback dd { margin:7px 0 0; font:25px Georgia,serif; color:#3b573d; }
+.trial-feedback dd small { font:10px Arial,sans-serif; margin-left:5px; }
+.trial-feedback p { font-size:12px; line-height:1.9; }
+.trial-feedback .trial-adjustment { padding:13px 17px; border-left:3px solid #a27a4a; background:#e2dbc4; color:#6d573c; }
+.trial-feedback .idle-fine-print { color:#7b816a; font-size:10px; }
+.trial-feedback .button.secondary { background:#dce1ca; border-color:#9fac88; color:#3d634c; border-radius:3px; }
+.trial-feedback .button.primary { background:#365f4a; border-color:#365f4a; color:#f2eddc; border-radius:3px; }
+.trial-feedback summary { cursor:pointer; padding:9px 0; border-bottom:1px solid #b6b89b; font-size:12px; }
+.trial-rounds { list-style:none; display:grid; gap:0; margin:0; padding:0; }
+.trial-rounds li { display:grid; grid-template-columns:60px 1fr 1fr; gap:7px 14px; padding:13px 0; border-bottom:1px solid #b6b89b55; font-size:11px; }
+.trial-rounds small { grid-column:2/-1; color:#7a8067; font-size:10px; }
+@media(max-width:700px) { .trial-feedback { padding:0 20px 22px; }.trial-feedback>dl { grid-template-columns:1fr 1fr; }.trial-rounds li { grid-template-columns:55px 1fr; }.trial-rounds span,.trial-rounds small { grid-column:2; } }

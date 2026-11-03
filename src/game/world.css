@@ -1,0 +1,48 @@
+/* Shared wheel and server-confirmed progression feedback. */
+.main-content { max-width: 1450px; }
+.page-heading h1 { font-size: clamp(26px, 2.7vw, 36px); }
+.landing { background-image: linear-gradient(90deg,#08161dde,#071c2460 55%,#091820d9),url('/art/scenes/thanh-van.webp'); }
+.landing-story h1 { text-shadow: 0 4px 30px #081b23aa; }
+.onboarding-page { position: relative; }
+.install-banner { position: relative; inset: auto; max-width: none; margin: 0; border-radius: 0; justify-content: center; box-shadow: none; z-index: 1; }
+.install-banner>div { max-width: 520px; }
+.wheel-stage { position: relative; isolation: isolate; min-height: 450px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 15px; padding: 36px; overflow: hidden; border: 1px solid #8a7958; border-radius: 16px; background: #191d32; }
+.wheel-backdrop { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .4; }
+.wheel-stage::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg,#11213b88,#11213299 45%,#121a2fe8); }
+.wheel-art { width: min(100%,340px); aspect-ratio: 1; position: relative; margin: 12px auto; }
+.wheel-ring,.wheel-orbit { position: absolute; border-radius: 50%; inset: 4%; border: 2px solid #dfc788; box-shadow: 0 0 25px #bdebd744,inset 0 0 20px #b2d5ab44; }
+.wheel-ring { border: 14px double #c9ba79; background: radial-gradient(circle,#081b34 34%,#30474570 35%,#0c2346aa 64%); animation: spin 70s linear infinite; }
+.wheel-ring span { position: absolute; top: 50%; left: 50%; font: 24px Georgia,serif; color: #ead6a0; transform: translate(-50%,-50%) rotate(calc(var(--n)*45deg)) translateY(-110px) rotate(calc(var(--n)*-45deg)); }
+.wheel-ring span:nth-child(1) { --n:0; }.wheel-ring span:nth-child(2) { --n:1; }.wheel-ring span:nth-child(3) { --n:2; }.wheel-ring span:nth-child(4) { --n:3; }.wheel-ring span:nth-child(5) { --n:4; }.wheel-ring span:nth-child(6) { --n:5; }.wheel-ring span:nth-child(7) { --n:6; }.wheel-ring span:nth-child(8) { --n:7; }
+.wheel-orbit.orbit-one { inset: 0; border-style: dashed; animation: spin 100s linear infinite reverse; }
+.wheel-orbit.orbit-two { inset: 23%; border-color: #a8e8dc; transform: rotate(45deg); border-radius: 14%; animation: spin 35s linear infinite reverse; }
+.wheel-core { position: absolute; inset: 35%; border: 1px solid #e3e2a8; border-radius: 50%; display: grid; place-items: center; background: #193d49; color: #e9e1a1; box-shadow: 0 0 45px #b3ffcf88; animation: aura-breathe 4s ease-in-out infinite; }
+.is-turning .wheel-ring { animation-duration: 1.2s; }.is-turning .wheel-orbit { animation-duration: 2s; }.is-turning .wheel-core { animation-duration: .8s; }
+.wheel-console { position: relative; display: grid; justify-items: start; gap: 16px; }
+.wheel-console h2 { font-size: 38px; color: #eed7a0; }
+.wheel-console .button { min-height: 48px; }
+.wheel-console .fine-print { max-width: 330px; color: #bfcdc7; }
+.wheel-reveal { grid-column: 1/-1; display: flex; align-items: center; gap: 18px; border: 1px solid #b6a97a; border-radius: 12px; padding: 20px; background: #152e38ef; color: #e7d197; animation: treasure-reveal .7s ease-out both; }
+.wheel-reveal h3 { font: 23px Georgia,serif; margin: 5px 0; }
+.wheel-reveal p { font-size: 12px; color: #cbded5; }.wheel-reveal time { font-size: 10px; color: #94b1ab; }
+.progress-feedback { position: fixed; isolation: isolate; z-index: 70; top: 104px; right: 24px; width: min(450px,calc(100vw - 32px)); display: flex; align-items: center; gap: 16px; padding: 20px; border: 1px solid #b9d79c; border-radius: 12px; background: #143337f5; box-shadow: 0 12px 45px #0008; color: #d0edb8; animation: treasure-reveal .5s ease-out; }
+.progress-feedback h2 { font-size: 21px; margin: 4px 0; }.progress-feedback p { font-size: 12px; }.progress-feedback>div:not(.feedback-radiance) { flex: 1; }
+.progress-feedback.realm-awakening { border-color: #ffe1a1; background: linear-gradient(110deg,#37442efa,#253e42fa); color: #ffedba; }
+.feedback-radiance { position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none; }
+.realm-awakening .feedback-radiance { background: radial-gradient(ellipse at 20% 50%,#ffde8155,transparent 70%); animation: aura-breathe 1.8s ease-in-out 3; }
+@keyframes aura-breathe { 50% { opacity: .55; } }
+@keyframes treasure-reveal { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+@media(max-width:1150px) { .cultivation-dock { grid-template-columns: 1fr auto; gap: 20px; }.cultivation-clock { display: none; }.journey-shortcuts { gap: 9px; }.journey-shortcuts button { padding: 14px; gap: 9px; }.journey-shortcuts button>svg:last-child { display: none; } }
+@media(max-width:600px) {
+ .world-stage { border-radius: 12px 12px 0 0; margin-bottom: -20px; }
+ .world-location { top: 10px; left: 12px; }.world-location h2 { font-size: 19px; margin: 2px 0; }.world-location p { font-size: 9px; }
+ .world-motion { position: relative; top: auto; right: auto; margin: 7px 10px 10px; font-size: 9px; padding: 5px 8px; min-height: 34px; }
+ .world-caption { display: none; }
+ .cultivation-dock { grid-template-columns: 1fr; gap: 16px; padding: 18px; }.cultivation-readout .cultivation-number { font-size: 31px; }.cultivation-clock { display: flex; }.cultivation-controls { grid-template-columns: 1fr 1fr; }.cultivation-controls .button { padding: 10px; font-size: 10px; white-space: normal; }
+ .journey-shortcuts { grid-template-columns: 1fr; }.journey-shortcuts button>svg:last-child { display: block; }.journey-shortcuts button { padding: 15px; }
+ .wheel-stage { grid-template-columns: 1fr; padding: 22px 16px; gap: 22px; }.wheel-art { width: 280px; max-width: 100%; }.wheel-ring span { transform: translate(-50%,-50%) rotate(calc(var(--n)*45deg)) translateY(-88px) rotate(calc(var(--n)*-45deg)); font-size: 20px; }.wheel-console { justify-items: center; text-align: center; }.wheel-console h2 { font-size: 32px; }.wheel-reveal { padding: 16px; gap: 12px; }
+ .progress-feedback { top: auto; bottom: 100px; right: 16px; padding: 15px; }.progress-feedback h2 { font-size: 19px; }
+ .path-option::before { height: 140px; }
+ .install-banner { padding: 10px; gap: 7px; }.install-banner strong { font-size: 12px; }.install-banner .button { padding: 8px; }
+}
+@media(prefers-reduced-motion:reduce) { .world-stage *, .wheel-stage *, .progress-feedback, .progress-feedback * { animation: none!important; transition: none!important; } }

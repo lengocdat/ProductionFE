@@ -1,0 +1,12 @@
+[
+  {"id":"boss-moss-boar","source":"f5_minibeast","palette":"jade"},
+  {"id":"boss-gate-guardian","source":"neutral_golemnature","palette":"jade"},
+  {"id":"boss-bamboo-serpent","source":"boss_serpenti","palette":"jade"},
+  {"id":"boss-mist-hermit","source":"f2_geomancer","palette":"ivory"},
+  {"id":"boss-black-wind-wolf","source":"f6_spiritwolf","palette":"violet"},
+  {"id":"boss-bronze-general","source":"f1_warblade","palette":"bronze"},
+  {"id":"boss-cloud-kirin","source":"f6_elklodon","palette":"ivory"},
+  {"id":"boss-void-reflection","source":"f4_shadowdancer","palette":"violet"},
+  {"id":"boss-guild-earth-dragon","source":"f5_drogon","palette":"jade"},
+  {"id":"boss-guild-sky-phoenix","source":"neutral_monsterflamewing"}
+]

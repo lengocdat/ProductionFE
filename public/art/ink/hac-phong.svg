@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" fill="none">
+ <defs>
+  <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#c9c8c6"/><stop offset="1" stop-color="#e9e0cd"/></linearGradient>
+  <linearGradient id="rock" x2=".7" y2="1"><stop stop-color="#55626a"/><stop offset="1" stop-color="#a1aaa1" stop-opacity=".5"/></linearGradient>
+  <linearGradient id="fog" x2="0" y2="1"><stop stop-color="#e6dece" stop-opacity="0"/><stop offset=".55" stop-color="#e6dece"/><stop offset="1" stop-color="#e6dece" stop-opacity="0"/></linearGradient>
+  <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".67" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".07"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter>
+ </defs>
+ <g filter="url(#paper)">
+ <path d="M0 0h1200v720H0Z" fill="url(#sky)"/>
+ <circle cx="649" cy="177" r="67" fill="#ece4d0" opacity=".8"/>
+ <path d="m0 340 63-29 32-80 37 39 30-22 34-112 35-18 33 94 28-14 28 104 45 14 34 116 49-14 54-93 45 9 26 70 78 34 42-81 38-11 33-106 40-23 29 108 35-5 32 64 31-28 42-194 36-24 37 155 40 3 46 85v195H0Z" fill="#929d9d" opacity=".35"/>
+ <path d="M0 65 46 88 82 171 105 162 145 223 156 307 194 337 228 399 249 492 340 550H0Z" fill="url(#rock)"/>
+ <path d="m37 106 19 135 42 56 1 130m51-154-15 101 45 71m-105-53 18 110 82 55m-154-306 14 132 21 31m73-92-22-40" stroke="#404f55" stroke-width="4" opacity=".45"/>
+ <path d="M1200 0 1164 33 1140 145 1114 119 1089 172 1063 277 1016 323 997 411 953 420 906 529h294Z" fill="url(#rock)"/>
+ <path d="m1162 67-10 152-39 47-27 127m21-174-14 96-47 56m-20 41 3 75-43 36m192-298-9 147-37 63" stroke="#465359" stroke-width="4" opacity=".45"/>
+ <path d="M0 351h1200v227H0Z" fill="url(#fog)"/>
+ <path d="M0 572q168-88 376-52t360-13q240-34 464 44v169H0Z" fill="#a9afa0"/>
+ <path d="M0 632q266-77 405-18t321-3q271-91 474 21v88H0Z" fill="#c4c5b1"/>
+ <path d="m0 714 112-31 147 10 124-31 82 15 85-8 152 36 93-7 133-31 119 27 153-13v39H0Z" fill="#8a9785" opacity=".4"/>
+ <!-- Broken moon gate, bronze votive and weathered memorial stones. -->
+ <g stroke="#606965" stroke-linejoin="round">
+  <path d="m829 515 7-140 21-19 4-33h27l6 36 18 9 1 47-12 5-1 95Z" fill="#959c89" stroke-width="2"/>
+  <path d="m936 515 5-115 9-14-3-29 25 6 7 46 20 12 7 94Z" fill="#8b9584" stroke-width="2"/>
+  <path d="m844 362 8-67q62-52 125-4l-7 38-21-6-2-19q-37-19-69 4l-1 41Z" fill="#919985" stroke-width="3"/>
+  <path d="m858 285-14 10-13-12 12-12m125 15 18 9 11-10-16-18" fill="#727f70"/>
+  <path d="m861 398 8 37-13 24m35-148 8-8 8 7m-55 175 22-9m77-81 9 36-11 11" stroke-width="2"/>
+  <path d="m813 516 22-13 174 3 19 13-13 9H817Z" fill="#a2a38a"/>
+  <path d="m902 497 4-20h23l5 20Zm12-21v-17m-10 8h26" fill="#897f5c" stroke="#79755a"/>
+  <path d="m224 569 4-66 18-11 36 7-4 70Z" fill="#919c88"/>
+  <path d="m237 516 20 1m-18 8 16 1m-15 8h12m-14 8h11" stroke-width="2" opacity=".65"/>
+  <path d="m164 580 7-42 32 5 2 30Z" fill="#7f8e7c"/>
+ </g>
+ <!-- Black pine snag and copper prayer ribbons. -->
+ <path d="M1188 720h-46c22-106 15-188-3-260-11-45-36-87-72-122 47 25 65 56 81 84l-3-120-19-85 30 66 10 126 34-89-21 104-13 62Z" fill="#344749"/>
+ <path d="m1146 456-55-31-69-2-54-26 62 12 71 2 46 25m-2-74-48-42-40-57 55 51 35 28m17 166 38-56" stroke="#344749" stroke-width="9"/>
+ <path d="M1085 322q-13 30-4 51t-14 46q36-25 21-51 0-24 9-34" fill="#a16f50" opacity=".9"/>
+ <path d="M1019 417q-14 32-6 51l14-8q-12-19 0-39" fill="#ad8965"/>
+ <g fill="#526760"><path d="m0 720 15-78 1 57 28-40-15 49 43-19-28 31Zm105 0 3-45 10 34 18-21-7 32Z"/></g>
+ <path d="M304 236q68-12 105-1m391 12 67-4m-372 70q70-9 97-2" stroke="#f0e7d5" stroke-width="3" opacity=".5"/>
+ </g>
+</svg>
