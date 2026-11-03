@@ -36,4 +36,5 @@ jobs:
       - name: Record immutable image digest
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
-        run: printf 'Frontend image digest: %s\n' "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          printf 'Frontend image digest: %s\n' "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
