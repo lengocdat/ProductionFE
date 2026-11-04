@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the Thiên Cơ twist sound effects into public/sfx/.
+# Builds the Thiên Cơ twist and sect-spot sound effects into public/sfx/.
 #
 # Sources are Freesound recordings released under CC0 1.0 (public domain: commercial use,
 # no attribution required). The licence was checked on each sound's page; see
@@ -122,7 +122,26 @@ ffmpeg -y -hide_banner -loglevel error \
   -filter_complex "[1:a]adelay=420[second];[0:a][second]amix=inputs=2:duration=longest:normalize=0,afade=t=out:st=3.0:d=0.6,$norm" \
   "${enc[@]}" "$out/chieng.mp3"
 
-for f in set ga occ truot lonnhao bikip daingoc bep vet chieng; do
+# Chuông đồng (Gõ chuông): one strike of a bronze temple bell — wooden "cộc" of the striker, then
+# the bell's partials (hum 0.5, prime, minor third, fifth, nominal over 262 Hz) with a 263.4 Hz
+# twin for the slow beat of real bronze. Fully synthesised.
+bell='(0.55*sin(2*PI*131*t)*exp(-0.5*t)+sin(2*PI*262*t)*exp(-0.9*t)+0.25*sin(2*PI*263.4*t)*exp(-0.9*t)+0.55*sin(2*PI*314.4*t)*exp(-1.3*t)+0.4*sin(2*PI*393*t)*exp(-1.7*t)+0.45*sin(2*PI*524*t)*exp(-2.2*t)+0.2*sin(2*PI*661*t)*exp(-3*t)+0.15*sin(2*PI*1312*t)*exp(-8*t))'
+ffmpeg -y -hide_banner -loglevel error \
+  -f lavfi -t 3.4 -i "aevalsrc=0.3*$bell:s=44100" \
+  -f lavfi -t 0.06 -i "anoisesrc=c=pink:r=44100:a=0.6:s=7" \
+  -filter_complex "[1:a]bandpass=f=1200:width_type=q:w=1.2,afade=t=out:st=0:d=0.06[knock];[0:a][knock]amix=inputs=2:duration=longest:normalize=0,afade=t=out:st=2.6:d=0.8,$norm" \
+  "${enc[@]}" "$out/chuong.mp3"
+
+# Nổ lò (luyện đan thất bại): a low "BÙM" — sine thump falling 105 → 45 Hz under a burst of
+# brown noise — then the furnace hissing smoke "xììì". Fully synthesised.
+ffmpeg -y -hide_banner -loglevel error \
+  -f lavfi -t 1.2 -i "aevalsrc=0.9*sin(2*PI*(45*t+60*(1-exp(-8*t))/8))*exp(-3.5*t):s=44100" \
+  -f lavfi -t 1.3 -i "anoisesrc=c=brown:r=44100:a=0.9:s=11" \
+  -f lavfi -t 0.7 -i "anoisesrc=c=white:r=44100:a=0.5:s=13" \
+  -filter_complex "[1:a]lowpass=f=900,afade=t=in:d=0.005,afade=t=out:st=0.08:d=1.2,volume=2.2[blast];[2:a]highpass=f=3000,afade=t=in:d=0.08,afade=t=out:st=0.25:d=0.45,volume=0.35,adelay=850[hiss];[0:a][blast][hiss]amix=inputs=3:duration=longest:normalize=0,$norm" \
+  "${enc[@]}" "$out/nolo.mp3"
+
+for f in set ga occ truot lonnhao bikip daingoc bep vet chieng chuong nolo; do
   printf '%s.mp3  %ss  %s bytes\n' "$f" \
     "$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out/$f.mp3")" \
     "$(wc -c < "$out/$f.mp3" | tr -d ' ')"

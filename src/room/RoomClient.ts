@@ -2,7 +2,7 @@ import { APIError, request } from '@/game/api';
 import {
   CLOSE_AFK, CLOSE_BAD_TICKET, CLOSE_FULL, CLOSE_REPLACED, CLOSE_SPAM, CLOSE_TOO_MANY, CHAT_MAX_LEN, MODE_SIT,
   parseDiscipleResponse, parseServerMessage, parseTicketResponse,
-  type AfkMsg, type ChatMsg, type ClientMessage, type DeltaMsg, type EmoteDef, type EmoteMsg, type ErrMsg, type GatherMsg, type GuestTicketResponse,
+  type ActMsg, type AfkMsg, type ChatMsg, type ClientMessage, type DeltaMsg, type EmoteDef, type EmoteMsg, type ErrMsg, type GatherMsg, type GuestTicketResponse,
   type Id, type OfferingMsg, type OfferingOrder, type PlayerId, type PlayerState, type Phrase, type PollEndMsg, type PollMsg, type QiMsg, type RankDef, type RankMsg,
   type RecentOffering, type ReportOkMsg, type ReportReason, type Room, type SectMsg, type ServerMessage, type TwistMsg, type WelcomeMsg,
   parseOfferingOrder, parseRecentOfferings,
@@ -55,6 +55,8 @@ export interface RoomClientEvents {
   poll: PollMsg;
   poll_end: PollEndMsg;
   report_ok: ReportOkMsg;
+  /** Someone used a spot; the client already added `qi`/`room_qi` to its own tu vi. */
+  act: ActMsg;
   /** An established session dropped; attempt `attempt` (1-based) starts after `delayMs`. A `welcome` means it worked. */
   reconnecting: { attempt: number; delayMs: number };
   /** Fired once per session when the connection is over. A new session needs `connect()` again (fresh ticket). */
@@ -85,11 +87,19 @@ const ERR_MESSAGES: Record<string, string> = {
   report_bad: 'Không báo cáo được người này.',
   report_dup: 'Bạn đã báo cáo người này rồi. Thiên Đạo ghi nhớ cả, đừng lo.',
   report_rate: 'Báo cáo dồn dập quá, nghỉ tay một phút rồi báo tiếp nhé.',
+  act_bad: 'Chỗ này không dùng được.',
+};
+
+/** Codes the server words itself (distance, time left); the fallback covers an empty `msg`. */
+const ERR_FALLBACKS: Record<string, string> = {
+  chat_banned: 'Bạn đang tạm bị khoá tự gõ chat. Câu có sẵn vẫn dùng được.',
+  act_far: 'Lại gần thêm chút nữa.',
+  act_cooldown: 'Chỗ này vừa dùng xong, quay lại sau nhé.',
 };
 
 export function errMessage(e: ErrMsg): string {
-  // The server words the free-chat lock itself (it includes the minutes left).
-  if (e.code === 'chat_banned') return e.msg || 'Bạn đang tạm bị khoá tự gõ chat. Câu có sẵn vẫn dùng được.';
+  const own = ERR_FALLBACKS[e.code];
+  if (own !== undefined) return e.msg || own;
   return ERR_MESSAGES[e.code] ?? (e.msg || 'Có lỗi xảy ra.');
 }
 
@@ -437,6 +447,12 @@ export class RoomClient {
       case 'report_ok':
         this.emit('report_ok', msg);
         return;
+      case 'act':
+        // Standing players get no `qi` frames, so keep the total in step here.
+        if (msg.id === this.you) this.qi += msg.qi;
+        this.qi += msg.room_qi;
+        this.emit('act', msg);
+        return;
     }
   }
 
@@ -494,6 +510,8 @@ export class RoomClient {
   /** Thiên Đạo hỏi: votes (or moves the vote to) option `o` of poll `poll`. */
   vote(poll: number, o: number): boolean { return this.send({ t: 'vote', poll, o }); }
   report(id: PlayerId, reason: ReportReason): boolean { return this.send({ t: 'report', id, reason }); }
+  /** Uses an interactive spot (thắp hương, gõ chuông…); the server checks reach and cooldowns. */
+  act(spot: string): boolean { return this.send({ t: 'act', spot }); }
 
   // ---------- lifecycle ----------
 

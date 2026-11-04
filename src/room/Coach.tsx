@@ -24,7 +24,7 @@ export const COACH_STEPS = [
   {
     target: ".dt-master",
     title: "Mục tiêu của bạn",
-    body: "Đủ tu vi là thăng cấp, từ Tạp dịch lên tới Thái thượng trưởng lão. Ai nhiều tu vi nhất tuần làm Chưởng môn 👑. Thỉnh thoảng sẽ có chuyện bất ngờ, cứ chờ xem!",
+    body: "Đủ tu vi là thăng cấp, từ Tạp dịch lên tới Thái thượng trưởng lão. Ai nhiều tu vi nhất tuần làm Chưởng môn 👑. Rảnh chân thì dạo quanh tông môn: chạm Đỉnh hương, chuông, lò đan, hồ cá… để thử. Thỉnh thoảng sẽ có chuyện bất ngờ, cứ chờ xem!",
     action: "Bắt đầu tu luyện",
   },
 ] as const;

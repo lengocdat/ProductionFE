@@ -1,4 +1,4 @@
-Âm thanh Thiên Cơ Bất Ngờ — nguồn và giấy phép (kiểm tra ngày 2026-11-02)
+Âm thanh Thiên Cơ Bất Ngờ và các nơi tương tác trong tông môn — nguồn và giấy phép (kiểm tra ngày 2026-11-02)
 
 Bản ghi gốc đều phát hành theo Creative Commons Zero 1.0 (CC0, public domain):
 dùng thương mại, chỉnh sửa, không bắt buộc ghi công. https://creativecommons.org/publicdomain/zero/1.0/
@@ -24,5 +24,7 @@ lonnhao.mp3 — tiếng gió "vụt" + "póc" tiếp đất
 bikip.mp3   — lật trang + chuỗi nốt lấp lánh
 daingoc.mp3 — kèn buồn "wà-wà-wà-wàaa" (mô-típ hài phổ thông, tự tổng hợp)
 chieng.mp3  — chiêng "boong… BOONG~" khi có người cúng dường (tần số không điều hoà của chiêng, tự tổng hợp)
+chuong.mp3  — chuông đồng "cộc… boong~" khi Gõ chuông (các bội âm của chuông đồng, tự tổng hợp)
+nolo.mp3    — "BÙM" nổ lò luyện đan + tiếng khói "xììì" (sóng sin hạ tần + tiếng ồn lọc, tự tổng hợp)
 
 Cách cắt/ghép: FE/scripts/build_sfx.sh (chạy lại để dựng lại các file).

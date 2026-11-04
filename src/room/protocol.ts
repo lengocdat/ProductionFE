@@ -12,7 +12,8 @@ export const MODE_STAND = 0;
 export const MODE_WALK = 1;
 export const MODE_SIT = 2;
 
-export type ObstacleKind = 'altar' | 'pond' | 'tree';
+export type ObstacleKind = 'statue' | 'cauldron' | 'bell' | 'furnace' | 'stele' | 'pond' | 'tree';
+const OBSTACLE_KINDS: readonly ObstacleKind[] = ['statue', 'cauldron', 'bell', 'furnace', 'stele', 'pond', 'tree'];
 /** `rank`: presets for all, free text from `free_chat_rank`; `preset`: presets only; `free`: everyone types. */
 export type ChatMode = 'preset' | 'rank' | 'free';
 
@@ -54,6 +55,12 @@ export interface DeltaPlayer {
 /** `min_rank`: lowest sect rank allowed to sit; `bonus`: multiplier on the qi rate. */
 export interface Seat { i: number; x: number; z: number; min_rank: number; bonus: number }
 export interface Obstacle { x: number; z: number; r: number; kind: ObstacleKind }
+/**
+ * An interactive place in the sect. (x, z) is where a player stands to use it, within
+ * `reach`; `prop` is the obstacle kind it belongs to. `local` spots never reach the server
+ * (e.g. the stele opens the help sheet). `cooldown_s` is the per-player wait after a use.
+ */
+export interface SpotDef { id: string; prop: ObstacleKind; label: string; emoji: string; x: number; z: number; reach: number; cooldown_s: number; local: boolean }
 
 export interface Room {
   id: Id;
@@ -67,6 +74,7 @@ export interface Room {
   spawn: { x: number; z: number };
   seats: Seat[];
   obstacles: Obstacle[];
+  spots: SpotDef[];
 }
 
 export interface Phrase { id: Id; text: string }
@@ -74,7 +82,8 @@ export interface EmoteDef { id: Id; name: string }
 
 export type ErrCode =
   | 'seat_taken' | 'chat_rate' | 'chat_bad' | 'bad_msg'
-  | 'vote_bad' | 'report_bad' | 'report_dup' | 'report_rate' | 'chat_banned';
+  | 'vote_bad' | 'report_bad' | 'report_dup' | 'report_rate' | 'chat_banned'
+  | 'act_bad' | 'act_far' | 'act_cooldown';
 
 // ---------- server -> client ----------
 
@@ -106,7 +115,8 @@ export interface RankMsg { t: 'rank'; id: PlayerId; rank: number }
 export interface SectEntry { name: string; qi: number; rank: number; me: boolean }
 /** Weekly board; `master` (= top[0]) is the Chưởng môn, `master_id` their id if in this room, else 0. */
 export interface SectMsg { t: 'sect'; week: string; master: SectEntry | null; master_id: PlayerId; top: SectEntry[] }
-export type TwistAnim = 'faint' | 'jump' | 'spin' | 'flip';
+export type TwistAnim = 'faint' | 'jump' | 'spin' | 'flip' | 'bow';
+const TWIST_ANIMS: readonly TwistAnim[] = ['faint', 'jump', 'spin', 'flip', 'bow'];
 /** Thiên Cơ Bất Ngờ: a shared, funny surprise that happened to player `id`. */
 export interface TwistMsg { t: 'twist'; id: PlayerId; kind: string; anim: TwistAnim; text: string; qi: number; flash: boolean }
 /** A paid offering: `id` is the donor's connection in this room (0 = elsewhere). */
@@ -119,10 +129,19 @@ export interface PollMsg { t: 'poll'; id: number; q: string; opts: string[]; cou
 export type PollEffect = 'rain' | 'chicken' | 'dance' | 'gather' | 'song';
 export interface PollEndMsg { t: 'poll_end'; id: number; win: number; counts: number[]; text: string; effect: PollEffect; targets: PlayerId[]; qi: number }
 export interface ReportOkMsg { t: 'report_ok'; id: PlayerId }
+/** Visual (and sound) of a spot outcome; the scene draws it at the spot's prop. */
+export type SpotFx = 'smoke' | 'glow' | 'ring' | 'boom' | 'pill' | 'ripple' | 'dragon';
+const SPOT_FX: readonly SpotFx[] = ['smoke', 'glow', 'ring', 'boom', 'pill', 'ripple', 'dragon'];
+/**
+ * Player `id` used spot `spot` (broadcast to the room). `text` already contains the name.
+ * `qi` went to the actor, `room_qi` to everyone in the room (both may be 0). `fx` is null when
+ * the server sent one this client does not know; `anim` null for none.
+ */
+export interface ActMsg { t: 'act'; id: PlayerId; spot: string; fx: SpotFx | null; anim: TwistAnim | null; text: string; qi: number; room_qi: number }
 
 export type ServerMessage =
   | WelcomeMsg | JoinMsg | LeaveMsg | DeltaMsg | ChatMsg | EmoteMsg | QiMsg | AfkMsg | ErrMsg | KickMsg | RankMsg | SectMsg | TwistMsg | OfferingMsg
-  | GatherMsg | PollMsg | PollEndMsg | ReportOkMsg;
+  | GatherMsg | PollMsg | PollEndMsg | ReportOkMsg | ActMsg;
 
 // ---------- client -> server ----------
 
@@ -137,7 +156,8 @@ export type ClientMessage =
   | { t: 'emote'; e: Id }
   | { t: 'here' }
   | { t: 'vote'; poll: number; o: number }
-  | { t: 'report'; id: PlayerId; reason: ReportReason };
+  | { t: 'report'; id: PlayerId; reason: ReportReason }
+  | { t: 'act'; spot: string };
 
 export interface GuestTicketRequest { token: string; name: string; look: number }
 export interface GuestTicketResponse { ticket: string; expires_in: number; ws_path: string }
@@ -221,8 +241,18 @@ function parseRoom(v: unknown): Room | null {
     : null));
   const obstacles = parseList<Obstacle>(v.obstacles, o => {
     if (!isRec(o) || !isNum(o.x) || !isNum(o.z) || !isNum(o.r)) return null;
-    if (o.kind !== 'altar' && o.kind !== 'pond' && o.kind !== 'tree') return null;
-    return { x: o.x, z: o.z, r: Math.max(0.1, o.r), kind: o.kind };
+    const kind = OBSTACLE_KINDS.find(k => k === o.kind);
+    if (!kind) return null;
+    return { x: o.x, z: o.z, r: Math.max(0.1, o.r), kind };
+  });
+  const spots = parseList<SpotDef>(v.spots, s => {
+    if (!isRec(s) || !isStr(s.id) || !isStr(s.label) || !isNum(s.x) || !isNum(s.z) || !isNum(s.reach)) return null;
+    const prop = OBSTACLE_KINDS.find(k => k === s.prop);
+    if (!prop) return null;
+    return {
+      id: s.id, prop, label: s.label, emoji: isStr(s.emoji) ? s.emoji : '✨', x: s.x, z: s.z, reach: Math.max(0.3, s.reach),
+      cooldown_s: isNum(s.cooldown_s) ? Math.max(0, s.cooldown_s) : 0, local: s.local === true,
+    };
   });
   return {
     id: isId(v.id) ? v.id : 'room',
@@ -236,6 +266,7 @@ function parseRoom(v: unknown): Room | null {
     spawn,
     seats,
     obstacles,
+    spots,
   };
 }
 
@@ -295,7 +326,7 @@ export function parseServerMessage(raw: unknown): ServerMessage | null {
       };
     case 'twist': {
       if (!isId(raw.id) || !isStr(raw.text)) return null;
-      const anim: TwistAnim = raw.anim === 'faint' || raw.anim === 'jump' || raw.anim === 'flip' ? raw.anim : 'spin';
+      const anim: TwistAnim = raw.anim === 'faint' || raw.anim === 'jump' || raw.anim === 'flip' || raw.anim === 'bow' ? raw.anim : 'spin';
       return { t: 'twist', id: raw.id, kind: isStr(raw.kind) ? raw.kind : '', anim, text: raw.text, qi: isNum(raw.qi) ? raw.qi : 0, flash: raw.flash === true };
     }
     case 'gather': {
@@ -324,6 +355,15 @@ export function parseServerMessage(raw: unknown): ServerMessage | null {
     }
     case 'report_ok':
       return isId(raw.id) ? { t: 'report_ok', id: raw.id } : null;
+    case 'act': {
+      if (!isId(raw.id) || !isStr(raw.spot) || raw.spot === '' || !isStr(raw.text)) return null;
+      const fx = SPOT_FX.find(f => f === raw.fx) ?? null;
+      const anim = TWIST_ANIMS.find(a => a === raw.anim) ?? null;
+      return {
+        t: 'act', id: raw.id, spot: raw.spot, fx, anim, text: raw.text,
+        qi: isNum(raw.qi) ? Math.max(0, raw.qi) : 0, room_qi: isNum(raw.room_qi) ? Math.max(0, raw.room_qi) : 0,
+      };
+    }
     default:
       return null;
   }

@@ -1,7 +1,8 @@
-// Sound effects for twists and offerings, plus background music. Sources: public/sfx/SOURCES.txt,
+// Sound effects for twists, offerings and the sect's spots, plus background music. Sources: public/sfx/SOURCES.txt,
 // public/chanh-dien/SOURCES.txt.
 
-/** Sound key → file: every twist kind in BE twist.go, plus "offering" (paid cúng dường). */
+/** Sound key → file: every twist kind in BE twist.go, "offering" (paid cúng dường), and the spot outcomes
+ *  "bell" (Gõ chuông) and "boom" (nổ lò luyện đan). */
 const SOUNDS: Readonly<Record<string, string>> = {
   lightning: '/sfx/set.mp3',
   chicken: '/sfx/ga.mp3',
@@ -13,6 +14,8 @@ const SOUNDS: Readonly<Record<string, string>> = {
   parrot: '/sfx/vet.mp3',
   misname: '/sfx/daingoc.mp3',
   offering: '/sfx/chieng.mp3',
+  bell: '/sfx/chuong.mp3',
+  boom: '/sfx/nolo.mp3',
 };
 
 /** "Nhạc động phủ" loops played back-to-back while sound is on (built by scripts/build_art.sh). */
@@ -84,7 +87,7 @@ export class Sfx {
     }));
   }
 
-  /** Plays the sound for a key in SOUNDS (twist kind or "offering"); `volume` 0..1. */
+  /** Plays the sound for a key in SOUNDS (twist kind, "offering", "bell", "boom"); `volume` 0..1. */
   play(kind: string, volume: number): void {
     const ctx = this.ctx;
     const buffer = this.buffers.get(kind);

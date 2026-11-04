@@ -301,6 +301,13 @@
   font-size: 12px; padding: 2px 9px; border-radius: 99px; color: #fff3c4; background: rgba(40, 30, 6, 0.6); border: 1px solid rgba(242, 210, 122, 0.6);
 }
 .dt-zone.is-locked { color: #d8d2c4; border-color: rgba(255, 255, 255, 0.25); background: rgba(8, 18, 21, 0.6); }
+/* Spot labels over the sect's props ("🪔 Thắp hương"); the scene sets `transform`, `translate` lifts them above the anchor. */
+.dt-spot { position: absolute; left: 0; top: 0; translate: -50% -100%; white-space: nowrap; pointer-events: none; will-change: transform; }
+.dt-spot-in {
+  display: block; font-size: 11.5px; padding: 2px 8px; border-radius: 99px; color: #f6ead0;
+  background: rgba(22, 16, 8, 0.62); border: 1px solid rgba(227, 194, 122, 0.4); transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.dt-spot.is-near .dt-spot-in { color: #2a1f08; background: linear-gradient(180deg, #f1d894, #d3a94f); border-color: rgba(255, 230, 160, 0.95); box-shadow: 0 0 12px rgba(255, 215, 120, 0.75); }
 
 /* Join screen pitch */
 .dt-intro { list-style: none; margin: 4px 0 6px; padding: 0; text-align: left; }
@@ -356,11 +363,31 @@
 .dt-modmenu-actions { display: flex; flex-direction: column; gap: 6px; }
 .dt-chatnote { margin: 0; font-size: 12.5px; color: var(--dt-danger); overflow-wrap: anywhere; }
 
+/* Spot action button ("🔔 Gõ chuông"): phones stack it centred between the chat log and the dock, so it never covers
+   the sit button or the chat bar; desktop floats it above the dock's right edge. */
+.dt-spotbtn {
+  align-self: center; display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 22px; border-radius: 99px;
+  font-size: 17px; white-space: nowrap; max-width: 100%; box-shadow: 0 0 0 3px rgba(242, 210, 122, 0.25), 0 8px 24px rgba(0, 0, 0, 0.45);
+  animation: dt-pop 0.2s ease-out, dt-spot-glow 2s ease-in-out 0.2s infinite;
+}
+.dt-spotbtn-emoji { font-size: 22px; line-height: 1; }
+.dt-spotbtn small { font-size: 13px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.dt-spotbtn.is-cooling, .dt-spotbtn.is-cooling:hover { color: var(--dt-muted); background: var(--dt-glass-strong); border-color: var(--dt-line); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); animation: none; }
+@keyframes dt-spot-glow { 0%, 100% { box-shadow: 0 0 0 3px rgba(242, 210, 122, 0.25), 0 8px 24px rgba(0, 0, 0, 0.45); } 50% { box-shadow: 0 0 0 3px rgba(242, 210, 122, 0.5), 0 0 22px rgba(255, 215, 120, 0.6); } }
+.dt-log .dt-log-spot { color: #f3dca6; }
+.dt-help-spots { list-style: none; margin: 0; padding: 0; }
+.dt-help-spots li { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 14px; line-height: 1.45; }
+.dt-help-spots small { color: var(--dt-muted); font-size: 12.5px; }
+.dt-help-spot-emoji { font-size: 20px; width: 26px; flex: 0 0 auto; text-align: center; }
+
 @media (min-width: 720px) {
   .dt-bottom { flex-direction: row; align-items: flex-end; justify-content: space-between; }
   .dt-bottom > .dt-poll { position: absolute; left: 50%; bottom: calc(100% + 10px); translate: -50% 0; width: min(380px, calc(100% - 24px)); }
   .dt-dock { width: min(640px, 100%); }
   .dt-bottom .dt-logwrap { order: -1; }
+  .dt-bottom > .dt-spotbtn { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: calc(100% + 10px); }
+  /* An open poll owns the space above the bar: the button joins the bottom row instead. */
+  .dt-bottom > .dt-poll ~ .dt-spotbtn { position: static; align-self: flex-end; }
 }
 @media (max-width: 719px) {
   .dt-top { flex-direction: column; align-items: stretch; gap: 6px; }
@@ -378,7 +405,7 @@
   .dt-gather.is-bless { padding: 4px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dt-status.is-active .dt-qi-num, .dt-spin, .dt-coach-target, .dt-gather.is-bless, .dt-poll, .dt-reconnect, .dt-modmenu { animation: none; }
+  .dt-status.is-active .dt-qi-num, .dt-spin, .dt-coach-target, .dt-gather.is-bless, .dt-poll, .dt-reconnect, .dt-modmenu, .dt-spotbtn { animation: none; }
   .dt-poll-time > div { transition: none; }
   .dt-coach-target { outline: 3px solid #f2d27a; outline-offset: 3px; }
   .dt-flash, .dt-rain { display: none; }

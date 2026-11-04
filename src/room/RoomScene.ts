@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { CharacterAssets, CharacterRig, CUSHION_H } from './characters';
 import { ParticleField } from './particles';
-import { MODE_SIT, MODE_WALK, type DeltaPlayer, type PlayerId, type PlayerMode, type PlayerState, type Room, type TwistAnim } from './protocol';
-import { makeGroundTexture, makePondTexture, makeRadialTexture, makeRippleTexture, mulberry32 } from './textures';
+import { MODE_SIT, MODE_WALK, type DeltaPlayer, type PlayerId, type PlayerMode, type PlayerState, type Room, type SpotDef, type TwistAnim } from './protocol';
+import { SECT_MIST, SectWorld, type SectProp } from './sect';
+import { Batch, placeAt } from './sectGeo';
+import { makeRadialTexture } from './textures';
 
 export interface RoomSceneHandlers {
   onMove(x: number, z: number): void;
@@ -10,7 +12,9 @@ export interface RoomSceneHandlers {
 }
 
 const FOV = 30;
-const PITCH = (50 * Math.PI) / 180;
+/** Camera pitch when fully zoomed in (shows the hall and the peaks) and fully zoomed out (overview). */
+const PITCH_NEAR = (36 * Math.PI) / 180;
+const PITCH_FAR = (56 * Math.PI) / 180;
 const ZOOM_MIN = 9;
 const ZOOM_MAX = 44;
 const BUBBLE_MS = 5000;
@@ -21,9 +25,8 @@ const TWIST_BUBBLE_MS = 7000;
 const SNAP_DIST = 8;
 const FAR_ZOOM = 30;
 const FOCUS_Y = 0.7;
-const MAX_ALTAR_LIGHTS = 2;
 
-const COL_BG = 0x0a1a1c;
+const COL_BG = SECT_MIST;
 const COL_JADE = 0x5fd9b0;
 const COL_GOLD = 0xf2d27a;
 
@@ -73,11 +76,26 @@ interface SeatVisual {
   inner: boolean;
   x: number;
   z: number;
-  ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
-  glow: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
+  /** instance slot in the seat ring / glow meshes */
+  slot: number;
   level: number;
   /** 0 free, 1 someone walking to it, 2 someone seated */
   state: 0 | 1 | 2;
+}
+
+/** Floating "{emoji} {label}" over an interactive prop; tapping it (or the prop) asks to use the spot. */
+interface SpotLabel {
+  spot: SpotDef;
+  prop: SectProp | null;
+  el: HTMLDivElement;
+  x: number;
+  y: number;
+  z: number;
+  shown: boolean;
+  /** local player is within reach of the stand point */
+  near: boolean;
+  px: number;
+  py: number;
 }
 
 interface Disposable { dispose(): void }
@@ -115,18 +133,22 @@ export class RoomScene {
   /** Badge emoji per cúng dường patron tier (index = tier), from the welcome catalogue. */
   private patronBadges: readonly string[] = [];
   private readonly seatVisuals: SeatVisual[] = [];
+  private seatRings: THREE.InstancedMesh | null = null;
+  private seatGlows: THREE.InstancedMesh | null = null;
   private readonly seatBySeatIndex = new Map<number, SeatVisual>();
   private readonly seatHits: THREE.Mesh[] = [];
   private readonly seatHitIndex = new Map<THREE.Object3D, number>();
   private readonly seatFacing = new Map<number, number>();
   private seatsDirty = true;
 
-  private smoke: ParticleField | null = null;
+  /** Sect environment and interactive props (owns lights, ambience and spot effects). */
+  private readonly sect: SectWorld;
+  private readonly spotLabels: SpotLabel[] = [];
+  private spotTap: ((spotId: string) => void) | null = null;
+  private readonly tmpHead = new THREE.Vector3();
+  private readonly tmpFocus = new THREE.Vector3();
   private qi: ParticleField | null = null;
   private motes: ParticleField;
-  private readonly rippleA: THREE.Texture;
-  private readonly rippleB: THREE.Texture;
-  private readonly lights: THREE.PointLight[] = [];
   private readonly marker = new THREE.Group();
   private readonly markerRing: THREE.Mesh;
   private markerOn = false;
@@ -166,6 +188,7 @@ export class RoomScene {
   private readonly resizeObserver: ResizeObserver;
 
   private readonly tmpColor = new THREE.Color();
+  private readonly tmpM = new THREE.Matrix4();
   private readonly colJade = new THREE.Color(COL_JADE);
   private readonly colGold = new THREE.Color(COL_GOLD);
 
@@ -203,17 +226,10 @@ export class RoomScene {
     this.assets = new CharacterAssets(shadowTex);
     this.disposables.push(this.assets);
 
-    this.rippleA = this.track(makeRippleTexture());
-    this.rippleB = this.track(makeRippleTexture());
-    this.rippleA.repeat.set(2.5, 2.5);
-    this.rippleB.repeat.set(1.7, 1.7);
-
-    this.buildLights();
-    this.buildGround();
-    this.buildWalls();
-    this.buildTrees();
-    this.buildObstacles();
+    this.sect = new SectWorld({ track: o => this.track(o), maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy() }, room);
+    this.scene.add(this.sect.root);
     this.buildSeats();
+    this.buildSpotLabels();
     this.motes = this.buildMotes();
     this.markerRing = this.buildMarker();
     this.computeSeatFacing();
@@ -327,6 +343,19 @@ export class RoomScene {
     this.actors.get(id)?.rig.playTwist(anim);
   }
 
+  /** While set, tapping a prop or its floating label calls `cb(spotId)` instead of moving there. */
+  setSpotTapHandler(cb: ((spotId: string) => void) | null): void {
+    this.spotTap = cb;
+  }
+
+  /** Plays a spot outcome (smoke|glow|ring|boom|pill|ripple|dragon) on its prop; a pill flies to `actorId`. */
+  playSpotFx(spotId: string, fx: string, actorId: PlayerId): void {
+    const l = this.spotLabels.find(q => q.spot.id === spotId);
+    if (this.destroyed || !l || !l.prop) return;
+    const a = this.actors.get(actorId);
+    this.sect.playFx(l.prop, fx, l.spot, a ? this.tmpHead.set(a.x, a.rig.anchorY - 0.35, a.z) : null);
+  }
+
   /** Updates the linh mạch label for the local player's rank (locked vs. open). */
   setLocalRank(rank: number): void {
     const zone = this.zone;
@@ -420,7 +449,6 @@ export class RoomScene {
     this.tagsLayer.remove();
     for (const d of this.disposables) d.dispose();
     this.disposables.length = 0;
-    this.smoke?.dispose();
     this.qi?.dispose();
     this.motes.dispose();
     this.scene.clear();
@@ -444,326 +472,78 @@ export class RoomScene {
     return this.track(g);
   }
 
-  private buildLights(): void {
-    this.scene.add(new THREE.HemisphereLight(0x9fd8cc, 0x4a3a28, 0.8));
-    const sun = new THREE.DirectionalLight(0xffd8a0, 1.0);
-    sun.position.set(-12, 22, 9);
-    this.scene.add(sun);
-  }
-
-  private buildGround(): void {
-    const { w, d } = this.room;
-    const tex = this.track(makeGroundTexture(this.renderer.capabilities.getMaxAnisotropy()));
-    tex.repeat.set(w / 4, d / 4);
-    const ground = new THREE.Mesh(this.geo(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2)), this.lambert(0xffffff, { map: tex }));
-    ground.position.set(w / 2, 0, d / 2);
-    ground.matrixAutoUpdate = false;
-    ground.updateMatrix();
-    this.scene.add(ground);
-
-    const soil = new THREE.Mesh(this.geo(new THREE.PlaneGeometry(w + 3.2, d + 3.2).rotateX(-Math.PI / 2)), this.lambert(0x1d3330));
-    soil.position.set(w / 2, -0.012, d / 2);
-    soil.matrixAutoUpdate = false;
-    soil.updateMatrix();
-    this.scene.add(soil);
-
-    const outer = new THREE.Mesh(this.geo(new THREE.PlaneGeometry(700, 700).rotateX(-Math.PI / 2)), this.lambert(0x0e1f1e));
-    outer.position.set(w / 2, -0.03, d / 2);
-    outer.matrixAutoUpdate = false;
-    outer.updateMatrix();
-    this.scene.add(outer);
-  }
-
-  private buildWalls(): void {
-    const { w, d } = this.room;
-    const wallMat = this.lambert(0x3b504d);
-    const capMat = this.lambert(0x5a7469);
-    const sides: ReadonlyArray<readonly [number, number, number, number]> = [
-      [w / 2, -0.2, w + 0.8, 0.4],
-      [w / 2, d + 0.2, w + 0.8, 0.4],
-      [-0.2, d / 2, 0.4, d],
-      [w + 0.2, d / 2, 0.4, d],
-    ];
-    for (const [cx, cz, sx, sz] of sides) {
-      const body = new THREE.Mesh(this.geo(new THREE.BoxGeometry(sx, 0.5, sz)), wallMat);
-      body.position.set(cx, 0.25, cz);
-      body.matrixAutoUpdate = false;
-      body.updateMatrix();
-      const cap = new THREE.Mesh(this.geo(new THREE.BoxGeometry(sx + 0.1, 0.08, sz + 0.1)), capMat);
-      cap.position.set(cx, 0.54, cz);
-      cap.matrixAutoUpdate = false;
-      cap.updateMatrix();
-      this.scene.add(body, cap);
-    }
-
-    // Lantern pillars: corners plus roughly every 8 m along each side.
-    const spots: Array<[number, number]> = [[-0.2, -0.2], [w + 0.2, -0.2], [-0.2, d + 0.2], [w + 0.2, d + 0.2]];
-    const nx = Math.max(1, Math.round(w / 8));
-    const nz = Math.max(1, Math.round(d / 8));
-    for (let i = 1; i < nx; i++) {
-      spots.push([(w * i) / nx, -0.2], [(w * i) / nx, d + 0.2]);
-    }
-    for (let i = 1; i < nz; i++) {
-      spots.push([-0.2, (d * i) / nz], [w + 0.2, (d * i) / nz]);
-    }
-    const n = spots.length;
-    const pillars = this.track(new THREE.InstancedMesh(this.geo(new THREE.BoxGeometry(0.52, 1.0, 0.52).translate(0, 0.5, 0)), this.lambert(0x4b6359), n));
-    const lanterns = this.track(new THREE.InstancedMesh(
-      this.geo(new THREE.SphereGeometry(0.15, 8, 6).translate(0, 1.2, 0)),
-      this.track(new THREE.MeshBasicMaterial({ color: 0xffd58a })), n));
-    const poolTex = this.track(makeRadialTexture([[0, 'rgba(255,196,110,0.55)'], [0.5, 'rgba(255,170,80,0.18)'], [1, 'rgba(255,160,70,0)']]));
-    const pools = this.track(new THREE.InstancedMesh(
-      this.geo(new THREE.PlaneGeometry(5, 5).rotateX(-Math.PI / 2)),
-      this.track(new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })), n));
-    const m = new THREE.Matrix4();
-    for (let i = 0; i < n; i++) {
-      const [x, z] = spots[i] as [number, number];
-      m.makeTranslation(x, 0, z);
-      pillars.setMatrixAt(i, m);
-      lanterns.setMatrixAt(i, m);
-      m.makeTranslation(x, 0.02, z);
-      pools.setMatrixAt(i, m);
-    }
-    pools.renderOrder = 1;
-    for (const im of [pillars, lanterns, pools]) {
-      im.instanceMatrix.needsUpdate = true;
-      im.frustumCulled = false;
-      this.scene.add(im);
-    }
-  }
-
-  private buildTrees(): void {
-    const { w, d } = this.room;
-    const rnd = mulberry32(4242);
-    // [x, z, scale]
-    const trees: Array<[number, number, number]> = [];
-    const ring = (offset: number, step: number, jitter: number): void => {
-      for (let x = -offset; x <= w + offset; x += step * (0.8 + rnd() * 0.5)) {
-        trees.push([x + (rnd() - 0.5) * jitter, -offset - rnd() * 1.8, 0.9 + rnd() * 0.7]);
-        trees.push([x + (rnd() - 0.5) * jitter, d + offset + rnd() * 1.8, 0.9 + rnd() * 0.7]);
-      }
-      for (let z = -offset + step; z < d + offset; z += step * (0.8 + rnd() * 0.5)) {
-        trees.push([-offset - rnd() * 1.8, z + (rnd() - 0.5) * jitter, 0.9 + rnd() * 0.7]);
-        trees.push([w + offset + rnd() * 1.8, z + (rnd() - 0.5) * jitter, 0.9 + rnd() * 0.7]);
-      }
-    };
-    ring(1.8, 3, 1.4);
-    ring(5.5, 4.5, 2.5);
-    for (const o of this.room.obstacles) {
-      if (o.kind === 'tree') trees.push([o.x, o.z, clamp(o.r / 0.4, 0.8, 2.4)]);
-    }
-    this.buildTreeInstances(trees, rnd);
-  }
-
-  private buildTreeInstances(trees: ReadonlyArray<readonly [number, number, number]>, rnd: () => number): void {
-    const n = trees.length;
-    if (n === 0) return;
-    const trunkGeo = this.geo(new THREE.CylinderGeometry(0.1, 0.16, 1.1, 6).translate(0, 0.55, 0));
-    const cone = (r: number, h: number, y: number): THREE.ConeGeometry => this.geo(new THREE.ConeGeometry(r, h, 7).translate(0, y + h / 2, 0));
-    const layerGeos = [cone(0.98, 1.35, 0.85), cone(0.74, 1.2, 1.6), cone(0.5, 1.05, 2.3)];
-    const layerTints = [0, 0.04, 0.08];
-    const trunk = this.track(new THREE.InstancedMesh(trunkGeo, this.lambert(0x4a3524), n));
-    const foliageMat = this.lambert(0xffffff, { flatShading: true });
-    const foliage = layerGeos.map(g => this.track(new THREE.InstancedMesh(g, foliageMat, n)));
-    const palette = [0x2a6b57, 0x347a5f, 0x23604f, 0x3d8466, 0x2f6e62, 0x6f8a4a].map(c => new THREE.Color(c));
-    const dummy = new THREE.Object3D();
-    const col = new THREE.Color();
-    for (let i = 0; i < n; i++) {
-      const [x, z, s] = trees[i] as readonly [number, number, number];
-      dummy.position.set(x, 0, z);
-      dummy.rotation.set(0, rnd() * 6.28, 0);
-      dummy.scale.set(s, s * (0.9 + rnd() * 0.3), s);
-      dummy.updateMatrix();
-      trunk.setMatrixAt(i, dummy.matrix);
-      const base = palette[Math.floor(rnd() * (palette.length - (rnd() < 0.85 ? 1 : 0)))] as THREE.Color;
-      foliage.forEach((f, li) => {
-        f.setMatrixAt(i, dummy.matrix);
-        col.copy(base).offsetHSL(0, 0, layerTints[li] ?? 0);
-        f.setColorAt(i, col);
+  private buildSpotLabels(): void {
+    for (const spot of this.room.spots) {
+      const prop = this.sect.propFor(spot.prop, spot.x, spot.z);
+      const el = document.createElement('div');
+      el.className = 'dt-spot';
+      const inner = document.createElement('span');
+      inner.className = 'dt-spot-in';
+      inner.textContent = `${spot.emoji} ${spot.label}`;
+      el.appendChild(inner);
+      el.style.visibility = 'hidden';
+      this.tagsLayer.appendChild(el);
+      this.spotLabels.push({
+        spot, prop, el,
+        x: prop ? prop.x : spot.x,
+        y: prop ? prop.top + 0.35 : 1.6,
+        z: prop ? prop.z : spot.z,
+        shown: false, near: false, px: -9999, py: -9999,
       });
-    }
-    for (const im of [trunk, ...foliage]) {
-      im.instanceMatrix.needsUpdate = true;
-      if (im.instanceColor) im.instanceColor.needsUpdate = true;
-      im.frustumCulled = false;
-      this.scene.add(im);
-    }
-  }
-
-  private buildObstacles(): void {
-    const altars: Array<{ x: number; z: number; r: number }> = [];
-    const stoneMat = this.lambert(0x546b64);
-    const stoneLight = this.lambert(0x6f867b);
-    const bronze = this.lambert(0x9a7632, { emissive: 0x2a1a05 });
-    const stickMat = this.lambert(0xa83a2c);
-    const tipMat = this.track(new THREE.MeshBasicMaterial({ color: 0xff9a4a }));
-    const glowTex = this.track(makeRadialTexture([[0, 'rgba(255,190,100,0.6)'], [0.5, 'rgba(255,160,80,0.2)'], [1, 'rgba(255,150,70,0)']]));
-    const glowMat = this.track(new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-
-    const pondTex = this.track(makePondTexture());
-    const pondMat = this.track(new THREE.MeshBasicMaterial({ map: pondTex }));
-    const rimMat = this.lambert(0x607a70);
-    const rippleMats = [this.rippleA, this.rippleB].map(t =>
-      this.track(new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending })));
-    const padMat = this.lambert(0x3f8b5e, { side: THREE.DoubleSide });
-    const padGeo = this.geo(new THREE.CircleGeometry(0.24, 10).rotateX(-Math.PI / 2));
-    const lotusMat = this.lambert(0xf0b8c4, { emissive: 0x3a1a22 });
-    const lotusGeo = this.geo(new THREE.ConeGeometry(0.1, 0.16, 6).translate(0, 0.08, 0));
-    const rnd = mulberry32(99);
-
-    for (const o of this.room.obstacles) {
-      if (o.kind === 'altar') {
-        altars.push({ x: o.x, z: o.z, r: o.r });
-        const g = new THREE.Group();
-        g.position.set(o.x, 0, o.z);
-        const base1 = new THREE.Mesh(this.geo(new THREE.CylinderGeometry(o.r + 0.5, o.r + 0.56, 0.12, 24).translate(0, 0.06, 0)), stoneMat);
-        const base2 = new THREE.Mesh(this.geo(new THREE.CylinderGeometry(o.r + 0.2, o.r + 0.26, 0.14, 24).translate(0, 0.19, 0)), stoneLight);
-        g.add(base1, base2);
-        const cs = clamp(o.r / 0.8, 0.7, 1.5);
-        const bowl = new THREE.Mesh(this.geo(new THREE.LatheGeometry([
-          new THREE.Vector2(0, 0.03), new THREE.Vector2(0.2, 0), new THREE.Vector2(0.31, 0.12), new THREE.Vector2(0.37, 0.3),
-          new THREE.Vector2(0.34, 0.42), new THREE.Vector2(0.39, 0.46), new THREE.Vector2(0.3, 0.46), new THREE.Vector2(0, 0.36),
-        ], 16)), bronze);
-        bowl.position.y = 0.26 + 0.1 * cs;
-        bowl.scale.setScalar(cs);
-        g.add(bowl);
-        const legGeo = this.geo(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 5).translate(0, 0.06, 0));
-        for (let i = 0; i < 3; i++) {
-          const a = (i / 3) * Math.PI * 2 + 0.5;
-          const leg = new THREE.Mesh(legGeo, bronze);
-          leg.position.set(Math.cos(a) * 0.22 * cs, 0.26, Math.sin(a) * 0.22 * cs);
-          leg.scale.setScalar(cs);
-          g.add(leg);
-        }
-        const stickGeo = this.geo(new THREE.CylinderGeometry(0.009, 0.009, 0.55, 4).translate(0, 0.275, 0));
-        const tipGeo = this.geo(new THREE.SphereGeometry(0.022, 5, 4));
-        const topY = 0.26 + 0.1 * cs + 0.4 * cs;
-        for (let i = 0; i < 7; i++) {
-          const a = (i / 7) * Math.PI * 2;
-          const rr = 0.04 + (i % 3) * 0.045;
-          const stick = new THREE.Mesh(stickGeo, stickMat);
-          stick.position.set(Math.cos(a) * rr * cs, topY - 0.3 * cs, Math.sin(a) * rr * cs);
-          stick.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12);
-          stick.scale.setScalar(cs);
-          g.add(stick);
-          const tip = new THREE.Mesh(tipGeo, tipMat);
-          tip.position.set(Math.cos(a) * rr * cs + Math.cos(a) * 0.065 * cs, topY - 0.3 * cs + 0.55 * cs, Math.sin(a) * rr * cs + Math.sin(a) * 0.065 * cs);
-          g.add(tip);
-        }
-        const pool = new THREE.Mesh(this.geo(new THREE.CircleGeometry((o.r + 1.4) * 1.5, 24).rotateX(-Math.PI / 2)), glowMat);
-        pool.position.y = 0.03;
-        pool.renderOrder = 1;
-        g.add(pool);
-        for (const child of g.children) {
-          child.matrixAutoUpdate = false;
-          child.updateMatrix();
-        }
-        this.scene.add(g);
-        if (this.lights.length < MAX_ALTAR_LIGHTS) {
-          const light = new THREE.PointLight(0xffa860, 14, 11, 1.6);
-          light.position.set(o.x, 1.3, o.z);
-          this.scene.add(light);
-          this.lights.push(light);
-        }
-      } else if (o.kind === 'pond') {
-        const g = new THREE.Group();
-        g.position.set(o.x, 0, o.z);
-        const rim = new THREE.Mesh(this.geo(new THREE.CylinderGeometry(o.r + 0.32, o.r + 0.4, 0.12, 28).translate(0, 0.05, 0)), rimMat);
-        const water = new THREE.Mesh(this.geo(new THREE.CircleGeometry(o.r, 36).rotateX(-Math.PI / 2)), pondMat);
-        water.position.y = 0.115;
-        g.add(rim, water);
-        const rippleGeo = this.geo(new THREE.CircleGeometry(o.r * 0.97, 36).rotateX(-Math.PI / 2));
-        rippleMats.forEach((mat, i) => {
-          const ripple = new THREE.Mesh(rippleGeo, mat);
-          ripple.position.y = 0.12 + i * 0.004;
-          ripple.renderOrder = 1;
-          g.add(ripple);
-        });
-        const pads = 3 + Math.floor(o.r);
-        for (let i = 0; i < pads; i++) {
-          const a = rnd() * Math.PI * 2;
-          const rr = Math.sqrt(rnd()) * o.r * 0.7;
-          const pad = new THREE.Mesh(padGeo, padMat);
-          pad.position.set(Math.cos(a) * rr, 0.13, Math.sin(a) * rr);
-          pad.scale.setScalar(0.8 + rnd() * 0.9);
-          g.add(pad);
-          if (i % 2 === 0) {
-            const lotus = new THREE.Mesh(lotusGeo, lotusMat);
-            lotus.position.set(pad.position.x, 0.13, pad.position.z);
-            g.add(lotus);
-          }
-        }
-        for (const child of g.children) {
-          child.matrixAutoUpdate = false;
-          child.updateMatrix();
-        }
-        this.scene.add(g);
-      }
-    }
-
-    if (altars.length > 0) {
-      const smokeTex = this.track(makeRadialTexture([[0, 'rgba(255,255,255,0.9)'], [0.45, 'rgba(255,255,255,0.35)'], [1, 'rgba(255,255,255,0)']]));
-      const field = new ParticleField('smoke', altars.length, 26, smokeTex, 0xc4cfc8, false);
-      altars.forEach((a, i) => {
-        const cs = clamp(a.r / 0.8, 0.7, 1.5);
-        field.origins[i * 3] = a.x;
-        field.origins[i * 3 + 1] = 0.26 + 0.1 * cs + 0.42 * cs;
-        field.origins[i * 3 + 2] = a.z;
-        field.intensity[i] = 1;
-      });
-      this.smoke = field;
-      this.scene.add(field.points);
     }
   }
 
   private buildSeats(): void {
     const seats = this.room.seats;
-    const cushionGeo = this.geo(new THREE.CylinderGeometry(0.4, 0.45, CUSHION_H, 20).translate(0, CUSHION_H / 2, 0));
-    const topGeo = this.geo(new THREE.CylinderGeometry(0.32, 0.36, 0.03, 20).translate(0, CUSHION_H + 0.005, 0));
-    const rimGeo = this.geo(new THREE.TorusGeometry(0.42, 0.05, 6, 22).rotateX(Math.PI / 2).translate(0, CUSHION_H * 0.55, 0));
-    const buttonGeo = this.geo(new THREE.SphereGeometry(0.05, 6, 4).translate(0, CUSHION_H + 0.02, 0));
-    const cushionMat = this.lambert(0xc7993a, { emissive: 0x2a1c06 });
-    const topMat = this.lambert(0xa5472f);
-    const rimMat = this.lambert(0xe3bd5a);
+    const n = seats.length;
+    if (n === 0) return;
+    // Every cushion goes into one merged vertex-coloured mesh; rings and glows are one instanced mesh each.
     // Linh mạch cushions (rank-gated): jade silk on a gold base, ringed in gold.
-    const innerCushionMat = this.lambert(0xe3bd5a, { emissive: 0x3a2a08 });
-    const innerTopMat = this.lambert(0x2f8f78, { emissive: 0x08261e });
+    const cushions = new Batch();
+    for (const seat of seats) {
+      const inner = seat.min_rank > 0;
+      cushions.within(placeAt(seat.x, 0, seat.z), () => {
+        cushions.add(new THREE.CylinderGeometry(0.4, 0.45, CUSHION_H, 20).translate(0, CUSHION_H / 2, 0), inner ? 0xe3bd5a : 0xc7993a);
+        cushions.add(new THREE.CylinderGeometry(0.32, 0.36, 0.03, 20).translate(0, CUSHION_H + 0.005, 0), inner ? 0x2f8f78 : 0xa5472f);
+        cushions.add(new THREE.TorusGeometry(0.42, 0.05, 6, 22).rotateX(Math.PI / 2).translate(0, CUSHION_H * 0.55, 0), 0xe3bd5a);
+        cushions.add(new THREE.SphereGeometry(0.05, 6, 4).translate(0, CUSHION_H + 0.02, 0), 0xe3bd5a);
+      });
+    }
+    const cushionGeo = cushions.build();
+    if (cushionGeo) {
+      const mesh = new THREE.Mesh(this.geo(cushionGeo), this.lambert(0xffffff, { vertexColors: true, emissive: 0x1c1406 }));
+      mesh.matrixAutoUpdate = false;
+      this.scene.add(mesh);
+    }
     const hitGeo = this.geo(new THREE.CylinderGeometry(0.75, 0.75, 0.7, 12).translate(0, 0.3, 0));
     const hitMat = this.track(new THREE.MeshBasicMaterial({ visible: false }));
-    const ringGeo = this.geo(new THREE.RingGeometry(0.62, 0.78, 40).rotateX(-Math.PI / 2));
-    const glowGeo = this.geo(new THREE.CircleGeometry(1.35, 32).rotateX(-Math.PI / 2));
     const glowTex = this.track(makeRadialTexture([[0, 'rgba(255,255,255,0.95)'], [0.45, 'rgba(255,255,255,0.35)'], [1, 'rgba(255,255,255,0)']]));
-
-    for (const seat of seats) {
-      const g = new THREE.Group();
-      g.position.set(seat.x, 0, seat.z);
-      const inner = seat.min_rank > 0;
-      g.add(new THREE.Mesh(cushionGeo, inner ? innerCushionMat : cushionMat), new THREE.Mesh(topGeo, inner ? innerTopMat : topMat), new THREE.Mesh(rimGeo, rimMat), new THREE.Mesh(buttonGeo, rimMat));
-      for (const child of g.children) {
-        child.matrixAutoUpdate = false;
-        child.updateMatrix();
-      }
-      const ring = new THREE.Mesh(ringGeo, this.track(new THREE.MeshBasicMaterial({
-        color: inner ? COL_GOLD : COL_JADE, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false,
-      })));
-      ring.position.y = 0.025;
-      ring.renderOrder = 2;
-      const glow = new THREE.Mesh(glowGeo, this.track(new THREE.MeshBasicMaterial({
-        map: glowTex, color: COL_JADE, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false,
-      })));
-      glow.position.y = 0.02;
-      glow.renderOrder = 1;
+    // Additive blending: an instance colour scaled by its opacity looks exactly like that opacity.
+    const rings = this.track(new THREE.InstancedMesh(this.geo(new THREE.RingGeometry(0.62, 0.78, 40).rotateX(-Math.PI / 2)),
+      this.track(new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })), n));
+    const glows = this.track(new THREE.InstancedMesh(this.geo(new THREE.CircleGeometry(1.35, 32).rotateX(-Math.PI / 2)),
+      this.track(new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })), n));
+    rings.renderOrder = 2;
+    glows.renderOrder = 1;
+    seats.forEach((seat, slot) => {
+      glows.setMatrixAt(slot, this.tmpM.makeTranslation(seat.x, 0.02, seat.z));
       const hit = new THREE.Mesh(hitGeo, hitMat);
+      hit.position.set(seat.x, 0, seat.z);
       hit.matrixAutoUpdate = false;
       hit.updateMatrix();
-      g.add(ring, glow, hit);
-      this.scene.add(g);
-      const visual: SeatVisual = { index: seat.i, inner, x: seat.x, z: seat.z, ring, glow, level: 0, state: 0 };
+      this.scene.add(hit);
+      const visual: SeatVisual = { index: seat.i, slot, inner: seat.min_rank > 0, x: seat.x, z: seat.z, level: 0, state: 0 };
       this.seatVisuals.push(visual);
       this.seatBySeatIndex.set(seat.i, visual);
       this.seatHits.push(hit);
       this.seatHitIndex.set(hit, seat.i);
+    });
+    for (const im of [rings, glows]) {
+      im.frustumCulled = false;
+      this.scene.add(im);
     }
+    this.seatRings = rings;
+    this.seatGlows = glows;
 
     // One floating label over the rank-gated ring explains why those cushions differ.
     const inner = seats.filter(s => s.min_rank > 0);
@@ -792,6 +572,7 @@ export class RoomScene {
       this.qi = field;
       this.scene.add(field.points);
     }
+    this.updateSeats(0, 0);
   }
 
   private buildMotes(): ParticleField {
@@ -815,11 +596,13 @@ export class RoomScene {
     return ring;
   }
 
+  /** Seated disciples face the heart of the bát quái circle (the centre of the seat rings). */
   private computeSeatFacing(): void {
-    const altar = this.room.obstacles.find(o => o.kind === 'altar');
-    const tx = altar ? altar.x : this.room.w / 2;
-    const tz = altar ? altar.z : this.room.d / 2;
-    for (const s of this.room.seats) {
+    const seats = this.room.seats;
+    if (seats.length === 0) return;
+    const tx = seats.reduce((s, q) => s + q.x, 0) / seats.length;
+    const tz = seats.reduce((s, q) => s + q.z, 0) / seats.length;
+    for (const s of seats) {
       const dx = tx - s.x;
       const dz = tz - s.z;
       this.seatFacing.set(s.i, dx * dx + dz * dz < 0.01 ? 0 : Math.atan2(dx, dz));
@@ -881,6 +664,27 @@ export class RoomScene {
       const on = tmpV.z < 1 && Math.abs(tmpV.x) < 1.1 && Math.abs(tmpV.y) < 1.1;
       zone.el.style.visibility = on ? 'visible' : 'hidden';
       if (on) zone.el.style.transform = `translate3d(${Math.round((tmpV.x * 0.5 + 0.5) * width)}px,${Math.round((-tmpV.y * 0.5 + 0.5) * height)}px,0)`;
+    }
+    const me = this.local;
+    for (const l of this.spotLabels) {
+      tmpV.set(l.x, l.y, l.z).project(camera);
+      const sx = Math.round((tmpV.x * 0.5 + 0.5) * width);
+      const sy = Math.round((-tmpV.y * 0.5 + 0.5) * height);
+      const on = tmpV.z < 1 && sx > -80 && sx < width + 80 && sy > -40 && sy < height + 80;
+      if (on !== l.shown) {
+        l.shown = on;
+        l.el.style.visibility = on ? 'visible' : 'hidden';
+      }
+      if (on && (sx !== l.px || sy !== l.py)) {
+        l.px = sx;
+        l.py = sy;
+        l.el.style.transform = `translate3d(${sx}px,${sy}px,0)`;
+      }
+      const near = me !== null && Math.hypot(me.x - l.spot.x, me.z - l.spot.z) <= l.spot.reach;
+      if (near !== l.near) {
+        l.near = near;
+        l.el.classList.toggle('is-near', near);
+      }
     }
     for (const a of this.actorList) {
       const tag = a.tag;
@@ -950,6 +754,8 @@ export class RoomScene {
     this.updateMarker(time, nowMs);
     this.updateCamera(dt);
     this.camera.updateMatrixWorld();
+    const me = this.local;
+    this.sect.update(time, dt, this.camera, me ? this.tmpFocus.set(me.x, me.rig.anchorY - 0.6, me.z) : null);
     this.renderer.render(this.scene, this.camera);
     this.updateTags(nowMs);
   };
@@ -994,36 +800,36 @@ export class RoomScene {
         else if (v.state === 0) v.state = 1;
       }
     }
+    const rings = this.seatRings;
+    const glows = this.seatGlows;
+    if (!rings || !glows) return;
     const k = clamp01(dt * 3);
     const qi = this.qi;
+    const c = this.tmpColor;
     for (let i = 0; i < this.seatVisuals.length; i++) {
       const v = this.seatVisuals[i] as SeatVisual;
       const target = v.state === 2 ? 1 : v.state === 1 ? 0.4 : 0;
       v.level += (target - v.level) * k;
       const hover = v.index === this.hoverSeat ? 1 : 0;
       const l = v.level;
-      v.ring.material.opacity = Math.min(1, 0.24 + hover * 0.3 + l * (0.5 + 0.22 * pulse));
-      v.ring.material.color.copy(v.inner ? this.colGold : this.colJade).lerp(this.colGold, l * 0.7);
+      const ringOpacity = Math.min(1, 0.24 + hover * 0.3 + l * (0.5 + 0.22 * pulse));
+      rings.setColorAt(v.slot, c.copy(v.inner ? this.colGold : this.colJade).lerp(this.colGold, l * 0.7).multiplyScalar(ringOpacity));
       const s = 1 + 0.05 * pulse * (0.4 + l) + hover * 0.1;
-      v.ring.scale.set(s, 1, s);
-      v.glow.material.opacity = 0.1 + hover * 0.08 + l * (0.38 + 0.14 * pulse);
-      v.glow.material.color.copy(this.colJade).lerp(this.colGold, l * 0.5);
+      rings.setMatrixAt(v.slot, this.tmpM.makeScale(s, 1, s).setPosition(v.x, 0.025, v.z));
+      const glowOpacity = 0.1 + hover * 0.08 + l * (0.38 + 0.14 * pulse);
+      glows.setColorAt(v.slot, c.copy(this.colJade).lerp(this.colGold, l * 0.5).multiplyScalar(glowOpacity));
       if (qi) qi.intensity[i] = clamp01((l - 0.5) * 2);
     }
+    rings.instanceMatrix.needsUpdate = true;
+    if (rings.instanceColor) rings.instanceColor.needsUpdate = true;
+    if (glows.instanceColor) glows.instanceColor.needsUpdate = true;
   }
 
   private updateAmbient(time: number, pulse: number): void {
-    this.smoke?.update(time);
     this.qi?.update(time);
     this.motes.update(time);
-    this.rippleA.offset.set(time * 0.012, time * 0.007);
-    this.rippleB.offset.set(-time * 0.009, time * 0.011);
     const auras = this.assets.auraMats;
     for (let i = 0; i < auras.length; i++) (auras[i] as THREE.MeshBasicMaterial).opacity = (this.assets.auraBase[i] ?? 0.1) * (0.7 + 0.6 * pulse);
-    for (let i = 0; i < this.lights.length; i++) {
-      const light = this.lights[i] as THREE.PointLight;
-      light.intensity = 13 + Math.sin(time * 7.3 + i * 2) * 0.9 + Math.sin(time * 3.1 + i) * 0.6;
-    }
   }
 
   private updateMarker(time: number, now: number): void {
@@ -1069,13 +875,17 @@ export class RoomScene {
     this.zoom += (this.zoomTarget - this.zoom) * clamp01(dt * 8);
     const aspect = this.width / this.height;
     const dist = this.zoom * (aspect < 1 ? 1 + (1 - aspect) * 0.45 : 1);
-    const horiz = Math.cos(PITCH) * dist;
+    const pitch = PITCH_NEAR + (PITCH_FAR - PITCH_NEAR) * clamp01((this.zoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN));
+    const horiz = Math.cos(pitch) * dist;
+    const shake = this.sect.shakeAt(performance.now() / 1000);
+    const jx = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+    const jy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
     camera.position.set(
-      this.focusX + Math.sin(this.yaw) * horiz,
-      FOCUS_Y + Math.sin(PITCH) * dist,
+      this.focusX + Math.sin(this.yaw) * horiz + jx,
+      FOCUS_Y + Math.sin(pitch) * dist + jy,
       this.focusZ + Math.cos(this.yaw) * horiz,
     );
-    camera.lookAt(this.focusX, FOCUS_Y, this.focusZ);
+    camera.lookAt(this.focusX + jx, FOCUS_Y + jy, this.focusZ);
     this.fog.near = dist * 1.05;
     this.fog.far = dist * 3.4;
   }
@@ -1093,7 +903,7 @@ export class RoomScene {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     const buf = this.renderer.getDrawingBufferSize(this.tmpV2);
-    this.smoke?.setScale(buf.y, FOV);
+    this.sect.setScale(buf.y, FOV);
     this.qi?.setScale(buf.y, FOV);
     this.motes.setScale(buf.y, FOV);
   }
@@ -1134,7 +944,36 @@ export class RoomScene {
     return this.seatHitIndex.get(first.object) ?? -1;
   }
 
+  /** Spot whose floating label covers the pointer. */
+  private pickLabel(clientX: number, clientY: number): SpotLabel | null {
+    for (const l of this.spotLabels) {
+      if (!l.shown) continue;
+      const r = l.el.getBoundingClientRect();
+      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) return l;
+    }
+    return null;
+  }
+
+  /** Spot whose prop the current ray hits (call after setNdc/pickSeat aimed the ray). */
+  private pickProp(): SpotLabel | null {
+    const first = this.raycaster.intersectObjects(this.sect.hits, false)[0];
+    const prop = first ? this.sect.propOf(first.object) : null;
+    return prop ? this.spotLabels.find(l => l.prop === prop) ?? null : null;
+  }
+
+  private useSpot(l: SpotLabel, cb: (spotId: string) => void): void {
+    const me = this.local;
+    if (!me || Math.hypot(me.x - l.spot.x, me.z - l.spot.z) > l.spot.reach) this.placeMarker(l.spot.x, l.spot.z);
+    cb(l.spot.id);
+  }
+
   private handleClick(clientX: number, clientY: number): void {
+    const tap = this.spotTap;
+    const label = tap ? this.pickLabel(clientX, clientY) : null;
+    if (tap && label) {
+      this.useSpot(label, tap);
+      return;
+    }
     const seat = this.pickSeat(clientX, clientY);
     if (seat >= 0) {
       const v = this.seatBySeatIndex.get(seat);
@@ -1143,6 +982,11 @@ export class RoomScene {
       return;
     }
     // pickSeat already aimed the ray at the pointer.
+    const prop = tap ? this.pickProp() : null;
+    if (tap && prop) {
+      this.useSpot(prop, tap);
+      return;
+    }
     const hit = this.raycaster.ray.intersectPlane(this.groundPlane, this.tmpV);
     if (!hit) return;
     const { w, d } = this.room;
@@ -1224,7 +1068,8 @@ export class RoomScene {
     if (now - this.lastHoverAt < 60) return;
     this.lastHoverAt = now;
     this.hoverSeat = this.pickSeat(e.clientX, e.clientY);
-    this.canvas.style.cursor = this.hoverSeat >= 0 ? 'pointer' : 'crosshair';
+    const spot = this.spotTap !== null && this.hoverSeat < 0 && (this.pickLabel(e.clientX, e.clientY) ?? this.pickProp()) !== null;
+    this.canvas.style.cursor = this.hoverSeat >= 0 || spot ? 'pointer' : 'crosshair';
   }
 }
 

@@ -9,10 +9,10 @@ import Coach, { COACH_CHAT, COACH_SIT, COACH_STEPS } from "./Coach";
 import HelpSheet from "./HelpSheet";
 import OfferingSheet from "./OfferingSheet";
 import { ROBE_LOOKS, cssHex } from "./looks";
-import { MODE_SIT, type ChatMode, type EmoteDef, type GatherPhase, type OfferingItem, type Phrase, type PlayerId, type PollMsg, type RankDef, type ReportReason, type SectMsg } from "./protocol";
+import { MODE_SIT, MODE_STAND, type ActMsg, type ChatMode, type EmoteDef, type GatherPhase, type OfferingItem, type Phrase, type PlayerId, type PollMsg, type RankDef, type ReportReason, type SectMsg, type SpotDef } from "./protocol";
 
 type Phase = "join" | "connecting" | "live" | "ended";
-type LogLine = { key: number; id: PlayerId; name: string; text: string; you: boolean; variant?: "system" | "twist" | "offering" | "event" };
+type LogLine = { key: number; id: PlayerId; name: string; text: string; you: boolean; variant?: "system" | "twist" | "offering" | "event" | "spot" };
 /** Linh mạch tụ khí as shown: `until` is when the blessing ends (local clock). */
 type GatherView = { phase: GatherPhase; pct: number; mult: number; until: number };
 /** The open Thiên Đạo hỏi poll; `endsAt` on the local clock, `total` the full duration for the time bar. */
@@ -42,6 +42,29 @@ const glyphOf = (e: number | string): string => EMOTE_GLYPHS[Number(e)] ?? "✨"
 /** "Ngoại môn đệ tử" → "Ngoại môn" for tight spots. */
 const shortRank = (name: string): string => name.replace(/\s*đệ tử$/u, "");
 const fmt = (n: number): string => n.toLocaleString("vi-VN", { maximumFractionDigits: 1 });
+
+/** BE README: after anyone rings the bell the whole room waits 45 s, on top of each disciple's own cooldown. */
+const BELL_SPOT = "bell";
+const BELL_ROOM_COOLDOWN_S = 45;
+/** A second press of the same spot this soon is dropped: the reply is still on its way. */
+const SPOT_PRESS_MS = 1200;
+const ACT_BUBBLE_MS = 6000;
+/** "4:05" from a minute up, else "12s". */
+const fmtLeft = (s: number): string => (s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s}s`);
+
+/** Sound key (sfx.ts) for a spot outcome, or null for the quiet ones (plain smoke, ripples). */
+function spotSound(msg: ActMsg): string | null {
+  switch (msg.fx) {
+    case "ring": return "bell";
+    case "glow":
+    case "dragon": return "offering";
+    case "boom": return "boom";
+    case "pill": return "scripture";
+    // The incense fortune where the smoke curls into a chicken gets the chicken's cackle.
+    case "smoke": return /con gà/u.test(msg.text) ? "chicken" : null;
+    default: return null;
+  }
+}
 
 export default function RoomView() {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -116,6 +139,16 @@ export default function RoomView() {
   const [modTarget, setModTarget] = useState<ModTarget | null>(null);
   const [chatNote, setChatNote] = useState<string | null>(null);
   const chatNoteTimer = useRef<number | undefined>(undefined);
+  // Interactive spots: the one the local player stands at (button shown), its cooldown left in seconds,
+  // and local cooldown hints (spot id -> local time it is usable again; the server stays authoritative).
+  const [spots, setSpots] = useState<SpotDef[]>([]);
+  const [nearSpot, setNearSpot] = useState<SpotDef | null>(null);
+  const [spotLeft, setSpotLeft] = useState(0);
+  const spotReady = useRef(new Map<string, number>());
+  const [spotRev, setSpotRev] = useState(0);
+  const lastPress = useRef<{ id: string; at: number } | null>(null);
+  // The help sheet was opened by reading the stele: scroll to the spot list.
+  const [helpSpots, setHelpSpots] = useState(false);
 
   useEffect(() => {
     setName(localStorage.getItem(NAME_KEY) ?? "");
@@ -156,6 +189,20 @@ export default function RoomView() {
     setLog(prev => [...prev, { ...line, key: ++logKey.current }].slice(-LOG_MAX));
   }, []);
 
+  // Uses a spot: the stele (the only local one) opens the help sheet, the rest go to the server.
+  const actAt = useCallback((spot: SpotDef) => {
+    if (spot.local) { setHelpSpots(true); setHelpOpen(true); return; }
+    const client = clientRef.current;
+    if (!client) return;
+    const now = Date.now();
+    const left = Math.ceil(((spotReady.current.get(spot.id) ?? 0) - now) / 1000);
+    if (left > 0) { showToast(`${spot.emoji} ${spot.label}: còn ${fmtLeft(left)} nữa mới làm lại được.`); return; }
+    const last = lastPress.current;
+    if (last && last.id === spot.id && now - last.at < SPOT_PRESS_MS) return;
+    lastPress.current = { id: spot.id, at: now };
+    if (!client.act(spot.id)) showToast("Đang mất kết nối, chưa làm được.");
+  }, [showToast]);
+
   // One client for the component's lifetime; every event is wired exactly once.
   useEffect(() => {
     const client = new RoomClient();
@@ -163,7 +210,7 @@ export default function RoomView() {
     const sfx = new Sfx();
     sfxRef.current = sfx;
     setMuted(sfx.muted);
-    // My pose and seat, plus how many people sit in the room (it drives the qi rate).
+    // My pose and seat, plus how many people sit in the room (it drives the qi rate), and the spot I stand at.
     const syncMe = () => {
       const me = client.me;
       setSeated(me?.s === MODE_SIT);
@@ -172,6 +219,15 @@ export default function RoomView() {
       setTogether(sitting);
       const seat = me && me.seat >= 0 ? client.room?.seats.find(s => s.i === me.seat) : undefined;
       setOnInner((seat?.min_rank ?? 0) > 0);
+      let near: SpotDef | null = null;
+      if (me && me.s === MODE_STAND) {
+        let best = Infinity;
+        for (const s of client.room?.spots ?? []) {
+          const d = Math.hypot(s.x - me.x, s.z - me.z);
+          if (d <= s.reach && d < best) { best = d; near = s; }
+        }
+      }
+      setNearSpot(near);
     };
 
     const off = [
@@ -202,6 +258,19 @@ export default function RoomView() {
         scene.setPatronBadges(badges);
         for (const p of msg.players) scene.addPlayer(p);
         scene.start();
+        scene.setSpotTapHandler(id => {
+          const spot = client.room?.spots.find(s => s.id === id);
+          const me = client.me;
+          if (!spot || !me) return;
+          // Already standing there: tapping the prop uses it, like the button.
+          if (me.s === MODE_STAND && Math.hypot(spot.x - me.x, spot.z - me.z) <= spot.reach) { actAt(spot); return; }
+          client.move(spot.x, spot.z);
+        });
+        // Cooldown hints restart from the server's word after every (re)connect.
+        spotReady.current.clear();
+        lastPress.current = null;
+        setSpotRev(n => n + 1);
+        setSpots(msg.room.spots);
         scene.setLocalRank(client.me?.rank ?? 0);
         if (!rejoin && localStorage.getItem(GUIDE_KEY) !== "done") setCoachStep(s => s ?? 0);
         setRoomName(msg.room.name);
@@ -335,10 +404,35 @@ export default function RoomView() {
         }
       }),
       client.on("report_ok", () => showToast("Đã gửi báo cáo. Cảm ơn đạo hữu giữ đạo tràng thanh tịnh 🙏")),
+      client.on("act", msg => {
+        const scene = sceneRef.current;
+        const you = msg.id === client.you;
+        const spot = client.room?.spots.find(s => s.id === msg.spot);
+        if (msg.fx) scene?.playSpotFx(msg.spot, msg.fx, msg.id);
+        if (msg.anim && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) scene?.playAnim(msg.id, msg.anim);
+        scene?.showChat(msg.id, msg.text, ACT_BUBBLE_MS);
+        const now = Date.now();
+        const ready = spotReady.current;
+        if (you && spot && spot.cooldown_s > 0) ready.set(spot.id, now + spot.cooldown_s * 1000);
+        if (msg.spot === BELL_SPOT) ready.set(BELL_SPOT, Math.max(ready.get(BELL_SPOT) ?? 0, now + BELL_ROOM_COOLDOWN_S * 1000));
+        setSpotRev(n => n + 1);
+        setQi(client.qi); // the client already added msg.qi (actor) and msg.room_qi (everyone)
+        const sound = spotSound(msg);
+        if (sound) sfxRef.current?.play(sound, you || msg.fx === "ring" ? 1 : 0.6);
+        const gain = `${msg.qi > 0 ? ` (+${msg.qi} tu vi)` : ""}${msg.room_qi > 0 ? ` · cả phòng +${msg.room_qi} tu vi` : ""}`;
+        pushLog({ id: msg.id, name: "", text: `${spot?.emoji ?? "✨"} ${msg.text}${gain}`, you, variant: "spot" });
+        if (msg.fx === "dragon") {
+          showBanner(`🐉 ${msg.text}${msg.room_qi > 0 ? `\n🎁 Cả phòng +${msg.room_qi} tu vi` : ""}`);
+          startRain(["🐉", "✨", "🪷"], false);
+        } else if (msg.fx === "boom") {
+          showBanner(`💥 ${msg.text}`);
+        }
+      }),
       client.on("reconnecting", r => {
         setReconnecting(r.attempt);
         setAfkUntil(null);
         setPoll(null);
+        setNearSpot(null);
       }),
       client.on("err", e => {
         if (e.code === "seat_taken" && wantedSeat.current !== null) {
@@ -367,6 +461,7 @@ export default function RoomView() {
         setPoll(null);
         setGather(null);
         setModTarget(null);
+        setNearSpot(null);
         setEnd(info);
         setPhase(info.kind === "ticket_failed" ? "join" : "ended");
         if (info.kind === "ticket_failed") setFormError(info.message);
@@ -384,7 +479,17 @@ export default function RoomView() {
       sfxRef.current?.close();
       sfxRef.current = null;
     };
-  }, [destroyScene, showToast, showBanner, startRain, pushLog]);
+  }, [destroyScene, showToast, showBanner, startRain, pushLog, actAt]);
+
+  // Cooldown left on the spot the player stands at, from the local hints.
+  useEffect(() => {
+    if (!nearSpot) { setSpotLeft(0); return; }
+    const id = nearSpot.id;
+    const tick = () => setSpotLeft(Math.max(0, Math.ceil(((spotReady.current.get(id) ?? 0) - Date.now()) / 1000)));
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [nearSpot, spotRev]);
 
   // Blessing countdown, ticking locally from the last `gather` frame.
   useEffect(() => {
@@ -462,6 +567,7 @@ export default function RoomView() {
     setPoll(null);
     setGather(null);
     setModTarget(null);
+    setNearSpot(null);
     setPhase("join");
   }, [destroyScene]);
 
@@ -533,7 +639,7 @@ export default function RoomView() {
                 <span title="Số người trong phòng">👥 {online}</span>
                 <span className="dt-roombar-actions">
                   <button type="button" className="dt-btn dt-btn--ghost dt-chip-btn" aria-pressed={!muted} title={muted ? "Bật âm thanh" : "Tắt âm thanh"} aria-label={muted ? "Bật âm thanh" : "Tắt âm thanh"} onClick={() => { const next = !muted; sfxRef.current?.setMuted(next); setMuted(next); }}>{muted ? "🔇" : "🔊"}</button>
-                  <button type="button" className="dt-btn dt-btn--ghost dt-chip-btn" title="Cách chơi" aria-label="Cách chơi" onClick={() => setHelpOpen(true)}>❓</button>
+                  <button type="button" className="dt-btn dt-btn--ghost dt-chip-btn" title="Cách chơi" aria-label="Cách chơi" onClick={() => { setHelpSpots(false); setHelpOpen(true); }}>❓</button>
                   <button type="button" className="dt-btn dt-btn--ghost dt-chip-btn" onClick={leave}>Rời đi</button>
                 </span>
               </div>
@@ -662,6 +768,8 @@ export default function RoomView() {
                       ? <p key={line.key} className="dt-log-twist">✨ {line.text}</p>
                       : line.variant === "offering"
                         ? <p key={line.key} className="dt-log-offering">🙏 {line.text}</p>
+                      : line.variant === "spot"
+                        ? <p key={line.key} className="dt-log-spot">{line.text}</p>
                       : line.variant === "event"
                         ? <p key={line.key} className="dt-log-event">{line.text}</p>
                       : line.variant === "system"
@@ -673,6 +781,19 @@ export default function RoomView() {
                 </div>
               )}
             </div>
+
+            {nearSpot && (
+              <button
+                type="button"
+                className={`dt-btn dt-btn--gold dt-spotbtn${spotLeft > 0 ? " is-cooling" : ""}`}
+                aria-label={spotLeft > 0 ? `${nearSpot.label}, còn ${fmtLeft(spotLeft)}` : nearSpot.label}
+                onClick={() => actAt(nearSpot)}
+              >
+                <span className="dt-spotbtn-emoji" aria-hidden="true">{nearSpot.emoji}</span>
+                <span>{nearSpot.label}</span>
+                {spotLeft > 0 && <small>còn {fmtLeft(spotLeft)}</small>}
+              </button>
+            )}
 
             <div className="dt-glass dt-dock">
               <div className="dt-row">
@@ -758,6 +879,8 @@ export default function RoomView() {
           ranks={ranks}
           perks={perks}
           chatUnlock={chatMode === "rank" ? unlockRank ?? null : null}
+          spots={spots}
+          focusSpots={helpSpots}
           onClose={() => setHelpOpen(false)}
           onReplayGuide={() => { setHelpOpen(false); setCoachStep(0); }}
           onTransfer={() => { setHelpOpen(false); setTransferOpen(true); }}

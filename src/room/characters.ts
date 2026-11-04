@@ -4,7 +4,7 @@ import { ROBE_LOOKS } from './looks';
 import type { TwistAnim } from './protocol';
 
 /** Seconds each Thiên Cơ animation lasts. */
-const TWIST_SECONDS: Record<TwistAnim, number> = { jump: 1.2, spin: 1.4, flip: 1.1, faint: 2.6 };
+const TWIST_SECONDS: Record<TwistAnim, number> = { jump: 1.2, spin: 1.4, flip: 1.1, faint: 2.6, bow: 2.4 };
 
 function easeInOut(p: number): number {
   return p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
@@ -397,6 +397,16 @@ export class CharacterRig {
       case 'jump': // two startled hops
         this.root.position.y += Math.abs(Math.sin(2 * Math.PI * p)) * 0.7 * (1 - 0.4 * p);
         break;
+      case 'bow': { // tam bái: three deep bows with hands clasped in front
+        const s = Math.sin(Math.PI * ((p * 3) % 1));
+        const k = s * s * (1 - this.seatBlend * 0.4);
+        this.upper.rotation.x += 0.85 * k;
+        this.armL.rotation.x += -1.0 * k;
+        this.armR.rotation.x += -1.0 * k;
+        this.armL.rotation.z -= 0.25 * k;
+        this.armR.rotation.z += 0.25 * k;
+        break;
+      }
       case 'spin':
         this.twistYaw = easeInOut(p) * 4 * Math.PI;
         break;
