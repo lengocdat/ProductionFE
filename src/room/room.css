@@ -504,3 +504,9 @@
   .dt-flash, .dt-rain { display: none; }
   .dt-offer-cta { animation: none; }
 }
+
+/* Waiting line when every room is full */
+.dt-queue-pos { margin: 8px 0 4px; font-size: 18px; }
+.dt-queue-pos b { font-size: 34px; color: #ecc978; font-variant-numeric: lining-nums; }
+.dt-queue-links { margin: 10px 0 0; font-size: 14px; }
+.dt-queue-links a { color: #ecc978; text-underline-offset: 3px; }

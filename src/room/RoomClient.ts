@@ -59,6 +59,8 @@ export interface RoomClientEvents {
   act: ActMsg;
   /** An established session dropped; attempt `attempt` (1-based) starts after `delayMs`. A `welcome` means it worked. */
   reconnecting: { attempt: number; delayMs: number };
+  /** Every room is full and we are in line; a `welcome` means our turn came. */
+  queue: { position: number; total: number };
   /** Fired once per session when the connection is over. A new session needs `connect()` again (fresh ticket). */
   end: RoomEnd;
 }
@@ -104,6 +106,9 @@ export function errMessage(e: ErrMsg): string {
 }
 
 /** Reconnect back-off: 1, 2, 4, 8, 16 s, each ±30%. */
+const QUEUE_FIRST_POLL_MS = 1500;
+const QUEUE_RETRY_MS = 8000;
+const QUEUE_MAX_FAILURES = 8;
 const RETRY_BASE_MS = 1000;
 const RETRY_MAX = 5;
 const RETRY_JITTER = 0.3;
@@ -115,6 +120,18 @@ function resolveWsUrl(wsPath: string): string {
   // The ticket response names the path; fall back to the documented one if it is odd.
   const path = wsPath.startsWith('/') ? wsPath : '/v1/room/ws';
   return `${scheme}//${location.host}${path}`;
+}
+
+type QueueReply = { status: 'go' | 'full' } | { status: 'wait'; position: number; total: number; retry_ms: number };
+
+function parseQueueResponse(raw: unknown): QueueReply | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const v = raw as Record<string, unknown>;
+  if (v.status === 'go' || v.status === 'full') return { status: v.status };
+  if (v.status !== 'wait') return null;
+  const { position, total, retry_ms: retryMs } = v;
+  if (typeof position !== 'number' || typeof total !== 'number' || typeof retryMs !== 'number') return null;
+  return { status: 'wait', position, total, retry_ms: Math.max(retryMs, QUEUE_FIRST_POLL_MS) };
 }
 
 export class RoomClient {
@@ -207,6 +224,7 @@ export class RoomClient {
   /** User-initiated join: fetches a fresh one-shot ticket, then opens the socket. Safe to call again after `end`. */
   async connect(opts: ConnectOptions): Promise<void> {
     this.stopRetrying();
+    this.stopQueue();
     this.live = null;
     this.resitSeat = -1;
     this.resetWorld();
@@ -261,8 +279,70 @@ export class RoomClient {
     };
   }
 
+  // ---------- waiting line (HTTP polls, so waiting holds no socket) ----------
+
+  private queueTimer: number | undefined;
+  private queueFailures = 0;
+  private inQueue = false;
+
+  private stopQueue(): void {
+    window.clearTimeout(this.queueTimer);
+    this.queueTimer = undefined;
+    this.queueFailures = 0;
+    this.inQueue = false;
+  }
+
+  /** The delay also stops a refused "go" from turning into a tight connect loop. */
+  private scheduleQueuePoll(opts: ConnectOptions, session: number, delayMs: number): void {
+    window.clearTimeout(this.queueTimer);
+    this.queueTimer = window.setTimeout(() => void this.pollQueue(opts, session), delayMs);
+  }
+
+  private async pollQueue(opts: ConnectOptions, session: number): Promise<void> {
+    const token = localStorage.getItem(TOKEN_KEY);
+    let reply: QueueReply | null = null;
+    let refused = !token;
+    if (token) {
+      try {
+        reply = parseQueueResponse(await request<unknown>('/room/queue', { method: 'POST', body: JSON.stringify({ token }) }));
+      } catch (error) {
+        refused = error instanceof APIError && error.status === 409;
+      }
+    }
+    if (session !== this.session) return;
+    if (refused || reply?.status === 'full') {
+      this.stopQueue();
+      this.finish({ kind: 'full', code: CLOSE_FULL, message: END_MESSAGES.full });
+      return;
+    }
+    if (!reply) {
+      // A brief network or server hiccup should not cost someone their place in line.
+      this.queueFailures += 1;
+      if (this.queueFailures >= QUEUE_MAX_FAILURES) {
+        this.stopQueue();
+        this.finish({ kind: 'network', code: null, message: END_MESSAGES.network });
+        return;
+      }
+      this.scheduleQueuePoll(opts, session, QUEUE_RETRY_MS);
+      return;
+    }
+    this.queueFailures = 0;
+    if (reply.status !== 'wait') { // 'full' already ended above, so this is 'go'
+      void this.open(opts);
+      return;
+    }
+    this.emit('queue', { position: reply.position, total: reply.total });
+    this.scheduleQueuePoll(opts, session, reply.retry_ms);
+  }
+
   /** Network drops of a welcomed session back off and retry; everything else (and giving up) ends it. */
   private retryOrFinish(end: RoomEnd): void {
+    if (end.kind === 'full' && this.pending) {
+      this.inQueue = true;
+      this.setState('connecting');
+      this.scheduleQueuePoll(this.pending, this.session, QUEUE_FIRST_POLL_MS);
+      return;
+    }
     if (end.kind !== 'network' || !this.live || this.retries >= RETRY_MAX) {
       this.finish(end);
       return;
@@ -525,9 +605,17 @@ export class RoomClient {
     try { ws.close(1000); } catch { /* already closed */ }
   }
 
+  /** Frees our place at once, so the people behind do not wait for it to expire. Best effort. */
+  private leaveQueue(): void {
+    const token = this.inQueue ? localStorage.getItem(TOKEN_KEY) : null;
+    this.stopQueue();
+    if (token) void request('/room/queue/leave', { method: 'POST', body: JSON.stringify({ token }), keepalive: true }).catch(() => undefined);
+  }
+
   /** User-initiated leave: closes the socket without raising `end` and never reconnects. */
   disconnect(): void {
     this.session += 1;
+    this.leaveQueue();
     this.stopRetrying();
     this.live = null;
     this.retries = 0;

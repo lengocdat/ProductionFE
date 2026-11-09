@@ -61,7 +61,7 @@ export default function LinhCan({ friendRoot }: { friendRoot: RootId | null }) {
     return navigator.canShare({ files: [new File([""], "x.png", { type: "image/png" })] });
   }, []);
 
-  const shareLink = rootId ? `${typeof location === "undefined" ? "" : location.origin}/linh-can?r=${rootId}` : "";
+  const shareLink = rootId ? `${typeof location === "undefined" ? "" : location.origin}/linh-can/${rootId}` : "";
 
   const deliver = async (mode: "share" | "save") => {
     if (!root || !rootId) return;

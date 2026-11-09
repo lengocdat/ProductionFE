@@ -82,6 +82,7 @@ export default function RoomView() {
   const [look, setLook] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [end, setEnd] = useState<RoomEnd | null>(null);
+  const [queue, setQueue] = useState<{ position: number; total: number } | null>(null);
   const [roomName, setRoomName] = useState("");
   const [online, setOnline] = useState(0);
   const [qi, setQi] = useState(0);
@@ -304,8 +305,10 @@ export default function RoomView() {
         prevMaster.current = undefined;
         setAfkUntil(null);
         syncMe();
+        setQueue(null);
         setPhase("live");
       }),
+      client.on("queue", setQueue),
       client.on("join", p => { sceneRef.current?.addPlayer(p); setOnline(client.online); }),
       client.on("leave", id => { sceneRef.current?.removePlayer(id); setOnline(client.online); syncMe(); }),
       client.on("delta", msg => {
@@ -465,6 +468,7 @@ export default function RoomView() {
         setGather(null);
         setModTarget(null);
         setNearSpot(null);
+        setQueue(null);
         setEnd(info);
         setPhase(info.kind === "ticket_failed" ? "join" : "ended");
         if (info.kind === "ticket_failed") setFormError(info.message);
@@ -571,6 +575,7 @@ export default function RoomView() {
     setGather(null);
     setModTarget(null);
     setNearSpot(null);
+    setQueue(null);
     setPhase("join");
   }, [destroyScene]);
 
@@ -868,6 +873,20 @@ export default function RoomView() {
               </>
             )}
           </form>
+        </div>
+      )}
+
+      {queue && (
+        <div className="dt-overlay dt-overlay--dim">
+          <div className="dt-glass dt-card dt-queue" role="status" aria-live="polite">
+            <h2 className="dt-title" style={{ fontSize: 26 }}>Tông môn đang đông</h2>
+            <p className="dt-queue-pos">Bạn đứng thứ <b>{queue.position.toLocaleString("vi-VN")}</b></p>
+            <p className="dt-sub">{queue.total.toLocaleString("vi-VN")} đạo hữu đang chờ. Có chỗ là tự vào, cứ để trang này mở.</p>
+            <p className="dt-queue-links">
+              Trong lúc chờ: <a href="/linh-can" target="_blank" rel="noopener">test linh căn</a> · <a href="/tha-den" target="_blank" rel="noopener">thả đèn ước</a>
+            </p>
+            <div className="dt-actions"><button type="button" className="dt-btn dt-btn--ghost" onClick={leave}>Rời hàng</button></div>
+          </div>
         </div>
       )}
 
