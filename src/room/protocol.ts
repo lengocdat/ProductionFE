@@ -321,7 +321,7 @@ export function parseServerMessage(raw: unknown): ServerMessage | null {
     case 'offering':
       if (!isId(raw.id) || !isStr(raw.name) || !isStr(raw.text)) return null;
       return {
-        t: 'offering', id: raw.id, name: raw.name, emoji: isStr(raw.emoji) ? raw.emoji : '🙏', item: isStr(raw.item) ? raw.item : '',
+        t: 'offering', id: raw.id, name: raw.name, emoji: isStr(raw.emoji) ? raw.emoji : '🍜', item: isStr(raw.item) ? raw.item : '',
         text: raw.text, gift: isNum(raw.gift) ? raw.gift : 0, patron: isNum(raw.patron) ? Math.max(0, Math.trunc(raw.patron)) : 0,
       };
     case 'twist': {
@@ -394,7 +394,7 @@ export function parseDiscipleResponse(raw: unknown): string | null {
 function parseOfferingItem(v: unknown): OfferingItem | null {
   if (!isRec(v) || !isStr(v.id) || !isStr(v.name) || !isNum(v.price) || !isNum(v.gift)) return null;
   return {
-    id: v.id, emoji: isStr(v.emoji) ? v.emoji : '🙏', name: v.name, price: v.price, gift: v.gift,
+    id: v.id, emoji: isStr(v.emoji) ? v.emoji : '🍜', name: v.name, price: v.price, gift: v.gift,
     tier: isNum(v.tier) ? v.tier : 0, perk_days: isNum(v.perk_days) ? v.perk_days : 0,
     perk: isStr(v.perk) ? v.perk : '', blurb: isStr(v.blurb) ? v.blurb : '',
   };
@@ -414,7 +414,7 @@ export function parseOfferingOrder(raw: unknown): OfferingOrder | null {
 
 export function parseRecentOfferings(raw: unknown): RecentOffering[] {
   return parseList<RecentOffering>(isRec(raw) ? raw.recent : null, r => (isRec(r) && isStr(r.name) && isStr(r.item) && isStr(r.paid_at)
-    ? { name: r.name, emoji: isStr(r.emoji) ? r.emoji : '🙏', item: r.item, paid_at: r.paid_at }
+    ? { name: r.name, emoji: isStr(r.emoji) ? r.emoji : '🍜', item: r.item, paid_at: r.paid_at }
     : null));
 }
 

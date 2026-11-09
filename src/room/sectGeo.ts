@@ -13,7 +13,7 @@ export const C = {
   plaster: 0xe9e3d5, tile: 0x323840, tileGroove: 0x22262d, tileEdge: 0x59606a, soffit: 0x5a2a20,
   red: 0x9a2a20, redDark: 0x681a14, wood: 0x5a3a26, woodLight: 0x8a5a32, gold: 0xd4ad55, teal: 0x2f6f6a,
   bronze: 0x8c6c36, bronzeDark: 0x56422a, patina: 0x4f7f6a, ash: 0x8f8a82, incense: 0xa83a2c,
-  pine: 0x2a4f3d, pineLight: 0x56866a, pineDeep: 0x1d372c, bark: 0x4f3a2a,
+  pine: 0x2f5640, pineLight: 0x7f9f68, pineDeep: 0x1c3329, bark: 0x4f3a2a,
   peach: 0xf0a2bf, peachLight: 0xffd3e0, peachDeep: 0xdc7aa0,
   bamboo: 0x7aa152, bambooDark: 0x56793a, leaf: 0x67984c, leafDark: 0x3f6a35,
   moss: 0x4d6448, rock: 0x5f645e, lanternRed: 0xff5634, lanternWarm: 0xffcf86, fire: 0xffa040,
@@ -301,16 +301,17 @@ export function pine(b: Batch, rnd: () => number, s: number): void {
       const reach = i === 4 ? 0 : (1.0 + rnd() * 0.5) * s * (1.25 - i * 0.12);
       const end = base.clone().add(v(Math.cos(a) * reach, (0.1 + rnd() * 0.25) * s, Math.sin(a) * reach));
       if (reach > 0) b.add(cylBetween(base, end, 0.07 * s, 0.04 * s, 5), C.bark, true);
-      const pad = new THREE.SphereGeometry(1, 8, 4)
-        .scale((1.05 + rnd() * 0.45) * s, 0.32 * s, (0.85 + rnd() * 0.3) * s)
+      // Smooth, lumpy pads read as cloud-like needle clusters instead of faceted rocks.
+      const pad = jitter(new THREE.SphereGeometry(1, 12, 6), 0.09, Math.floor(rnd() * 1e6))
+        .scale((1.05 + rnd() * 0.45) * s, 0.3 * s, (0.85 + rnd() * 0.3) * s)
         .rotateY(-a)
         .translate(end.x, end.y + 0.12 * s, end.z);
-      b.addShaded(pad, true, padShade);
+      b.addShaded(pad, false, padShade);
       // Smaller pad stacked above for the layered look.
-      const top = new THREE.SphereGeometry(1, 6, 3)
-        .scale(0.62 * s, 0.24 * s, 0.55 * s)
-        .translate(end.x + Math.cos(a) * 0.15 * s, end.y + 0.36 * s, end.z + Math.sin(a) * 0.15 * s);
-      b.addShaded(top, true, padShade);
+      const top = jitter(new THREE.SphereGeometry(1, 10, 5), 0.08, Math.floor(rnd() * 1e6))
+        .scale(0.62 * s, 0.22 * s, 0.55 * s)
+        .translate(end.x + Math.cos(a) * 0.15 * s, end.y + 0.34 * s, end.z + Math.sin(a) * 0.15 * s);
+      b.addShaded(top, false, padShade);
     }
   }
 }
@@ -327,9 +328,16 @@ export function peach(b: Batch, rnd: () => number, s: number): number {
     b.add(cylBetween(top, end, 0.08 * s, 0.035 * s, 5), C.bark, true);
     blobs.push(end, end.clone().add(v(Math.cos(a + 1.2) * 0.4 * s, 0.35 * s, Math.sin(a + 1.2) * 0.4 * s)));
   }
+  // Each blossom mass is a few smooth, slightly lumpy puffs so the crown reads soft rather than faceted.
   blobs.forEach((c, i) => {
-    b.add(new THREE.DodecahedronGeometry((0.5 + rnd() * 0.3) * s, 0).scale(1, 0.82, 1).translate(c.x, c.y + 0.15 * s, c.z),
-      colours[i % colours.length] as number, true);
+    const r = (0.5 + rnd() * 0.3) * s;
+    for (let k = 0; k < 3; k++) {
+      const a = rnd() * Math.PI * 2;
+      const o = k === 0 ? 0 : r * 0.55;
+      b.add(jitter(new THREE.IcosahedronGeometry(r * (k === 0 ? 1 : 0.62), 1), 0.07, Math.floor(rnd() * 1e6))
+        .scale(1, 0.82, 1).translate(c.x + Math.cos(a) * o, c.y + 0.15 * s + (k === 0 ? 0 : r * 0.25), c.z + Math.sin(a) * o),
+      colours[(i + k) % colours.length] as number, false);
+    }
   });
   return 2.4 * s;
 }

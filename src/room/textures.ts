@@ -76,7 +76,7 @@ export function makeGroundTexture(maxAnisotropy: number): THREE.CanvasTexture {
   const row = size / 4;
   const { canvas, ctx } = makeCanvas(size);
   const rnd = mulberry32(20240611);
-  ctx.fillStyle = '#4a4744';
+  ctx.fillStyle = '#5c554e';
   ctx.fillRect(0, 0, size, size);
   for (let r = 0; r < 4; r++) {
     // Slab widths per row sum to the tile width so rows wrap; the offset staggers the joints.
@@ -89,7 +89,7 @@ export function makeGroundTexture(maxAnisotropy: number): THREE.CanvasTexture {
     }
     let x = (r % 2) * 64 + Math.floor(rnd() * 2) * 32;
     for (const wdt of widths) {
-      const fill = `hsl(${30 + rnd() * 14} ${5 + rnd() * 6}% ${55 + rnd() * 9}%)`;
+      const fill = `hsl(${30 + rnd() * 14} ${6 + rnd() * 6}% ${60 + rnd() * 9}%)`;
       for (const ox of [0, -size]) slab(ctx, x + ox + 2, r * row + 2, wdt - 4, row - 4, fill);
       x += wdt;
     }

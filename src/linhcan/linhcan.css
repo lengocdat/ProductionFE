@@ -1,0 +1,65 @@
+/* Test Linh Căn. Everything is prefixed lc- so it never touches the room or the old game. */
+.lc-root {
+  --lc-tint: #ecc978;
+  --lc-gold: #ecc978;
+  --lc-ink: #fbf1dc;
+  --lc-muted: #cdbb9c;
+  --lc-title: "Cormorant Garamond", Georgia, serif;
+  position: fixed; inset: 0; overflow-y: auto; color: var(--lc-ink);
+  background: linear-gradient(180deg, rgba(6, 8, 18, 0.62), rgba(6, 6, 10, 0.9)), #0b0d18 url("/ui/bg-join.jpg") center / cover no-repeat;
+  font-family: Georgia, "Times New Roman", serif; line-height: 1.5; font-variant-numeric: lining-nums;
+}
+.lc-column { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px 16px; box-sizing: border-box; }
+.lc-panel {
+  width: min(460px, 100%); padding: 24px 20px; box-sizing: border-box; text-align: center; border-radius: 14px;
+  background: rgba(14, 12, 12, 0.8); border: 1px solid rgba(214, 170, 96, 0.5); backdrop-filter: blur(4px);
+  animation: lc-in 0.25s ease-out;
+}
+@keyframes lc-in { from { opacity: 0; transform: translateY(8px); } }
+.lc-eyebrow { margin: 0 0 6px; color: var(--lc-gold); font-size: 14px; letter-spacing: 0.04em; }
+.lc-title, .lc-root-name { margin: 0; font-family: var(--lc-title); font-weight: 700; line-height: 1.1; }
+.lc-title { font-size: 48px; color: var(--lc-gold); }
+.lc-lead, .lc-friend { margin: 14px 0 20px; font-size: 17px; }
+.lc-fine { margin: 14px 0 0; color: var(--lc-muted); font-size: 13.5px; }
+
+.lc-root button { font-family: inherit; cursor: pointer; }
+.lc-root button:disabled { opacity: 0.6; cursor: default; }
+.lc-root button:focus-visible, .lc-root a:focus-visible, .lc-root input:focus-visible { outline: 2px solid var(--lc-gold); outline-offset: 2px; }
+.lc-cta, .lc-ghost { min-height: 48px; padding: 0 20px; border-radius: 10px; font-size: 16px; }
+.lc-cta { color: #17120a; font-weight: 700; background: var(--lc-gold); border: 1px solid var(--lc-gold); }
+.lc-cta:hover { background: #f6dc9c; }
+.lc-ghost { color: var(--lc-ink); background: rgba(236, 201, 120, 0.1); border: 1px solid rgba(214, 170, 96, 0.55); }
+.lc-ghost:hover { background: rgba(236, 201, 120, 0.2); }
+
+.lc-progress { height: 4px; margin-bottom: 16px; overflow: hidden; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+.lc-progress span { display: block; height: 100%; background: var(--lc-gold); transition: width 0.2s ease-out; }
+.lc-question { margin: 0 0 18px; font-family: var(--lc-title); font-size: 29px; font-weight: 700; line-height: 1.2; }
+.lc-options { display: grid; gap: 10px; }
+.lc-option {
+  min-height: 52px; padding: 10px 14px; color: var(--lc-ink); font-size: 16px; text-align: left; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(214, 170, 96, 0.35);
+}
+.lc-option:hover { background: rgba(236, 201, 120, 0.16); border-color: var(--lc-gold); }
+
+.lc-result { border-color: var(--lc-tint); }
+.lc-root-name { font-size: 46px; color: var(--lc-tint); text-shadow: 0 0 18px color-mix(in srgb, var(--lc-tint) 55%, transparent); }
+.lc-school { margin: 2px 0 12px; font-family: var(--lc-title); font-size: 27px; font-weight: 600; }
+.lc-verdict { margin: 0 0 16px; font-size: 16.5px; font-style: italic; }
+.lc-facts { margin: 0 0 16px; text-align: left; }
+.lc-facts div { padding: 9px 0; border-top: 1px solid rgba(214, 170, 96, 0.22); }
+.lc-facts dt { color: var(--lc-tint); font-size: 13.5px; font-weight: 700; }
+.lc-facts dd { margin: 1px 0 0; font-size: 15.5px; }
+.lc-name { display: block; margin-bottom: 12px; text-align: left; font-size: 13.5px; color: var(--lc-muted); }
+.lc-name input {
+  display: block; width: 100%; box-sizing: border-box; min-height: 44px; margin-top: 4px; padding: 0 12px; color: var(--lc-ink);
+  font: inherit; font-size: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(214, 170, 96, 0.45);
+}
+.lc-actions { display: grid; gap: 8px; }
+.lc-note { margin: 10px 0 0; font-size: 14px; overflow-wrap: anywhere; }
+.lc-room { display: block; margin-top: 16px; color: var(--lc-gold); font-size: 15px; text-underline-offset: 3px; }
+.lc-text { margin-top: 6px; min-height: 40px; padding: 0 12px; color: var(--lc-muted); font-size: 14px; background: none; border: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lc-panel { animation: none; }
+  .lc-progress span { transition: none; }
+}

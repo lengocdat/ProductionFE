@@ -101,7 +101,10 @@ export default function RoomView() {
   const [phrases, setPhrases] = useState<Phrase[]>([]);
   const [emotes, setEmotes] = useState<EmoteDef[]>([]);
   const [log, setLog] = useState<LogLine[]>([]);
-  const [logOpen, setLogOpen] = useState(true);
+  // Phones start with the chat log folded so the scene is not hidden behind text.
+  const [logOpen, setLogOpen] = useState(() => window.matchMedia("(min-width: 720px)").matches);
+  // Phones show the status card as a one-line chip; tapping it unfolds the details (no effect on desktop).
+  const [statusOpen, setStatusOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [afkUntil, setAfkUntil] = useState<number | null>(null);
@@ -355,7 +358,7 @@ export default function RoomView() {
         if (msg.id) sceneRef.current?.setPatron(msg.id, msg.patron);
         setQi(q => q + msg.gift);
         sfxRef.current?.play("offering", 1);
-        showBanner(`${msg.emoji} ${msg.name} cúng ${msg.item}!\n🎁 Mọi người +${msg.gift} tu vi`, true);
+        showBanner(`${msg.emoji} ${msg.name} đãi ${msg.item}!\n🎁 Mọi người +${msg.gift} tu vi`, true);
         setLog(prev => [...prev, { key: ++logKey.current, id: msg.id, name: "", text: msg.text, you: msg.id === client.you, variant: "offering" as const }].slice(-LOG_MAX));
         startRain([msg.emoji], true);
       }),
@@ -643,13 +646,14 @@ export default function RoomView() {
                   <button type="button" className="dt-btn dt-btn--ghost dt-chip-btn" onClick={leave}>Rời đi</button>
                 </span>
               </div>
-              <button type="button" className="dt-glass dt-master" onClick={() => setBoardOpen(v => !v)} aria-expanded={boardOpen}>
+              <button type="button" className="dt-glass dt-master" onClick={() => setBoardOpen(v => !v)} aria-expanded={boardOpen} aria-label={`Chưởng môn tuần này: ${sect?.master ? sect.master.name : "đang bỏ trống"}`}>
                 <span className="dt-master-crown">👑</span>
                 <small>Chưởng môn tuần này · {boardOpen ? "đóng bảng" : "xem bảng"}</small>
                 <b>{sect?.master ? sect.master.name : "đang bỏ trống"}</b>
               </button>
-              <button type="button" className="dt-glass dt-offer-cta" onClick={() => setOfferOpen(true)}>
-                🍜 Mời Thiên Đạo bát phở <small>· cả tông môn được phát lộc</small>
+              <button type="button" className="dt-glass dt-offer-cta" onClick={() => setOfferOpen(true)} aria-label="Mời Thiên Đạo bát phở">
+                <span className="dt-cta-icon" aria-hidden="true">🍜</span>
+                <span className="dt-cta-text"> Mời Thiên Đạo bát phở <small>· cả tông môn được phát lộc</small></span>
               </button>
               {boardOpen && (
                 <div className="dt-glass dt-board" role="dialog" aria-label="Phong Vân bảng">
@@ -671,7 +675,12 @@ export default function RoomView() {
               )}
             </div>
 
-            <div className={`dt-glass dt-status${seated && rate > 0 ? " is-active" : ""}`} aria-live="off">
+            <div
+              className={`dt-glass dt-status${seated && rate > 0 ? " is-active" : ""}${statusOpen ? " is-open" : ""}`} aria-live="off"
+              role="button" tabIndex={0} aria-expanded={statusOpen} title="Chạm để xem chi tiết tu vi"
+              onClick={() => setStatusOpen(v => !v)}
+              onKeyDown={ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); setStatusOpen(v => !v); } }}
+            >
               <span className={`dt-rank dt-rank--${Math.min(myRank, 5)}`}>{curRank?.name ?? ""}</span>
               <span className="dt-qi-num">{qi.toLocaleString("vi-VN")} <small>tu vi</small></span>
               {nextRank ? (
@@ -767,7 +776,7 @@ export default function RoomView() {
                     line.variant === "twist"
                       ? <p key={line.key} className="dt-log-twist">✨ {line.text}</p>
                       : line.variant === "offering"
-                        ? <p key={line.key} className="dt-log-offering">🙏 {line.text}</p>
+                        ? <p key={line.key} className="dt-log-offering">🍜 {line.text}</p>
                       : line.variant === "spot"
                         ? <p key={line.key} className="dt-log-spot">{line.text}</p>
                       : line.variant === "event"
@@ -854,6 +863,8 @@ export default function RoomView() {
                 <div className="dt-actions">
                   <button type="submit" className="dt-btn dt-btn--gold">Vào Đạo Tràng</button>
                 </div>
+                <a className="dt-event-link" href="/tha-den">🏮 Mới: thả đèn ước nguyện mùa Noel – Tết →</a>
+                <a className="dt-event-link" href="/linh-can">🌱 Test Linh Căn: bạn thuộc hệ gì? →</a>
               </>
             )}
           </form>

@@ -380,6 +380,80 @@
 .dt-help-spots small { color: var(--dt-muted); font-size: 12.5px; }
 .dt-help-spot-emoji { font-size: 20px; width: 26px; flex: 0 0 auto; text-align: center; }
 
+/* ---- Tông môn skin: lacquer panels in a bronze frame, jade buttons, a classical title face ----
+   Frames and buttons: /ui (Xianxia RPG UI kit free sample, hoantdz); backgrounds: Xuanhuan Mood Art (CC0);
+   title face: Cormorant Garamond (OFL, @font-face in app/globals.css). Sources: /ui/SOURCES.txt. */
+.dt-root {
+  --dt-title-font: "Cormorant Garamond", Georgia, serif;
+  --dt-lacquer: linear-gradient(180deg, rgba(34, 22, 16, 0.9), rgba(16, 11, 9, 0.92));
+  --dt-gold: #ecc978;
+  --dt-line: rgba(214, 170, 96, 0.3);
+}
+/* The frame's gold line sits ~23% into its slice; the outset lines it up with the panel's edge. */
+.dt-glass {
+  border: 12px solid transparent; border-radius: 0;
+  border-image: url("/ui/frame-bronze.png") 64 / 12px / 3px stretch;
+  background: var(--dt-lacquer);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+:where(.dt-glass) { position: relative; }
+.dt-card, .dt-help, .dt-offer, .dt-board, .dt-coach, .dt-modmenu {
+  border-width: 18px; border-image: url("/ui/frame-gold.png") 64 / 18px / 4px stretch;
+}
+.dt-card { padding: 14px 12px; }
+.dt-roombar { padding: 0 0 0 4px; }
+.dt-status { padding: 2px 4px; }
+.dt-master { padding: 0 2px; border-image-source: url("/ui/frame-jade.png"); }
+.dt-offer-cta { padding: 0 2px; }
+.dt-dock { padding: 0; }
+.dt-log { padding: 0 2px; }
+.dt-title, .dt-roombar b, .dt-qi-num, .dt-banner, .dt-coach h3, .dt-board h3, .dt-help h3, .dt-modmenu-name, .dt-master b {
+  font-family: var(--dt-title-font); font-weight: 700; letter-spacing: 0.01em; font-variant-numeric: lining-nums tabular-nums;
+}
+.dt-title { font-size: clamp(34px, 8.5vw, 46px); letter-spacing: 0.02em; text-shadow: 0 0 18px rgba(236, 201, 120, 0.45), 0 2px 3px rgba(0, 0, 0, 0.8); }
+.dt-qi-num { font-size: 26px; }
+.dt-roombar b { font-size: 17px; }
+.dt-banner { font-size: clamp(28px, 7vw, 44px); }
+
+/* Jade buttons: the lotus ends keep their shape, the middle stretches. */
+.dt-btn--gold, .dt-btn--gold:hover {
+  border: solid transparent; border-width: 11px 26px; border-radius: 0; padding: 0 6px; min-height: 48px;
+  border-image: url("/ui/btn-jade.png") 32 80 fill / 11px 26px stretch;
+  background: none; color: #f8e9bc; font-family: var(--dt-title-font); font-size: 18px; font-weight: 700; letter-spacing: 0.03em;
+  text-shadow: 0 0 10px rgba(255, 220, 140, 0.5), 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.dt-btn--gold:hover { border-image-source: url("/ui/btn-jade-hover.png"); }
+.dt-btn--gold:active { border-image-source: url("/ui/btn-jade-pressed.png"); }
+.dt-btn, .dt-chipbtn, .dt-poll-opt { background: rgba(236, 201, 120, 0.07); border-color: rgba(214, 170, 96, 0.38); }
+.dt-btn:hover, .dt-chipbtn:hover, .dt-poll-opt:hover { background: rgba(236, 201, 120, 0.16); }
+.dt-btn--ghost { background: transparent; border-color: transparent; }
+.dt-emobtn, .dt-emobtn:hover {
+  border: none; background: url("/ui/ring-jade.png") center / 100% 100% no-repeat; font-size: 20px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.dt-emobtn:hover { filter: drop-shadow(0 0 8px rgba(120, 230, 190, 0.7)); }
+.dt-input { background: rgba(10, 7, 5, 0.65); border-color: rgba(214, 170, 96, 0.35); }
+.dt-input:focus { border-color: var(--dt-gold); box-shadow: 0 0 0 3px rgba(236, 201, 120, 0.2); }
+.dt-chatlock { background: rgba(10, 7, 5, 0.5); }
+.dt-progress { height: 6px; background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 0 0 1px rgba(214, 170, 96, 0.35); }
+.dt-progress > div { background: linear-gradient(90deg, #3fae8c, #9fe3c4 60%, #f3d68a); box-shadow: 0 0 8px rgba(160, 240, 200, 0.6); }
+
+/* Join screen: a painted vista of floating isles behind the framed card. */
+.dt-overlay {
+  background:
+    linear-gradient(180deg, rgba(8, 10, 18, 0.15) 0%, rgba(8, 10, 18, 0.05) 40%, rgba(10, 8, 6, 0.75) 100%),
+    url("/ui/bg-join.jpg") center / cover no-repeat, var(--dt-bg);
+}
+.dt-overlay--dim { background: rgba(5, 4, 3, 0.72); }
+.dt-overlay > .dt-card { background: linear-gradient(180deg, rgba(26, 18, 13, 0.86), rgba(14, 10, 8, 0.92)); }
+.dt-intro li { font-size: 14.5px; }
+.dt-swatch { box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(214, 170, 96, 0.45); }
+.dt-event-link {
+  display: block; margin-top: 14px; padding: 9px 12px; border-radius: 10px; font-size: 14px; color: #ffe2a8; text-decoration: none;
+  background: linear-gradient(90deg, rgba(232, 116, 44, 0.22), rgba(236, 201, 120, 0.12)); border: 1px solid rgba(236, 201, 120, 0.5);
+}
+.dt-event-link:hover { background: linear-gradient(90deg, rgba(232, 116, 44, 0.34), rgba(236, 201, 120, 0.2)); }
+
 @media (min-width: 720px) {
   .dt-bottom { flex-direction: row; align-items: flex-end; justify-content: space-between; }
   .dt-bottom > .dt-poll { position: absolute; left: 50%; bottom: calc(100% + 10px); translate: -50% 0; width: min(380px, calc(100% - 24px)); }
@@ -400,6 +474,25 @@
   .dt-master { order: 2; align-self: flex-start; }
   .dt-offer-cta { order: 3; align-self: flex-start; }
   .dt-board { order: 4; }
+  /* Keep the scene visible: below the room bar sits one row — a folded tu vi chip, then 👑 and 🍜 as icons.
+     Tapping the chip unfolds its details; 👑 opens the board; the chat log starts folded (RoomView). */
+  .dt-top { flex-direction: row; flex-wrap: wrap; align-items: stretch; }
+  .dt-roombar, .dt-board { flex: 1 1 100%; }
+  .dt-status { flex: 1 1 0; min-width: 0; gap: 0; cursor: pointer; }
+  .dt-status small { font-size: 11.5px; line-height: 1.35; }
+  .dt-qi-num { font-size: 22px; }
+  .dt-master, .dt-offer-cta { flex: 0 0 auto; align-self: stretch; width: 52px; min-height: 44px; padding: 0; display: grid; place-items: center; }
+  .dt-master small, .dt-master b, .dt-cta-text { display: none; }
+  .dt-master-crown, .dt-cta-icon { grid-row: auto; font-size: 22px; line-height: 1; }
+  .dt-offer-cta { order: 3; }
+  .dt-top:has(.dt-status.is-open) :is(.dt-master, .dt-offer-cta) { align-self: flex-start; height: 64px; }
+  .dt-status:not(.is-open) { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+  .dt-status:not(.is-open) > small, .dt-status:not(.is-open) > .dt-gather:not(.is-bless) { display: none; }
+  .dt-status:not(.is-open) > .dt-progress { flex: 1 1 100%; margin: 2px 0 0; }
+  .dt-status:not(.is-open) > .dt-gather.is-bless { flex: 1 1 100%; font-size: 11.5px; }
+  .dt-status:not(.is-open)::after { content: "▾"; margin-left: auto; color: var(--dt-muted); font-size: 12px; order: 0; }
+  .dt-status:not(.is-open) > .dt-progress, .dt-status:not(.is-open) > .dt-gather { order: 1; }
+  .dt-status.is-open::after { content: "▴ thu gọn"; align-self: flex-end; color: var(--dt-muted); font-size: 11px; margin-top: 2px; }
   .dt-poll { padding: 8px 10px; gap: 6px; }
   .dt-poll-opt { min-height: 44px; font-size: 13px; }
   .dt-gather.is-bless { padding: 4px 8px; }

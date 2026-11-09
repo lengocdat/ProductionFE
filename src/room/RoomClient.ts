@@ -546,7 +546,7 @@ export class RoomClient {
     const order = parseOfferingOrder(await request<unknown>('/room/offerings', {
       method: 'POST', body: JSON.stringify({ token: storedToken(), offering, request_id: requestId }),
     }));
-    if (!order) throw new Error('Phản hồi lễ cúng không hợp lệ.');
+    if (!order) throw new Error('Phản hồi đơn mời không hợp lệ.');
     return order;
   }
 
@@ -554,7 +554,7 @@ export class RoomClient {
     const order = parseOfferingOrder(await request<unknown>('/room/offerings/status', {
       method: 'POST', body: JSON.stringify({ token: storedToken(), id }),
     }));
-    if (!order) throw new Error('Phản hồi lễ cúng không hợp lệ.');
+    if (!order) throw new Error('Phản hồi đơn mời không hợp lệ.');
     return order;
   }
 

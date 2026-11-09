@@ -47,7 +47,7 @@ export default function OfferingSheet({ client, items, paymentsOpen, onClose, sh
     try {
       setOrder(await client.createOffering(item.id, crypto.randomUUID()));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Chưa tạo được lễ cúng.");
+      showToast(error instanceof Error ? error.message : "Chưa tạo được đơn mời.");
     } finally {
       setBusy(false);
     }
@@ -60,13 +60,13 @@ export default function OfferingSheet({ client, items, paymentsOpen, onClose, sh
   const item = order ? items.find(i => i.id === order.offering) : undefined;
 
   return (
-    <div className="dt-overlay dt-overlay--dim" role="dialog" aria-label="Cúng dường Thiên Đạo" onClick={onClose}>
+    <div className="dt-overlay dt-overlay--dim" role="dialog" aria-label="Mời Thiên Đạo ăn" onClick={onClose}>
       <div className="dt-glass dt-card dt-offer" onClick={ev => ev.stopPropagation()}>
         {!order ? (
           <>
             <img className="dt-offer-incense" src="/chanh-dien/nhang-linh-khi.png" alt="" />
-            <h2 className="dt-title" style={{ fontSize: 26 }}>Cúng dường Thiên Đạo</h2>
-            <p className="dt-sub">Thiên Đạo cũng phải ăn. Cúng xong <b>cả tông môn được phát lộc tu vi</b>, còn bạn được ghi tên vào Sổ Công Đức.</p>
+            <h2 className="dt-title" style={{ fontSize: 26 }}>Mời Thiên Đạo ăn</h2>
+            <p className="dt-sub">Thiên Đạo cũng phải ăn. Mời xong <b>cả tông môn được phát lộc tu vi</b>, còn bạn được ghi tên vào Sổ Khách Quý.</p>
             <ul className="dt-offer-list">
               {items.map(i => (
                 <li key={i.id}>
@@ -77,32 +77,32 @@ export default function OfferingSheet({ client, items, paymentsOpen, onClose, sh
                     <small>🎁 Mọi người đang online <b>+{i.gift} tu vi</b> · Bạn: {i.perk}</small>
                   </div>
                   <button type="button" className="dt-btn dt-btn--gold" disabled={!paymentsOpen || busy} onClick={() => void choose(i)}>
-                    {paymentsOpen ? "Cúng" : "Sắp mở"}
+                    {paymentsOpen ? "Mời" : "Sắp mở"}
                   </button>
                 </li>
               ))}
             </ul>
             <p className="dt-offer-note">
-              {paymentsOpen ? "" : "Cúng dường chưa mở. Đừng chuyển tiền cho bất kỳ ai. "}
+              {paymentsOpen ? "" : "Chưa mở. Đừng chuyển tiền cho bất kỳ ai. "}
               Đây là ủng hộ đội làm game. Không mua được sức mạnh: tu vi phát đều cho mọi người, kể cả bạn.
             </p>
             {recent.length > 0 && (
               <section className="dt-offer-recent">
-                <h3><img src="/chanh-dien/cuon-so.png" alt="" /> Sổ Công Đức</h3>
-                <ol>{recent.map((r, k) => <li key={k}>{r.emoji} <b>{r.name}</b> cúng {r.item} · {ago(r.paid_at)}</li>)}</ol>
+                <h3><img src="/chanh-dien/cuon-so.png" alt="" /> Sổ Khách Quý</h3>
+                <ol>{recent.map((r, k) => <li key={k}>{r.emoji} <b>{r.name}</b> đãi {r.item} · {ago(r.paid_at)}</li>)}</ol>
               </section>
             )}
           </>
         ) : order.status === "paid" ? (
           <>
-            <div className="dt-offer-done" aria-hidden="true">{item?.emoji ?? "🙏"}</div>
-            <h2 className="dt-title" style={{ fontSize: 26 }}>Thiên Đạo đã nhận lễ!</h2>
-            <p className="dt-sub">Cả tông môn vừa được phát lộc. Đa tạ thí chủ 🙏</p>
+            <div className="dt-offer-done" aria-hidden="true">{item?.emoji ?? "🍜"}</div>
+            <h2 className="dt-title" style={{ fontSize: 26 }}>Thiên Đạo đã nhận bữa!</h2>
+            <p className="dt-sub">Cả tông môn vừa được phát lộc. Đa tạ đạo hữu!</p>
           </>
         ) : (
           <>
             <h2 className="dt-title" style={{ fontSize: 24 }}>{item?.emoji} {item?.name}</h2>
-            <p className="dt-sub">Chuyển khoản <b>đúng số tiền và đúng nội dung</b>. Thiên Đạo tự nhận lễ trong ít phút, không cần báo ai.</p>
+            <p className="dt-sub">Chuyển khoản <b>đúng số tiền và đúng nội dung</b>. Thiên Đạo tự nhận trong ít phút, không cần báo ai.</p>
             {order.qr_url && <img className="dt-offer-qr" src={order.qr_url} alt="Mã QR chuyển khoản" width={220} height={220} />}
             <dl className="dt-offer-bank">
               <div><dt>Ngân hàng</dt><dd>{order.bank_name}</dd></div>
@@ -111,7 +111,7 @@ export default function OfferingSheet({ client, items, paymentsOpen, onClose, sh
               <div><dt>Số tiền</dt><dd><b>{vnd(order.amount)}</b></dd></div>
               <div><dt>Nội dung</dt><dd><code>{order.transfer_content}</code> <button type="button" className="dt-btn dt-btn--ghost dt-chip-btn" onClick={() => copy(order.transfer_content, "nội dung")}>Chép</button></dd></div>
             </dl>
-            <p className="dt-offer-wait"><span className="dt-spin" /> Đang chờ Thiên Đạo nhận lễ…</p>
+            <p className="dt-offer-wait"><span className="dt-spin" /> Đang chờ Thiên Đạo nhận bữa…</p>
           </>
         )}
         <div className="dt-actions">

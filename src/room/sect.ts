@@ -19,10 +19,10 @@ export interface SectKit {
   maxAnisotropy: number;
 }
 
-/** Backdrop and fog colour: dusky violet-blue mist under a moonlit sky. */
-export const SECT_MIST = 0x464f72;
+/** Backdrop and fog colour: rose-lavender haze of a mountain sunset. */
+export const SECT_MIST = 0x9c86a0;
 /** Colour the peaks fade into where they meet the sea of clouds. */
-const PEAK_FOOT = 0x5e688c;
+const PEAK_FOOT = 0xa18aa6;
 const MAX_POINT_LIGHTS = 4;
 const KOI = 6;
 const DRAGON_SEGS = 40;
@@ -122,6 +122,7 @@ export class SectWorld {
   private readonly tmpV = new THREE.Vector3();
   private readonly tmpDir = new THREE.Vector3();
   private readonly ray = new THREE.Ray();
+  private readonly tmpBox = new THREE.Box3();
   private readonly tmpColor = new THREE.Color();
 
   constructor(private readonly kit: SectKit, private readonly room: Room) {
@@ -570,12 +571,18 @@ export class SectWorld {
     for (const f of this.faders) {
       let target = 1;
       if (focus) {
-        const hit = this.ray.intersectBox(f.box, this.tmpV);
-        if (hit && hit.distanceTo(cam) < dist - 0.2) target = 0.28;
+        // Test against the prop's footprint (box stretched vertically): with the low camera a gate or hall can sit
+        // in the foreground below the line of sight and still hide half the screen.
+        this.tmpBox.copy(f.box);
+        this.tmpBox.min.y = -1e3;
+        this.tmpBox.max.y = 1e3;
+        const hit = this.ray.intersectBox(this.tmpBox, this.tmpV);
+        if (hit && hit.distanceTo(cam) < dist - 0.2) target = 0.14;
       }
       if (Math.abs(target - f.level) < 0.002) continue;
       f.level += (target - f.level) * k;
-      for (const m of f.mats) m.opacity = f.level;
+      // A faded prop stops writing depth so its own back faces and the actor behind it show through cleanly.
+      for (const m of f.mats) { m.opacity = f.level; m.depthWrite = f.level > 0.95; }
     }
   }
 
@@ -613,10 +620,11 @@ export class SectWorld {
   }
 
   private buildLights(): void {
-    this.root.add(new THREE.HemisphereLight(0xb4c0f0, 0x4e4438, 1.05));
-    const moon = new THREE.DirectionalLight(0xe2e8ff, 1.05);
-    moon.position.set(-14, 26, 10);
-    this.root.add(moon);
+    // Golden hour: warm sky fill, a low sun from the west raking across the terrace.
+    this.root.add(new THREE.HemisphereLight(0xffe4cc, 0x5b4636, 1.0));
+    const sun = new THREE.DirectionalLight(0xffc98c, 1.55);
+    sun.position.set(-26, 16, -4);
+    this.root.add(sun);
   }
 
   /** Mountain-top terrace, stairs into the clouds, the sea of clouds, distant peaks, floating isles, drifting clouds. */
@@ -627,11 +635,11 @@ export class SectWorld {
     plateau(this.stat, cx, (d - 8) / 2, w / 2 + 9, (d + 22) / 2, 30, PEAK_FOOT);
     stairs(this.stat, cx, d + 6.4, 24);
 
-    const seaA = k.track(makeCloudSeaTexture('#525b83', 'rgba(206,210,238,A)', 11));
+    const seaA = k.track(makeCloudSeaTexture('#9a83a2', 'rgba(255,226,214,A)', 11));
     seaA.repeat.set(12, 12);
     this.seaA = seaA;
     this.add(new THREE.Mesh(k.track(new THREE.PlaneGeometry(800, 800).rotateX(-Math.PI / 2)), this.basic({ map: seaA })), cx, -10, d / 2);
-    const seaB = k.track(makeCloudSeaTexture(null, 'rgba(238,240,255,A)', 23));
+    const seaB = k.track(makeCloudSeaTexture(null, 'rgba(255,240,232,A)', 23));
     seaB.repeat.set(7, 7);
     this.seaB = seaB;
     const upper = this.add(new THREE.Mesh(k.track(new THREE.PlaneGeometry(800, 800).rotateX(-Math.PI / 2)),
@@ -651,7 +659,7 @@ export class SectWorld {
       const z = czw + Math.sin(a) * dist;
       const r = far ? 9 + rnd() * 8 : 5 + rnd() * 4;
       const top = far ? 2 + rnd() * 16 : -7 + rnd() * 9;
-      peak(peaks, rnd, x, z, -36, top, r, far ? 0x4c5873 : 0x33463f, far ? 0x6b7496 : PEAK_FOOT);
+      peak(peaks, rnd, x, z, -36, top, r, far ? 0x7a6a92 : 0x3c4a44, far ? 0xb196b0 : PEAK_FOOT);
       if (!far && rnd() < 0.65) peaks.within(placeAt(x, top - 0.5, z, rnd() * 6, 1.1), () => pine(peaks, rnd, 1));
     }
     const peakGeo = peaks.build();
@@ -686,7 +694,7 @@ export class SectWorld {
 
     const cloudTex = k.track(makeCloudTexture());
     const clouds = k.track(new THREE.InstancedMesh(k.track(new THREE.PlaneGeometry(1, 0.5)),
-      this.basic({ map: cloudTex, color: 0xdde0f6, transparent: true, opacity: 0.6, depthWrite: false }), CLOUDS));
+      this.basic({ map: cloudTex, color: 0xffe6dc, transparent: true, opacity: 0.6, depthWrite: false }), CLOUDS));
     clouds.frustumCulled = false;
     clouds.renderOrder = 2;
     for (let i = 0; i < CLOUDS; i++) {
@@ -1024,7 +1032,7 @@ export class SectWorld {
 
   private buildMist(tex: THREE.Texture): void {
     const { w, d } = this.room;
-    const field = this.field(new ParticleField('mist', 5, 6, tex, 0xc9cde8, false, { w: 34, d: 10 }));
+    const field = this.field(new ParticleField('mist', 5, 6, tex, 0xf0d8d4, false, { w: 34, d: 10 }));
     const origins: ReadonlyArray<readonly [number, number, number]> = [
       [w / 2, -1.2, -15], [w / 2, -1.2, d + 8], [-10, -1.2, d / 2], [w + 10, -1.2, d / 2], [w / 2, 0.05, d / 2],
     ];

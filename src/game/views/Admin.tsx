@@ -11,10 +11,11 @@ type Feed = { id: number; user_id: number; name: string; text: string; kind: str
 type Evidence = { provider_transaction_id: number; direction: 'in' | 'out'; amount: number; external_reference: string; transaction_at: string; refund_recorded_at: string | null };
 type AdminOrder = { id: string; user_id: number; product_id: string; product_name: string; amount: number; currency: string; status: string; created_at: string; paid_at: string | null; provider_transaction_id: number | null; refund_reason: string; refund_requested_at: string | null; refunded_at: string | null; external_reference: string | null; transfer_content: string; payment_evidence: Evidence[] };
 type Audit = { id: number; actor_id: number; request_id: string; action: string; target: string; payload: Record<string, unknown>; before_state: Record<string, unknown>; after_state: Record<string, unknown>; created_at: string };
-type Overview = { page: number; page_size: number; metrics: Record<string, number>; users: Account[]; reports: Report[]; support: Support[]; feed: Feed[]; orders: AdminOrder[]; audit: Audit[] };
-type Section = 'users' | 'reports' | 'feed' | 'support' | 'orders' | 'audit';
+type Lantern = { id: number; name: string; wish: string; blessings: number; reports: number; hidden: boolean; created_at: string };
+type Overview = { page: number; page_size: number; metrics: Record<string, number>; users: Account[]; reports: Report[]; support: Support[]; feed: Feed[]; orders: AdminOrder[]; audit: Audit[]; lanterns: Lantern[] };
+type Section = 'users' | 'reports' | 'feed' | 'lanterns' | 'support' | 'orders' | 'audit';
 type Draft = { type: string; label: string; payload: Record<string, unknown>; reason: string; reply: string; status: string; reference: string };
-const sections: { id: Section; label: string }[] = [{ id: 'users', label: 'Tài khoản' }, { id: 'reports', label: 'Báo cáo' }, { id: 'feed', label: 'Bảng tin' }, { id: 'support', label: 'Hỗ trợ' }, { id: 'orders', label: 'Thanh toán' }, { id: 'audit', label: 'Nhật ký quản trị' }];
+const sections: { id: Section; label: string }[] = [{ id: 'users', label: 'Tài khoản' }, { id: 'reports', label: 'Báo cáo' }, { id: 'feed', label: 'Bảng tin' }, { id: 'lanterns', label: 'Thiên Đăng' }, { id: 'support', label: 'Hỗ trợ' }, { id: 'orders', label: 'Thanh toán' }, { id: 'audit', label: 'Nhật ký quản trị' }];
 const metricLabels: Record<string, string> = { accounts: 'Tài khoản', players: 'Nhân vật', active_today: 'Hoạt động trong 24 giờ', open_reports: 'Báo cáo chờ xử lý', open_support: 'Yêu cầu hỗ trợ mở', refund_requests: 'Yêu cầu hoàn tiền', received_vnd: 'Đã nhận (VND)', refunded_vnd: 'Đã hoàn (VND)' };
 const statuses: Record<string, string> = { ACTIVE: 'Hoạt động', BANNED: 'Đã khóa', INACTIVE: 'Chưa hoạt động', open: 'Chờ xử lý', resolved: 'Đã xử lý', answered: 'Đã trả lời', closed: 'Đã đóng', pending: 'Chờ thanh toán', paid: 'Đã thanh toán', refund_requested: 'Yêu cầu hoàn tiền', refunded: 'Đã ghi nhận hoàn tiền' };
 const date = (value: string | null) => value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có';
@@ -152,6 +153,11 @@ export default function Admin({ busy }: GameProps) {
           <div className="section-heading"><h3>{post.name} · bài #{post.id}</h3><span className="badge">{post.removed_at ? 'Đã gỡ' : 'Đang hiển thị'}</span></div>
           <p className="muted">Tài khoản #{post.user_id} · {date(post.created_at)}</p><p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{post.text}</p>
           {post.removed_at ? <p className="muted">Gỡ bởi #{post.removed_by} · {date(post.removed_at)} · {post.removal_reason}</p> : <button type="button" className="button danger" disabled={disabled || uncertain} onClick={() => choose('feed.remove', `Gỡ bài viết #${post.id} của ${post.name}`, { id: post.id })}>Gỡ nội dung vi phạm</button>}
+        </article>)}
+        {section === 'lanterns' && data.lanterns.map(lantern => <article className="card stack" key={lantern.id}>
+          <div className="section-heading"><h3>{lantern.name} · đèn #{lantern.id}</h3><span className="badge">{lantern.hidden ? 'Đã ẩn' : 'Đang bay'}</span></div>
+          <p className="muted">{date(lantern.created_at)} · {lantern.blessings} chúc phúc · {lantern.reports} báo cáo</p><p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{lantern.wish}</p>
+          <button type="button" className={`button ${lantern.hidden ? 'secondary' : 'danger'}`} disabled={disabled || uncertain} onClick={() => choose(lantern.hidden ? 'lantern.show' : 'lantern.hide', `${lantern.hidden ? 'Hiện lại' : 'Ẩn'} đèn #${lantern.id} của ${lantern.name}`, { id: lantern.id })}>{lantern.hidden ? 'Hiện lại đèn' : 'Ẩn đèn'}</button>
         </article>)}
         {section === 'support' && data.support.map(ticket => <article className="card stack" key={ticket.id}>
           <div className="section-heading"><h3>#{ticket.id} · {ticket.subject}</h3><span className="badge">{status(ticket.status)}</span></div>

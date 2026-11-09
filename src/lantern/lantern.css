@@ -1,0 +1,159 @@
+/* Thả Thiên Đăng — everything is prefixed ld- so it never touches the room or the old game.
+   Panels and buttons reuse the sect skin assets in /ui (sources: /ui/SOURCES.txt). */
+.ld-root {
+  --ld-gold: #ecc978;
+  --ld-ink: #fbf1dc;
+  --ld-muted: #cdbb9c;
+  --ld-title: "Cormorant Garamond", Georgia, serif;
+  position: fixed; inset: 0; overflow: hidden; color: var(--ld-ink); background: #0b0d18;
+  font-family: Georgia, "Times New Roman", serif; line-height: 1.45; font-variant-numeric: lining-nums;
+}
+.ld-sky { position: absolute; inset: -2%; background: center / cover no-repeat; animation: ld-breathe 40s ease-in-out infinite alternate; }
+@keyframes ld-breathe { from { transform: scale(1); } to { transform: scale(1.06); } }
+.ld-shade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 8, 20, 0.55) 0%, rgba(6, 8, 20, 0.12) 30%, rgba(6, 8, 20, 0.2) 65%, rgba(8, 6, 4, 0.82) 100%);
+}
+.ld-season--tet .ld-shade { background: linear-gradient(180deg, rgba(40, 10, 20, 0.5) 0%, rgba(40, 10, 20, 0.08) 32%, rgba(30, 10, 10, 0.18) 65%, rgba(20, 6, 4, 0.82) 100%); }
+
+/* ---- lanterns ---- */
+.ld-lanterns { position: absolute; inset: 0; }
+.ld-lantern {
+  position: absolute; left: var(--x); bottom: -90px; width: calc(40px * var(--size)); height: calc(52px * var(--size));
+  margin-left: calc(-20px * var(--size)); padding: 0; border: 0; background: none; cursor: pointer;
+  opacity: var(--depth); animation: ld-rise var(--dur) linear var(--delay) infinite; will-change: transform;
+}
+.ld-lantern::before { content: ""; position: absolute; inset: -14px; } /* a bigger tap target than the paper */
+.ld-lantern--decor { cursor: default; pointer-events: none; opacity: calc(var(--depth) * 0.6); filter: blur(0.6px); }
+.ld-lantern.is-mine { opacity: 1; z-index: 2; }
+.ld-lantern.is-mine .ld-paper { box-shadow: 0 0 22px 8px rgba(255, 214, 120, 0.75), 0 0 70px 26px rgba(255, 170, 70, 0.35); }
+.ld-lantern.is-launch { z-index: 3; animation-timing-function: cubic-bezier(0.35, 0, 0.6, 1); }
+.ld-lantern:focus-visible { outline: 2px solid var(--ld-gold); outline-offset: 6px; border-radius: 8px; }
+@keyframes ld-rise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  6% { opacity: var(--depth); }
+  85% { opacity: var(--depth); }
+  100% { transform: translate(var(--drift), calc(-100vh - 160px)); opacity: 0; }
+}
+.ld-sway { position: absolute; inset: 0; animation: ld-sway var(--sway) ease-in-out infinite alternate; }
+@keyframes ld-sway { from { transform: translateX(-7px) rotate(-4deg); } to { transform: translateX(7px) rotate(4deg); } }
+
+/* The paper: a rounded-top trapezoid lit from the flame at its mouth. */
+.ld-paper {
+  --c1: #9c3215; --c2: #e8742c; --c3: #ffd27a;
+  position: absolute; inset: 0; border-radius: 46% 46% 22% 22% / 34% 34% 14% 14%;
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 82%, #fff7d6 0%, var(--c3) 22%, transparent 60%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.22), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.22)),
+    linear-gradient(180deg, var(--c1) 0%, var(--c2) 45%, var(--c3) 100%);
+  box-shadow: 0 0 16px 5px rgba(255, 170, 80, 0.5), 0 0 48px 16px rgba(255, 140, 50, 0.22);
+  animation: ld-flicker 2.6s ease-in-out infinite;
+}
+.ld-paper::after { /* the mouth and the flame inside it */
+  content: ""; position: absolute; left: 22%; right: 22%; bottom: -3%; height: 12%; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 30%, #fffbe8 0 26%, rgba(60, 18, 6, 0.7) 30% 100%);
+}
+@keyframes ld-flicker { 0%, 100% { filter: brightness(1); } 40% { filter: brightness(1.14); } 55% { filter: brightness(0.94); } 70% { filter: brightness(1.08); } }
+.ld-style-1 .ld-paper { --c1: #9a6a10; --c2: #f0b43a; --c3: #fff1b0; }
+.ld-style-2 .ld-paper { --c1: #17664f; --c2: #3fbf93; --c3: #d4ffe9; box-shadow: 0 0 16px 5px rgba(110, 240, 190, 0.45), 0 0 48px 16px rgba(80, 210, 160, 0.2); }
+.ld-style-3 .ld-paper { --c1: #5a2a8a; --c2: #a86be0; --c3: #f3e0ff; box-shadow: 0 0 16px 5px rgba(200, 150, 255, 0.45), 0 0 48px 16px rgba(170, 110, 240, 0.2); }
+
+/* ---- falling snow / petals / stars ---- */
+.ld-particles { position: absolute; inset: 0; pointer-events: none; }
+.ld-particles span { position: absolute; top: -20px; width: 8px; height: 8px; border-radius: 50%; background: #fff; opacity: 0.8; animation: ld-fall linear infinite; filter: blur(0.4px); }
+.ld-season--tet .ld-particles span { width: 11px; height: 8px; border-radius: 70% 0 70% 0; background: linear-gradient(135deg, #ffd6e4, #f48fb1); opacity: 0.9; filter: none; }
+.ld-season--den .ld-particles span { width: 3px; height: 3px; background: #fff6c8; box-shadow: 0 0 6px 2px rgba(255, 240, 180, 0.7); animation-name: ld-twinkle; top: auto; bottom: 30%; }
+@keyframes ld-fall { 0% { transform: translate(0, 0) rotate(0); } 100% { transform: translate(40px, 110vh) rotate(320deg); } }
+@keyframes ld-twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.9; } }
+
+/* ---- header & footer ---- */
+.ld-head {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 4; text-align: center; pointer-events: none;
+  padding: max(18px, env(safe-area-inset-top)) 16px 0;
+}
+.ld-eyebrow { margin: 0; font-family: var(--ld-title); font-weight: 700; font-size: 14px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ld-gold); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); }
+.ld-title {
+  margin: 2px 0 6px; font-family: var(--ld-title); font-weight: 700; font-size: clamp(42px, 11vw, 72px); line-height: 1.02; letter-spacing: 0.02em;
+  color: #fff3d2; text-shadow: 0 0 24px rgba(255, 200, 110, 0.55), 0 3px 6px rgba(0, 0, 0, 0.75);
+}
+.ld-count {
+  display: inline-block; margin: 0 0 6px; padding: 5px 14px; border-radius: 99px; font-size: 14px; color: var(--ld-ink);
+  background: rgba(14, 10, 8, 0.55); border: 1px solid rgba(236, 201, 120, 0.45); backdrop-filter: blur(6px);
+}
+.ld-count b { font-family: var(--ld-title); font-size: 18px; color: var(--ld-gold); font-variant-numeric: lining-nums tabular-nums; }
+.ld-sub { margin: 0; font-size: 13.5px; color: var(--ld-ink); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9); }
+.ld-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 0 16px max(18px, env(safe-area-inset-bottom)); pointer-events: none;
+}
+.ld-foot > * { pointer-events: auto; }
+.ld-foot .ld-btn--jade { min-width: min(320px, 100%); font-size: 21px; min-height: 58px; animation: ld-cta 2.8s ease-in-out infinite; }
+@keyframes ld-cta { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 215, 120, 0)); } 50% { filter: drop-shadow(0 0 14px rgba(255, 215, 120, 0.65)); } }
+.ld-link { color: var(--ld-ink); font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9); }
+
+/* ---- buttons, panels, form ---- */
+.ld-root button { font-variant-numeric: lining-nums tabular-nums; }
+.ld-btn {
+  min-height: 44px; padding: 0 16px; border-radius: 10px; cursor: pointer; font-family: inherit; font-size: 15px; color: var(--ld-ink);
+  background: rgba(236, 201, 120, 0.08); border: 1px solid rgba(214, 170, 96, 0.45);
+}
+.ld-btn:hover { background: rgba(236, 201, 120, 0.18); }
+.ld-btn:disabled { opacity: 0.6; cursor: default; }
+.ld-btn--jade, .ld-btn--jade:hover {
+  border: solid transparent; border-width: 12px 28px; border-radius: 0; padding: 0 6px; min-height: 50px; background: none;
+  border-image: url("/ui/btn-jade.png") 32 80 fill / 12px 28px stretch;
+  color: #f8e9bc; font-family: var(--ld-title); font-size: 19px; font-weight: 700; letter-spacing: 0.03em;
+  text-shadow: 0 0 10px rgba(255, 220, 140, 0.5), 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.ld-btn--jade:hover { border-image-source: url("/ui/btn-jade-hover.png"); }
+.ld-btn--jade:active { border-image-source: url("/ui/btn-jade-pressed.png"); }
+.ld-overlay {
+  position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(4, 3, 2, 0.55); backdrop-filter: blur(3px); animation: ld-fade 0.2s ease-out;
+}
+@keyframes ld-fade { from { opacity: 0; } }
+.ld-panel {
+  position: relative; width: min(420px, 100%); max-height: calc(100% - 8px); overflow-y: auto; padding: 18px 14px; text-align: center;
+  border: 18px solid transparent; border-image: url("/ui/frame-gold.png") 64 / 18px / 4px stretch;
+  background: linear-gradient(180deg, rgba(30, 20, 14, 0.95), rgba(14, 10, 8, 0.97)); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: ld-pop 0.25s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes ld-pop { from { transform: scale(0.9); opacity: 0; } }
+.ld-panel-eyebrow { margin: 0; font-size: 12.5px; color: var(--ld-muted); letter-spacing: 0.04em; }
+.ld-panel-title { margin: 2px 0 10px; font-family: var(--ld-title); font-weight: 700; font-size: 30px; color: var(--ld-gold); overflow-wrap: anywhere; }
+.ld-panel-hint { margin: -4px 0 12px; font-size: 13px; color: var(--ld-muted); }
+.ld-wish { margin: 0 0 16px; font-family: var(--ld-title); font-style: italic; font-weight: 600; font-size: 24px; line-height: 1.3; overflow-wrap: anywhere; }
+.ld-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ld-report { all: unset; display: block; margin: 14px auto 0; font-size: 12.5px; color: var(--ld-muted); text-decoration: underline; cursor: pointer; }
+.ld-report:focus-visible { outline: 2px solid var(--ld-gold); }
+.ld-mini { position: relative; display: block; width: 34px; height: 44px; margin: 0 auto 8px; }
+.ld-field { display: block; text-align: left; margin: 0 0 12px; }
+.ld-field > span { display: flex; justify-content: space-between; font-size: 13px; color: var(--ld-muted); margin-bottom: 5px; }
+.ld-input {
+  box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--ld-ink); border-radius: 10px;
+  background: rgba(10, 7, 5, 0.7); border: 1px solid rgba(214, 170, 96, 0.4); outline: none;
+}
+.ld-input:focus { border-color: var(--ld-gold); box-shadow: 0 0 0 3px rgba(236, 201, 120, 0.2); }
+.ld-textarea { resize: none; line-height: 1.4; }
+.ld-ideas { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 14px; justify-content: flex-start; }
+.ld-chip { min-height: 32px; padding: 0 11px; border-radius: 99px; font: inherit; font-size: 12.5px; cursor: pointer; color: var(--ld-ink); background: rgba(236, 201, 120, 0.08); border: 1px solid rgba(214, 170, 96, 0.35); }
+.ld-chip:hover { background: rgba(236, 201, 120, 0.2); }
+.ld-styles { display: flex; gap: 8px; justify-content: space-between; }
+.ld-style-pick { flex: 1; padding: 8px 2px 6px; border-radius: 10px; cursor: pointer; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(214, 170, 96, 0.25); color: var(--ld-muted); font: inherit; }
+.ld-style-pick small { font-size: 11.5px; }
+.ld-style-pick .ld-mini { width: 24px; height: 31px; margin-bottom: 6px; }
+.ld-style-pick[aria-checked="true"] { border-color: var(--ld-gold); color: var(--ld-ink); background: rgba(236, 201, 120, 0.14); box-shadow: 0 0 0 2px rgba(236, 201, 120, 0.3); }
+.ld-error { margin: 0 0 10px; color: #f0a49d; font-size: 14px; }
+.ld-rank { font-size: 46px; margin-bottom: 6px; text-shadow: 0 0 18px rgba(236, 201, 120, 0.5); }
+.ld-fortune { margin: 0 0 16px; font-size: 16.5px; line-height: 1.55; }
+.ld-note {
+  position: absolute; left: 50%; top: 40%; translate: -50% 0; z-index: 12; max-width: calc(100% - 32px); width: max-content; text-align: center;
+  padding: 10px 16px; border-radius: 10px; font-size: 14px; background: rgba(14, 10, 8, 0.88); border: 1px solid rgba(236, 201, 120, 0.5);
+  pointer-events: none; animation: ld-fade 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-sky, .ld-paper, .ld-sway, .ld-foot .ld-btn--jade { animation: none; }
+  .ld-lantern { animation-duration: calc(var(--dur) * 3); }
+  .ld-particles { display: none; }
+}

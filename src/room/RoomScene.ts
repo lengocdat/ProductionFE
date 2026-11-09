@@ -13,8 +13,8 @@ export interface RoomSceneHandlers {
 
 const FOV = 30;
 /** Camera pitch when fully zoomed in (shows the hall and the peaks) and fully zoomed out (overview). */
-const PITCH_NEAR = (36 * Math.PI) / 180;
-const PITCH_FAR = (56 * Math.PI) / 180;
+const PITCH_NEAR = (26 * Math.PI) / 180;
+const PITCH_FAR = (47 * Math.PI) / 180;
 const ZOOM_MIN = 9;
 const ZOOM_MAX = 44;
 const BUBBLE_MS = 5000;
@@ -218,7 +218,7 @@ export class RoomScene {
     this.scene.fog = this.fog;
 
     const aspectGuess = Math.max(0.4, container.clientWidth / Math.max(1, container.clientHeight));
-    this.zoom = this.zoomTarget = clamp(24 * (aspectGuess < 1 ? 1.2 : 1), ZOOM_MIN, ZOOM_MAX);
+    this.zoom = this.zoomTarget = clamp(20 * (aspectGuess < 1 ? 1.2 : 1), ZOOM_MIN, ZOOM_MAX);
     this.focusX = room.spawn.x;
     this.focusZ = room.spawn.z;
 
@@ -310,7 +310,7 @@ export class RoomScene {
   private paintPatron(el: HTMLSpanElement, tier: number): void {
     const badge = tier > 0 ? this.patronBadges[tier] ?? '' : '';
     el.textContent = badge;
-    el.title = badge ? 'Đã cúng dường Thiên Đạo' : '';
+    el.title = badge ? 'Đã mời Thiên Đạo ăn' : '';
     el.hidden = badge === '';
   }
 
@@ -812,11 +812,11 @@ export class RoomScene {
       v.level += (target - v.level) * k;
       const hover = v.index === this.hoverSeat ? 1 : 0;
       const l = v.level;
-      const ringOpacity = Math.min(1, 0.24 + hover * 0.3 + l * (0.5 + 0.22 * pulse));
+      const ringOpacity = Math.min(1, 0.04 + hover * 0.4 + l * (0.5 + 0.22 * pulse));
       rings.setColorAt(v.slot, c.copy(v.inner ? this.colGold : this.colJade).lerp(this.colGold, l * 0.7).multiplyScalar(ringOpacity));
       const s = 1 + 0.05 * pulse * (0.4 + l) + hover * 0.1;
       rings.setMatrixAt(v.slot, this.tmpM.makeScale(s, 1, s).setPosition(v.x, 0.025, v.z));
-      const glowOpacity = 0.1 + hover * 0.08 + l * (0.38 + 0.14 * pulse);
+      const glowOpacity = 0.03 + hover * 0.1 + l * (0.38 + 0.14 * pulse);
       glows.setColorAt(v.slot, c.copy(this.colJade).lerp(this.colGold, l * 0.5).multiplyScalar(glowOpacity));
       if (qi) qi.intensity[i] = clamp01((l - 0.5) * 2);
     }

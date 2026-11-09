@@ -29,7 +29,7 @@ export const RANK_JADE_GUAN = 2; // nội môn: jade hair crown
 export const RANK_GOLD_GUAN = 3; // chân truyền+: gold hair crown
 export const RANK_BEARD = 4; // trưởng lão+: long white beard
 export const RANK_HALO = 5; // thái thượng trưởng lão: halo behind the head
-export const CLOUD_FROM_TIER = 2; // cúng dường patron tier that rides a cloud (bát phở and up)
+export const CLOUD_FROM_TIER = 2; // patron tier that rides a cloud (bát phở and up)
 
 /** Seated aura [colour, opacity] per rank; matches the badge colours in room.css. */
 const RANK_AURA: ReadonlyArray<readonly [number, number]> = [

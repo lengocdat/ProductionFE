@@ -1,0 +1,10 @@
+frame-*.png, btn-*.png, ring-jade.png
+  Xianxia RPG UI & GUI Kit — FREE sample, by hoantdz: https://hoantdz.itch.io/xianxia-rpg-ui-kit
+  Royalty-free, commercial use allowed; do not resell/redistribute the files as a standalone pack. AI-assisted art.
+  Resized from the 512 px originals; otherwise unmodified.
+bg-join.jpg (09_floating_isles), sky-noel.jpg (14_ice_palace), sky-tet.jpg (22_peach_blossom_stream), sky-den.jpg (23_star_river_boat)
+  Xuanhuan Mood Art by willYEE: https://willyee.itch.io/xuanhuan-mood-art — CC0 1.0. AI-generated (Krea 2).
+  Resized to 1600x900.
+../fonts/cormorant-*.woff2
+  Cormorant Garamond, SIL Open Font License 1.1 (../fonts/OFL-Cormorant.txt), Google Fonts subsets.
+Downloaded 2026-11-04.

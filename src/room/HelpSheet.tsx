@@ -126,7 +126,7 @@ export default function HelpSheet({ ranks, perks, chatUnlock, spots, focusSpots,
 
         <section>
           <h3>🌀 Linh mạch tụ khí</h3>
-          <p>Thanh tụ khí dưới ô tu vi là <b>mục tiêu chung của cả phòng</b>. Càng nhiều người cùng ngồi thiền thì thanh đầy càng nhanh; lễ cúng dường và Thiên Đạo cũng góp thêm.</p>
+          <p>Thanh tụ khí dưới ô tu vi là <b>mục tiêu chung của cả phòng</b>. Càng nhiều người cùng ngồi thiền thì thanh đầy càng nhanh; bữa mời Thiên Đạo và câu hỏi của Thiên Đạo cũng góp thêm.</p>
           <p>Đầy thanh là <b>Thiên Đạo giáng lộc</b>: trong 5 phút, ai đang ngồi thiền trong phòng cũng được <b>×2 tu vi</b>. Hết lộc thì cả phòng tụ khí lại từ đầu.</p>
         </section>
 
@@ -145,8 +145,8 @@ export default function HelpSheet({ ranks, perks, chatUnlock, spots, focusSpots,
         </section>
 
         <section>
-          <h3>🍜 Cúng dường Thiên Đạo</h3>
-          <p>Mời Thiên Đạo ly trà đá, bát phở… để ủng hộ đội làm game. Mỗi lễ <b>phát lộc tu vi cho mọi người đang online</b>, người cúng được huy hiệu, cưỡi mây và ghi tên vào Sổ Công Đức. Không mua được sức mạnh.</p>
+          <h3>🍜 Mời Thiên Đạo ăn</h3>
+          <p>Mời Thiên Đạo ly trà đá, bát phở… để ủng hộ đội làm game. Mỗi bữa <b>phát lộc tu vi cho mọi người đang online</b>, người mời được huy hiệu, cưỡi mây và ghi tên vào Sổ Khách Quý. Không mua được sức mạnh.</p>
         </section>
 
         <section>
