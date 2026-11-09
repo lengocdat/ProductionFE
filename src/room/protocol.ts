@@ -213,7 +213,9 @@ function parsePlayer(v: unknown): PlayerState | null {
   };
 }
 
-function parseDeltaPlayer(v: unknown): DeltaPlayer | null {
+/** Server sends [id,x,z,s,seat]; the object form is what a server from before that change sends. */
+function parseDeltaPlayer(raw: unknown): DeltaPlayer | null {
+  const v = Array.isArray(raw) ? { id: raw[0], x: raw[1], z: raw[2], s: raw[3], seat: raw[4] } : raw;
   if (!isRec(v)) return null;
   const mode = asMode(v.s);
   if (!isId(v.id) || !isNum(v.x) || !isNum(v.z) || mode === null) return null;

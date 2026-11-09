@@ -6,7 +6,7 @@
   --lc-muted: #cdbb9c;
   --lc-title: "Cormorant Garamond", Georgia, serif;
   position: fixed; inset: 0; overflow-y: auto; color: var(--lc-ink);
-  background: linear-gradient(180deg, rgba(6, 8, 18, 0.62), rgba(6, 6, 10, 0.9)), #0b0d18 url("/ui/bg-join.jpg") center / cover no-repeat;
+  background: linear-gradient(180deg, rgba(6, 8, 18, 0.62), rgba(6, 6, 10, 0.9)), #0b0d18 url("/ui/bg-join-960.webp") center / cover no-repeat;
   font-family: Georgia, "Times New Roman", serif; line-height: 1.5; font-variant-numeric: lining-nums;
 }
 .lc-column { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px 16px; box-sizing: border-box; }

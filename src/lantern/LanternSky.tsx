@@ -233,7 +233,7 @@ export default function LanternSky() {
 
   return (
     <main className={`ld-root ld-season--${season.id}`} id="main-content">
-      <div className="ld-sky" style={{ backgroundImage: `url(${season.sky})` }} aria-hidden="true" />
+      <div className="ld-sky" style={{ backgroundImage: `url(${season.sky.replace('.jpg', '-960.webp')})` }} aria-hidden="true" />
       <div className="ld-shade" aria-hidden="true" />
 
       <div className="ld-particles" aria-hidden="true">

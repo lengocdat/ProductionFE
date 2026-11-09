@@ -8,3 +8,5 @@ bg-join.jpg (09_floating_isles), sky-noel.jpg (14_ice_palace), sky-tet.jpg (22_p
 ../fonts/cormorant-*.woff2
   Cormorant Garamond, SIL Open Font License 1.1 (../fonts/OFL-Cormorant.txt), Google Fonts subsets.
 Downloaded 2026-11-04.
+*-960.webp
+  Page backgrounds made from the matching .jpg above with cwebp (960 px wide, quality 55). The .jpg stays for share cards.

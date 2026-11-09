@@ -442,7 +442,7 @@
 .dt-overlay {
   background:
     linear-gradient(180deg, rgba(8, 10, 18, 0.15) 0%, rgba(8, 10, 18, 0.05) 40%, rgba(10, 8, 6, 0.75) 100%),
-    url("/ui/bg-join.jpg") center / cover no-repeat, var(--dt-bg);
+    url("/ui/bg-join-960.webp") center / cover no-repeat, var(--dt-bg);
 }
 .dt-overlay--dim { background: rgba(5, 4, 3, 0.72); }
 .dt-overlay > .dt-card { background: linear-gradient(180deg, rgba(26, 18, 13, 0.86), rgba(14, 10, 8, 0.92)); }
