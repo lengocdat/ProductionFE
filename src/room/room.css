@@ -510,3 +510,48 @@
 .dt-queue-pos b { font-size: 34px; color: #ecc978; font-variant-numeric: lining-nums; }
 .dt-queue-links { margin: 10px 0 0; font-size: 14px; }
 .dt-queue-links a { color: #ecc978; text-underline-offset: 3px; }
+
+/* ---- Motion polish: panels and bubbles settle with a soft spring instead of popping; nothing here blocks input. ---- */
+.dt-root { --dt-spring: cubic-bezier(0.22, 1.25, 0.36, 1); --dt-out: cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes dt-pop { from { transform: translateY(6px) scale(0.92); opacity: 0; } to { transform: none; opacity: 1; } }
+.dt-bubble { transform-origin: 50% 100%; transition: opacity 0.5s ease, transform 0.5s ease; }
+.dt-bubble.is-on { animation: dt-pop 0.28s var(--dt-spring); }
+.dt-bubble.is-fading { opacity: 0; transform: translateY(-6px); }
+.dt-toast, .dt-reconnect, .dt-modmenu, .dt-poll, .dt-coach { animation-duration: 0.3s; animation-timing-function: var(--dt-spring); }
+.dt-coach { animation-name: dt-coach-in; }
+@keyframes dt-coach-in { from { transform: translateX(-50%) translateY(10px); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+.dt-overlay { animation: dt-fade 0.25s ease-out; }
+.dt-overlay > .dt-glass { animation: dt-rise 0.38s var(--dt-out); }
+.dt-board { animation: dt-rise 0.28s var(--dt-out); }
+@keyframes dt-fade { from { opacity: 0; } }
+@keyframes dt-rise { from { transform: translateY(14px); opacity: 0; } }
+.dt-hud .dt-top, .dt-hud .dt-bottom { animation: dt-fade 0.5s ease-out; }
+.dt-spot-in { transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, color 0.25s, transform 0.25s var(--dt-spring); }
+.dt-spot.is-near .dt-spot-in { transform: scale(1.08); }
+.dt-name { transition: opacity 0.25s ease, border-color 0.3s, box-shadow 0.3s; }
+.dt-btn, .dt-chipbtn, .dt-emobtn, .dt-poll-opt, .dt-swatch { transition: background 0.18s, border-color 0.18s, transform 0.14s var(--dt-out), filter 0.18s; }
+.dt-chipbtn:active, .dt-poll-opt:active { transform: scale(0.96); }
+.dt-emobtn:active { transform: scale(0.88); }
+.dt-progress > div { transition: width 0.9s var(--dt-out); position: relative; overflow: hidden; }
+/* While cultivating, a glint runs along the tu vi bar. */
+.dt-status.is-active .dt-progress > div::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent); animation: dt-sheen 2.4s ease-in-out infinite;
+}
+@keyframes dt-sheen { 60%, 100% { transform: translateX(100%); } }
+.dt-banner { animation-timing-function: var(--dt-out); }
+@keyframes dt-banner {
+  0% { opacity: 0; transform: translate(-50%, -42%) scale(0.9); filter: blur(6px); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); filter: blur(0); }
+  22% { transform: translate(-50%, -50%) scale(1); }
+  82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -56%) scale(0.98); }
+}
+@keyframes dt-rain { 0% { transform: translateY(0) rotate(0) scale(0.7); opacity: 0; } 12% { opacity: 1; transform: translateY(12vh) rotate(30deg) scale(1); } 100% { transform: translateY(112vh) rotate(260deg) scale(1); opacity: 0.85; } }
+/* The chat-log toggle is both a button and a panel: keep the dark lacquer so it reads over a bright scene. */
+.dt-logtoggle.dt-glass, .dt-logtoggle.dt-glass:hover { background: var(--dt-lacquer); }
+@media (prefers-reduced-motion: reduce) {
+  .dt-overlay, .dt-overlay > .dt-glass, .dt-board, .dt-hud .dt-top, .dt-hud .dt-bottom, .dt-toast, .dt-coach, .dt-bubble.is-on,
+  .dt-status.is-active .dt-progress > div::after { animation: none; }
+  .dt-spot.is-near .dt-spot-in { transform: none; }
+}

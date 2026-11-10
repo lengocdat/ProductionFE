@@ -1,10 +1,14 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { CharacterAssets, CharacterRig, CUSHION_H } from './characters';
 import { ParticleField } from './particles';
 import { MODE_SIT, MODE_WALK, type DeltaPlayer, type PlayerId, type PlayerMode, type PlayerState, type Room, type SpotDef, type TwistAnim } from './protocol';
 import { SECT_MIST, SectWorld, type SectProp } from './sect';
 import { Batch, placeAt } from './sectGeo';
-import { makeRadialTexture } from './textures';
+import { makeRadialTexture, makeRingTexture } from './textures';
 
 export interface RoomSceneHandlers {
   onMove(x: number, z: number): void;
@@ -25,6 +29,20 @@ const TWIST_BUBBLE_MS = 7000;
 const SNAP_DIST = 8;
 const FAR_ZOOM = 30;
 const FOCUS_Y = 0.7;
+
+/** Rendered positions ease toward the interpolated server position at this rate (1/s): hides tick jitter and hard stops. */
+const ACTOR_SMOOTH = 16;
+/** Graphics tiers, best first: [max device pixel ratio, bloom]. The scene steps down when frames run long. */
+const GFX_TIERS: ReadonlyArray<readonly [number, boolean]> = [[2, true], [1.5, true], [1.25, false], [1, false]];
+const GFX_KEY = 'dt:gfx';
+/** Average frame time (ms) over a sample window above which the scene drops one tier. */
+const GFX_SLOW_MS = 24;
+const GFX_WINDOW = 90;
+const BLOOM_STRENGTH = 0.42;
+const BLOOM_RADIUS = 0.7;
+const BLOOM_THRESHOLD = 0.9;
+/** With bloom on, emissive parts (lantern paper, fire) are pushed past white so they are what blooms. */
+const GLOW_BOOST = 1.9;
 
 const COL_BG = SECT_MIST;
 const COL_JADE = 0x5fd9b0;
@@ -59,6 +77,9 @@ interface Actor {
   tag: Tag;
   x: number;
   z: number;
+  /** Interpolated server position the rendered x/z eases toward. */
+  aimX: number;
+  aimZ: number;
   fromX: number;
   fromZ: number;
   toX: number;
@@ -115,6 +136,14 @@ function wrapPi(a: number): number {
 
 export class RoomScene {
   private readonly renderer: THREE.WebGLRenderer;
+  private composer: EffectComposer | null = null;
+  private bloomPass: UnrealBloomPass | null = null;
+  private tier = 0;
+  private slowMs = 0;
+  private slowFrames = 0;
+  /** Frames to skip before sampling frame time (start-up and tier changes compile shaders). */
+  private settle = 120;
+  private prevFrameMs = 0;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(FOV, 1, 0.5, 300);
   private readonly fog = new THREE.Fog(COL_BG, 20, 80);
@@ -159,6 +188,10 @@ export class RoomScene {
 
   // camera rig
   private yaw = 0;
+  private yawTarget = 0;
+  /** Drag speed in rad/s, for the little glide after the finger lifts. */
+  private yawVel = 0;
+  private lastDragAt = 0;
   private zoom: number;
   private zoomTarget: number;
   private focusX: number;
@@ -203,7 +236,9 @@ export class RoomScene {
   ) {
     this.tickMs = tickMs;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const savedTier = Number(sessionStorage.getItem(GFX_KEY));
+    if (Number.isInteger(savedTier) && savedTier > 0 && savedTier < GFX_TIERS.length) this.tier = savedTier;
+    this.renderer.setPixelRatio(this.pixelRatio());
     this.renderer.setClearColor(COL_BG);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -236,7 +271,7 @@ export class RoomScene {
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
-    this.resize();
+    this.applyTier();
 
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
     this.canvas.addEventListener('pointermove', this.onPointerMove);
@@ -251,6 +286,9 @@ export class RoomScene {
 
   start(): void {
     if (this.destroyed || this.raf !== 0 || document.hidden) return;
+    // Compile every material now (one-shot effects included) so the first bell or explosion does not hitch.
+    this.updateCamera(0);
+    this.renderer.compile(this.scene, this.camera);
     this.lastMs = performance.now();
     this.raf = requestAnimationFrame(this.frame);
   }
@@ -273,7 +311,7 @@ export class RoomScene {
     const now = performance.now();
     const actor: Actor = {
       id: p.id, isLocal, rig, tag,
-      x: p.x, z: p.z, fromX: p.x, fromZ: p.z, toX: p.x, toZ: p.z, t0: now,
+      x: p.x, z: p.z, aimX: p.x, aimZ: p.z, fromX: p.x, fromZ: p.z, toX: p.x, toZ: p.z, t0: now,
       s: p.s, seat: p.seat, heading: this.initialHeading(p), speed: 0,
     };
     rig.root.position.set(p.x, 0, p.z);
@@ -372,6 +410,7 @@ export class RoomScene {
     const a = this.actors.get(id);
     if (!a) return;
     a.rig.setRank(rank);
+    this.sect.celebrate(a.x, a.rig.anchorY - 0.6, a.z);
     this.paintRank(a.tag.rankEl, rank);
     a.tag.el.classList.add('dt-tag--promoted');
     a.tag.promotedUntil = performance.now() + PROMOTED_MS;
@@ -390,15 +429,19 @@ export class RoomScene {
       if (!a) continue;
       const jump = Math.hypot(u.x - a.toX, u.z - a.toZ);
       if (jump > SNAP_DIST) {
-        a.x = u.x;
-        a.z = u.z;
+        a.x = a.aimX = u.x;
+        a.z = a.aimZ = u.z;
       }
-      a.fromX = a.x;
-      a.fromZ = a.z;
+      a.fromX = a.aimX;
+      a.fromZ = a.aimZ;
       a.toX = u.x;
       a.toZ = u.z;
       a.t0 = now;
       if (a.s !== u.s || a.seat !== u.seat) this.seatsDirty = true;
+      if (a.s !== u.s && u.s === MODE_SIT) {
+        const seat = this.seatBySeatIndex.get(u.seat);
+        this.sect.settle(seat ? seat.x : u.x, seat ? seat.z : u.z, seat?.inner === true);
+      }
       a.s = u.s;
       a.seat = u.seat;
     }
@@ -452,6 +495,7 @@ export class RoomScene {
     this.qi?.dispose();
     this.motes.dispose();
     this.scene.clear();
+    this.disposeComposer();
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.canvas.remove();
@@ -519,8 +563,10 @@ export class RoomScene {
     const hitMat = this.track(new THREE.MeshBasicMaterial({ visible: false }));
     const glowTex = this.track(makeRadialTexture([[0, 'rgba(255,255,255,0.95)'], [0.45, 'rgba(255,255,255,0.35)'], [1, 'rgba(255,255,255,0)']]));
     // Additive blending: an instance colour scaled by its opacity looks exactly like that opacity.
-    const rings = this.track(new THREE.InstancedMesh(this.geo(new THREE.RingGeometry(0.62, 0.78, 40).rotateX(-Math.PI / 2)),
-      this.track(new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })), n));
+    // A soft-edged ring texture on a disc: no stair-stepped rim, and it blooms evenly.
+    const ringTex = this.track(makeRingTexture(0.74, 0.9, 0.07));
+    const rings = this.track(new THREE.InstancedMesh(this.geo(new THREE.CircleGeometry(0.86, 32).rotateX(-Math.PI / 2)),
+      this.track(new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })), n));
     const glows = this.track(new THREE.InstancedMesh(this.geo(new THREE.CircleGeometry(1.35, 32).rotateX(-Math.PI / 2)),
       this.track(new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })), n));
     rings.renderOrder = 2;
@@ -563,7 +609,7 @@ export class RoomScene {
 
     if (seats.length > 0) {
       const qiTex = this.track(makeRadialTexture([[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(255,255,255,0.55)'], [1, 'rgba(255,255,255,0)']]));
-      const field = new ParticleField('qi', seats.length, 9, qiTex, 0x9ff2d0, true);
+      const field = new ParticleField('qi', seats.length, 12, qiTex, 0x9ff2d0, true);
       seats.forEach((s, i) => {
         field.origins[i * 3] = s.x;
         field.origins[i * 3 + 1] = CUSHION_H;
@@ -656,6 +702,8 @@ export class RoomScene {
 
   private updateTags(now: number): void {
     const { width, height, tmpV, camera } = this;
+    // Snap to device pixels, not CSS pixels: on a 2x-3x phone tags then glide instead of stepping.
+    const snap = Math.min(3, Math.max(1, Math.round(window.devicePixelRatio || 1)));
     const far = this.zoom > FAR_ZOOM;
     this.tagsLayer.classList.toggle('dt-tags--far', far);
     const zone = this.zone;
@@ -668,8 +716,8 @@ export class RoomScene {
     const me = this.local;
     for (const l of this.spotLabels) {
       tmpV.set(l.x, l.y, l.z).project(camera);
-      const sx = Math.round((tmpV.x * 0.5 + 0.5) * width);
-      const sy = Math.round((-tmpV.y * 0.5 + 0.5) * height);
+      const sx = Math.round((tmpV.x * 0.5 + 0.5) * width * snap) / snap;
+      const sy = Math.round((-tmpV.y * 0.5 + 0.5) * height * snap) / snap;
       const on = tmpV.z < 1 && sx > -80 && sx < width + 80 && sy > -40 && sy < height + 80;
       if (on !== l.shown) {
         l.shown = on;
@@ -689,8 +737,8 @@ export class RoomScene {
     for (const a of this.actorList) {
       const tag = a.tag;
       tmpV.set(a.x, a.rig.anchorY, a.z).project(camera);
-      const sx = Math.round((tmpV.x * 0.5 + 0.5) * width);
-      const sy = Math.round((-tmpV.y * 0.5 + 0.5) * height);
+      const sx = Math.round((tmpV.x * 0.5 + 0.5) * width * snap) / snap;
+      const sy = Math.round((-tmpV.y * 0.5 + 0.5) * height * snap) / snap;
       const visible = tmpV.z < 1 && sx > -120 && sx < width + 120 && sy > -120 && sy < height + 120;
       if (!visible) {
         if (!tag.hidden) {
@@ -709,7 +757,7 @@ export class RoomScene {
         tag.py = sy;
         tag.el.style.transform = `translate3d(${sx}px,${sy}px,0)`;
       }
-      const z = sy + (tag.bubbleOn ? 5000 : 0) + (a.isLocal ? 2000 : 0);
+      const z = Math.round(sy) + (tag.bubbleOn ? 5000 : 0) + (a.isLocal ? 2000 : 0);
       if (z !== tag.z) {
         tag.z = z;
         tag.el.style.zIndex = String(z);
@@ -756,17 +804,77 @@ export class RoomScene {
     this.camera.updateMatrixWorld();
     const me = this.local;
     this.sect.update(time, dt, this.camera, me ? this.tmpFocus.set(me.x, me.rig.anchorY - 0.6, me.z) : null);
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) this.composer.render(dt);
+    else this.renderer.render(this.scene, this.camera);
     this.updateTags(nowMs);
+    this.watchFrameTime(this.prevFrameMs > 0 ? nowMs - this.prevFrameMs : 0);
+    this.prevFrameMs = nowMs;
   };
+
+  // ------------------------------------------------------------------ graphics quality
+
+  private pixelRatio(): number {
+    return Math.min(window.devicePixelRatio || 1, (GFX_TIERS[this.tier] ?? [1, false])[0]);
+  }
+
+  /** Builds or drops the bloom chain for the current tier, then resizes everything to match. */
+  private applyTier(): void {
+    const bloom = (GFX_TIERS[this.tier] ?? [1, false])[1];
+    if (!this.composer) {
+      // Every tier renders through the same linear chain so glows blend identically; low tiers only skip the bloom pass.
+      // Half-float keeps lanterns and qi brighter than white so only they bloom; MSAA keeps edges clean.
+      const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+      const composer = new EffectComposer(this.renderer, target);
+      composer.addPass(new RenderPass(this.scene, this.camera));
+      this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD);
+      composer.addPass(this.bloomPass);
+      composer.addPass(new OutputPass());
+      this.composer = composer;
+    }
+    if (this.bloomPass) this.bloomPass.enabled = bloom;
+    this.sect.setGlowBoost(bloom ? GLOW_BOOST : 1);
+    this.settle = 120;
+    this.slowMs = 0;
+    this.slowFrames = 0;
+    this.resize();
+  }
+
+  private disposeComposer(): void {
+    const c = this.composer;
+    if (!c) return;
+    for (const pass of c.passes) pass.dispose();
+    c.renderTarget1.dispose();
+    c.renderTarget2.dispose();
+    this.composer = null;
+    this.bloomPass = null;
+  }
+
+  /** Steps down one graphics tier when a whole window of frames ran slow (never back up: no flip-flopping). */
+  private watchFrameTime(ms: number): void {
+    if (this.tier >= GFX_TIERS.length - 1) return;
+    if (this.settle > 0) { this.settle--; return; }
+    if (ms <= 0 || ms > 250) return; // tab switches and breakpoints are not a slow GPU
+    this.slowMs += ms;
+    if (++this.slowFrames < GFX_WINDOW) return;
+    const avg = this.slowMs / this.slowFrames;
+    this.slowMs = 0;
+    this.slowFrames = 0;
+    if (avg <= GFX_SLOW_MS) return;
+    this.tier++;
+    try { sessionStorage.setItem(GFX_KEY, String(this.tier)); } catch { /* private mode */ }
+    this.applyTier();
+  }
 
   private updateActors(dt: number, time: number, now: number): void {
     const dur = this.tickMs * 1.25;
     const invDt = dt > 0 ? 1 / dt : 0;
+    const ease = 1 - Math.exp(-dt * ACTOR_SMOOTH);
     for (const a of this.actorList) {
       const k = clamp01((now - a.t0) / dur);
-      const nx = a.fromX + (a.toX - a.fromX) * k;
-      const nz = a.fromZ + (a.toZ - a.fromZ) * k;
+      a.aimX = a.fromX + (a.toX - a.fromX) * k;
+      a.aimZ = a.fromZ + (a.toZ - a.fromZ) * k;
+      const nx = a.x + (a.aimX - a.x) * ease;
+      const nz = a.z + (a.aimZ - a.z) * ease;
       const dx = nx - a.x;
       const dz = nz - a.z;
       a.x = nx;
@@ -812,11 +920,11 @@ export class RoomScene {
       v.level += (target - v.level) * k;
       const hover = v.index === this.hoverSeat ? 1 : 0;
       const l = v.level;
-      const ringOpacity = Math.min(1, 0.04 + hover * 0.4 + l * (0.5 + 0.22 * pulse));
+      const ringOpacity = Math.min(1, 0.004 + hover * 0.25 + l * (0.24 + 0.12 * pulse));
       rings.setColorAt(v.slot, c.copy(v.inner ? this.colGold : this.colJade).lerp(this.colGold, l * 0.7).multiplyScalar(ringOpacity));
       const s = 1 + 0.05 * pulse * (0.4 + l) + hover * 0.1;
       rings.setMatrixAt(v.slot, this.tmpM.makeScale(s, 1, s).setPosition(v.x, 0.025, v.z));
-      const glowOpacity = 0.03 + hover * 0.1 + l * (0.38 + 0.14 * pulse);
+      const glowOpacity = 0.002 + hover * 0.05 + l * (0.085 + 0.045 * pulse);
       glows.setColorAt(v.slot, c.copy(this.colJade).lerp(this.colGold, l * 0.5).multiplyScalar(glowOpacity));
       if (qi) qi.intensity[i] = clamp01((l - 0.5) * 2);
     }
@@ -828,8 +936,7 @@ export class RoomScene {
   private updateAmbient(time: number, pulse: number): void {
     this.qi?.update(time);
     this.motes.update(time);
-    const auras = this.assets.auraMats;
-    for (let i = 0; i < auras.length; i++) (auras[i] as THREE.MeshBasicMaterial).opacity = (this.assets.auraBase[i] ?? 0.1) * (0.7 + 0.6 * pulse);
+    this.assets.update(time, pulse, this.local ? this.local.rig.sitBlend : 0);
   }
 
   private updateMarker(time: number, now: number): void {
@@ -872,14 +979,17 @@ export class RoomScene {
     const f = 1 - Math.exp(-dt * 6);
     this.focusX += (tx - this.focusX) * f;
     this.focusZ += (tz - this.focusZ) * f;
-    this.zoom += (this.zoomTarget - this.zoom) * clamp01(dt * 8);
+    this.zoom += (this.zoomTarget - this.zoom) * (1 - Math.exp(-dt * 9));
+    this.yaw += (this.yawTarget - this.yaw) * (1 - Math.exp(-dt * 16));
     const aspect = this.width / this.height;
     const dist = this.zoom * (aspect < 1 ? 1 + (1 - aspect) * 0.45 : 1);
     const pitch = PITCH_NEAR + (PITCH_FAR - PITCH_NEAR) * clamp01((this.zoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN));
     const horiz = Math.cos(pitch) * dist;
-    const shake = this.sect.shakeAt(performance.now() / 1000);
-    const jx = shake > 0 ? (Math.random() - 0.5) * shake : 0;
-    const jy = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+    // Two detuned sines per axis: a rumble that reads as a shake, not as per-frame noise.
+    const st = performance.now() / 1000;
+    const shake = this.sect.shakeAt(st);
+    const jx = shake > 0 ? (Math.sin(st * 61) * 0.6 + Math.sin(st * 37 + 1.3) * 0.4) * shake * 0.5 : 0;
+    const jy = shake > 0 ? (Math.sin(st * 53 + 0.7) * 0.6 + Math.sin(st * 29) * 0.4) * shake * 0.5 : 0;
     camera.position.set(
       this.focusX + Math.sin(this.yaw) * horiz + jx,
       FOCUS_Y + Math.sin(pitch) * dist + jy,
@@ -898,8 +1008,12 @@ export class RoomScene {
     const h = Math.max(1, this.container.clientHeight);
     this.width = w;
     this.height = h;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(this.pixelRatio());
     this.renderer.setSize(w, h, false);
+    if (this.composer) {
+      this.composer.setPixelRatio(this.pixelRatio());
+      this.composer.setSize(w, h);
+    }
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     const buf = this.renderer.getDrawingBufferSize(this.tmpV2);
@@ -919,9 +1033,11 @@ export class RoomScene {
     }
     // Deltas kept arriving while hidden: jump to the latest authoritative positions.
     for (const a of this.actorList) {
-      a.x = a.fromX = a.toX;
-      a.z = a.fromZ = a.toZ;
+      a.x = a.aimX = a.fromX = a.toX;
+      a.z = a.aimZ = a.fromZ = a.toZ;
     }
+    this.settle = 60;
+    this.prevFrameMs = 0;
     if (this.raf === 0) {
       this.lastMs = performance.now();
       this.raf = requestAnimationFrame(this.frame);
@@ -1006,6 +1122,8 @@ export class RoomScene {
       this.downY = e.clientY;
       this.downAt = performance.now();
       this.dragged = false;
+      this.yawVel = 0;
+      this.lastDragAt = this.downAt;
     } else if (this.pointers.size === 2) {
       this.dragged = true;
       const [p, q] = Array.from(this.pointers.values()) as [{ x: number; y: number }, { x: number; y: number }];
@@ -1022,7 +1140,14 @@ export class RoomScene {
     }
     if (this.pointers.size === 1) {
       if (!this.dragged && Math.hypot(e.clientX - this.downX, e.clientY - this.downY) > 8) this.dragged = true;
-      if (this.dragged) this.yaw -= (e.clientX - p.x) * 0.006;
+      if (this.dragged) {
+        const dYaw = -(e.clientX - p.x) * 0.006;
+        const now = performance.now();
+        const gap = Math.max(4, now - this.lastDragAt);
+        this.lastDragAt = now;
+        this.yawTarget += dYaw;
+        this.yawVel += ((dYaw / gap) * 1000 - this.yawVel) * 0.5;
+      }
     } else if (this.pointers.size === 2) {
       p.x = e.clientX;
       p.y = e.clientY;
@@ -1042,6 +1167,9 @@ export class RoomScene {
     if (this.canvas.hasPointerCapture(e.pointerId)) this.canvas.releasePointerCapture(e.pointerId);
     if (wasSingle && !this.dragged && e.button === 0 && performance.now() - this.downAt < 600) {
       this.handleClick(e.clientX, e.clientY);
+    } else if (wasSingle && this.dragged && performance.now() - this.lastDragAt < 80) {
+      // Let go mid-swipe: the view glides on a little instead of stopping dead.
+      this.yawTarget += clamp(this.yawVel, -6, 6) * 0.16;
     }
     if (this.pointers.size === 1) {
       // Pinch ended with one finger left: do not treat the remainder as a click or sudden yaw jump.

@@ -8,7 +8,7 @@ import {
 } from './sectGeo';
 import {
   makeBannerTexture, makeBeamTexture, makeCloudSeaTexture, makeCloudTexture, makeGroundTexture, makePathTexture, makePlaqueTexture,
-  makePondTexture, makeRadialTexture, makeRippleTexture, makeSteleTexture, makeTaijiTexture, makeWaterfallTexture, mulberry32,
+  makePetalTexture, makePondTexture, makeRadialTexture, makeRingTexture, makeRippleTexture, makeSteleTexture, makeTaijiTexture, makeWaterfallTexture, mulberry32,
 } from './textures';
 
 interface Disposable { dispose(): void }
@@ -26,7 +26,7 @@ const PEAK_FOOT = 0xa18aa6;
 const MAX_POINT_LIGHTS = 4;
 const KOI = 6;
 const DRAGON_SEGS = 40;
-const RING_POOL = 6;
+const RING_POOL = 12;
 const FLASH_POOL = 5;
 const CLOUDS = 12;
 
@@ -41,9 +41,9 @@ export interface SectProp {
   readonly yaw: number;
 }
 
-interface Ring { mesh: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>; active: boolean; t0: number; dur: number; maxR: number; alpha: number }
+interface Ring { mesh: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>; active: boolean; t0: number; dur: number; maxR: number; alpha: number }
 interface Flash { sprite: THREE.Sprite; active: boolean; t0: number; dur: number; size: number; follow: THREE.Vector3 | null }
-interface Fader { mats: THREE.Material[]; box: THREE.Box3; level: number }
+interface Fader { mats: THREE.Material[]; box: THREE.Box3; level: number; lights: THREE.Material[] }
 interface Floater { group: THREE.Group; baseY: number; phase: number }
 interface Lamp { light: THREE.PointLight; base: number; phase: number; furnace: boolean }
 
@@ -65,6 +65,9 @@ export class SectWorld {
 
   private readonly matStatic: THREE.MeshLambertMaterial;
   private readonly matGlow: THREE.MeshBasicMaterial;
+  private glowBoost = 1;
+  /** Lantern materials of the hall and gate, which fade with their building. */
+  private readonly fadeGlows: THREE.MeshBasicMaterial[] = [];
   private readonly glow = new Batch();
   private readonly stat = new Batch(this.glow);
   private readonly halos: number[] = [];
@@ -168,10 +171,12 @@ export class SectWorld {
     this.dragon.visible = false;
     this.dragon.frustumCulled = false;
     this.root.add(this.pillar, this.pill, this.dragon);
-    const ringGeo = kit.track(new THREE.RingGeometry(0.86, 1, 48).rotateX(-Math.PI / 2));
+    // A soft-edged band painted on a disc: the shockwave has no hard rim and blooms evenly.
+    const ringGeo = kit.track(new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2));
+    const ringTex = kit.track(makeRingTexture(0.8, 0.9, 0.07));
     for (let i = 0; i < RING_POOL; i++) {
       const mesh = new THREE.Mesh(ringGeo, kit.track(new THREE.MeshBasicMaterial({
-        color: 0xffd98a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+        map: ringTex, color: 0xffd98a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
       })));
       mesh.visible = false;
       mesh.renderOrder = 4;
@@ -215,6 +220,29 @@ export class SectWorld {
     for (const f of this.fields) f.setScale(drawingBufferHeight, fovDeg);
   }
 
+  /** Brightness of the emissive parts (lantern paper, flames): above 1 only when bloom is there to soften it. */
+  setGlowBoost(k: number): void {
+    this.glowBoost = k;
+    this.matGlow.color.setScalar(k);
+    for (const m of this.fadeGlows) m.color.setScalar(k);
+  }
+
+  /** Someone settled onto a cushion: a ripple of qi spreads from the seat. */
+  settle(x: number, z: number, inner: boolean): void {
+    const t = performance.now() / 1000;
+    const color = inner ? 0xffd98a : 0x8ff0cc;
+    this.ring(x, 0.05, z, 1.9, 0.9, color, 0.55, t + 0.15);
+    this.sparks.emit('glint', x, 0.35, z, 7, color, 0.9, t + 0.15);
+  }
+
+  /** A promotion: golden light bursts from the disciple. */
+  celebrate(x: number, y: number, z: number): void {
+    const t = performance.now() / 1000;
+    this.flash(x, y, z, 3.2, 1.4, 0xffd98a, null, t);
+    for (let i = 0; i < 2; i++) this.ring(x, 0.06, z, 3 + i * 1.5, 1.3, 0xffd98a, 0.8, t + i * 0.25);
+    this.sparks.emit('glint', x, y - 0.4, z, 30, 0xffe3a0, 2.2, t);
+  }
+
   /** Camera shake offset (metres) from a furnace explosion. */
   shakeAt(time: number): number {
     const t = time - this.boomT0;
@@ -252,7 +280,7 @@ export class SectWorld {
         break;
       case 'ring':
         this.bellT0 = t;
-        for (let i = 0; i < 3; i++) this.ring(x, 0.08, z, 10 + i * 2, 1.8, 0xffd98a, 0.9, t + 0.4 + i * 0.35);
+        for (let i = 0; i < 3; i++) this.ring(x, 0.08, z, 10 + i * 2, 1.8, 0xffd98a, 0.5 - i * 0.1, t + 0.4 + i * 0.35);
         this.ring(x, 1.9, z, 4, 1.2, 0xfff0c0, 0.7, t + 0.4);
         this.sparks.emit('glint', x, 2, z, 10, 0xffe3a0, 1.5, t + 0.4);
         this.taijiT0 = t + 0.4;
@@ -372,13 +400,13 @@ export class SectWorld {
     const pulse = 0.5 + 0.5 * Math.sin(time * 1.3);
     if (this.taijiGlow) {
       const since = time - this.taijiT0;
-      this.taijiGlow.opacity = 0.16 + 0.1 * pulse + (since >= 0 && since < 4 ? 0.6 * Math.exp(-since * 1.2) : 0);
+      this.taijiGlow.opacity = 0.05 + 0.035 * pulse + (since >= 0 && since < 4 ? 0.3 * Math.exp(-since * 1.2) : 0);
     }
 
     const sinceFlare = time - this.flareT0;
     const flare = sinceFlare >= 0 && sinceFlare < 4 ? this.flareAmp * Math.exp(-sinceFlare * 2.2) : 0;
     const flicker = 1 + Math.sin(time * 13.1) * 0.1 + Math.sin(time * 7.7) * 0.07;
-    if (this.fire) this.fire.color.copy(this.fireBase).multiplyScalar(flicker * (1 + flare));
+    if (this.fire) this.fire.color.copy(this.fireBase).multiplyScalar(flicker * (1 + flare) * this.glowBoost);
     for (const l of this.lamps) {
       const f = 1 + Math.sin(time * 7.3 + l.phase) * 0.06 + Math.sin(time * 3.1 + l.phase) * 0.04;
       l.light.intensity = l.base * f * (l.furnace ? flicker * (1 + flare) : 1);
@@ -466,9 +494,10 @@ export class SectWorld {
         continue;
       }
       r.mesh.visible = true;
-      const s = 0.3 + u * r.maxR;
+      // Shoots out and slows as it thins, like a wave losing energy; a quick fade-in avoids a first-frame pop.
+      const s = 0.3 + (1 - (1 - u) ** 3) * r.maxR;
       r.mesh.scale.set(s, 1, s);
-      r.mesh.material.opacity = (1 - u) ** 1.5 * r.alpha;
+      r.mesh.material.opacity = Math.min(1, u * 10) * (1 - u) ** 1.5 * r.alpha;
     }
     for (const f of this.flashes) {
       if (!f.active) continue;
@@ -509,7 +538,8 @@ export class SectWorld {
       pos.copy(s.from);
       pos.y += (1 - (1 - u) * (1 - u)) * 1.2;
     } else if (s.hasTarget && t < 1.8) {
-      const u = (t - 0.6) / 1.2;
+      const v = (t - 0.6) / 1.2;
+      const u = v * v * (3 - 2 * v); // leaves the furnace gently and slows into the hand
       const ax = s.from.x;
       const ay = s.from.y + 1.2;
       const az = s.from.z;
@@ -567,7 +597,7 @@ export class SectWorld {
       dist = this.tmpDir.length();
       this.ray.set(cam, this.tmpDir.normalize());
     }
-    const k = clamp01(dt * 6);
+    const k = 1 - Math.exp(-dt * 7);
     for (const f of this.faders) {
       let target = 1;
       if (focus) {
@@ -583,6 +613,13 @@ export class SectWorld {
       f.level += (target - f.level) * k;
       // A faded prop stops writing depth so its own back faces and the actor behind it show through cleanly.
       for (const m of f.mats) { m.opacity = f.level; m.depthWrite = f.level > 0.95; }
+      // Lantern paper and halos go out completely: a faint lantern is still bright enough to bloom, and then it
+      // hangs in mid-air over the courtyard as a stray glowing blob.
+      const lit = clamp01((f.level - 0.14) / 0.86);
+      for (const m of f.lights) {
+        m.opacity = lit;
+        if (!(m instanceof THREE.PointsMaterial)) m.depthWrite = f.level > 0.95;
+      }
     }
   }
 
@@ -788,20 +825,47 @@ export class SectWorld {
     const k = this.kit;
     const hx = w / 2;
     const hz = -6.2;
-    const hb = new Batch(this.glow);
+    const hg = new Batch();
+    const hb = new Batch(hg);
     let lamps: THREE.Vector3[] = [];
-    hb.within(placeAt(hx, 0, hz), () => { lamps = hall(hb, this.glow); });
+    hb.within(placeAt(hx, 0, hz), () => { lamps = hall(hb, hg); });
     const geo = hb.build();
     if (!geo) return;
     const mat = this.lambert({ vertexColors: true, transparent: true });
     this.add(new THREE.Mesh(k.track(geo), mat));
+    const glowMat = this.fadeGlow(hg);
     const plaqueMat = this.lambert({ map: k.track(makePlaqueTexture('Trường Sinh Điện')), transparent: true });
     this.add(new THREE.Mesh(k.track(new THREE.PlaneGeometry(3.6, 1.12)), plaqueMat), hx, 5.65, hz + 1.66);
-    for (const p of lamps) this.halos.push(hx + p.x, p.y, hz + p.z);
+    const halo = this.haloPoints(lamps.flatMap((p) => [hx + p.x, p.y, hz + p.z]));
     this.pointLight(0xffb070, 16, 15, hx, 3.2, -0.8);
     geo.computeBoundingBox();
     const box = (geo.boundingBox ?? new THREE.Box3()).clone();
-    this.faders.push({ mats: [mat, plaqueMat], box, level: 1 });
+    this.faders.push({ mats: [mat, plaqueMat], box, level: 1, lights: [glowMat, halo].filter((m): m is THREE.MeshBasicMaterial | THREE.PointsMaterial => m !== null) });
+  }
+
+  /** Builds a faded building's lanterns as their own mesh so they dim with it instead of hanging in mid-air. */
+  /** Soft additive glows around lantern lights; a building that fades gets its own set so they fade with it. */
+  private haloPoints(positions: number[]): THREE.PointsMaterial | null {
+    if (positions.length === 0) return null;
+    const k = this.kit;
+    const g = k.track(new THREE.BufferGeometry());
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const mat = k.track(new THREE.PointsMaterial({
+      map: this.glowTex, color: 0xffbf78, size: 1.5, sizeAttenuation: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    const halos = this.add(new THREE.Points(g, mat));
+    halos.renderOrder = 9;
+    halos.frustumCulled = false;
+    return mat;
+  }
+
+  private fadeGlow(batch: Batch): THREE.MeshBasicMaterial | null {
+    const geo = batch.build();
+    if (!geo) return null;
+    const mat = this.basic({ vertexColors: true, transparent: true });
+    this.add(new THREE.Mesh(this.kit.track(geo), mat));
+    this.fadeGlows.push(mat);
+    return mat;
   }
 
   private buildGate(): void {
@@ -809,13 +873,15 @@ export class SectWorld {
     const k = this.kit;
     const gx = w / 2;
     const gz = d + 0.2;
-    const gb = new Batch(this.glow);
+    const gg = new Batch();
+    const gb = new Batch(gg);
     let lamps: THREE.Vector3[] = [];
-    gb.within(placeAt(gx, 0, gz), () => { lamps = gate(gb, this.glow); });
+    gb.within(placeAt(gx, 0, gz), () => { lamps = gate(gb, gg); });
     const geo = gb.build();
     if (!geo) return;
     const mat = this.lambert({ vertexColors: true, transparent: true });
     this.add(new THREE.Mesh(k.track(geo), mat));
+    const glowMat = this.fadeGlow(gg);
     const front = new THREE.PlaneGeometry(2.9, 0.82).translate(0, 0, 0.17);
     const back = new THREE.PlaneGeometry(2.9, 0.82).rotateY(Math.PI).translate(0, 0, -0.17);
     const plaqueGeo = k.track(mergeGeometries([front, back], false));
@@ -823,14 +889,12 @@ export class SectWorld {
     back.dispose();
     const plaqueMat = this.lambert({ map: k.track(makePlaqueTexture('Cẩu Đạo Tông')), transparent: true });
     this.add(new THREE.Mesh(plaqueGeo, plaqueMat), gx, 3.0, gz);
-    for (const p of lamps) {
-      this.halos.push(gx + p.x, p.y, gz + p.z);
-      this.pools.push([gx + p.x, 0.02, gz + p.z, 3.4]);
-    }
+    for (const p of lamps) this.pools.push([gx + p.x, 0.02, gz + p.z, 3.4]);
+    const halo = this.haloPoints(lamps.flatMap((p) => [gx + p.x, p.y, gz + p.z]));
     this.pointLight(0xffb070, 10, 10, gx, 2.4, d - 0.6);
     geo.computeBoundingBox();
     const box = (geo.boundingBox ?? new THREE.Box3()).clone();
-    this.faders.push({ mats: [mat, plaqueMat], box, level: 1 });
+    this.faders.push({ mats: [mat, plaqueMat], box, level: 1, lights: [glowMat, halo].filter((m): m is THREE.MeshBasicMaterial | THREE.PointsMaterial => m !== null) });
   }
 
   /** Every server obstacle becomes its prop, with a pick proxy matching the collision radius. */
@@ -949,7 +1013,7 @@ export class SectWorld {
     const rippleGeo = k.track(new THREE.CircleGeometry(r * 0.97, 36).rotateX(-Math.PI / 2));
     [this.rippleA, this.rippleB].forEach((t, i) => {
       const ripple = this.add(new THREE.Mesh(rippleGeo,
-        this.basic({ map: t, transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending })), x, 0.12 + i * 0.004, z);
+        this.basic({ map: t, transparent: true, opacity: 0.24, depthWrite: false, blending: THREE.AdditiveBlending })), x, 0.12 + i * 0.004, z);
       ripple.renderOrder = 2;
     });
     const koi = k.track(new THREE.InstancedMesh(k.track(koiGeometry()), this.lambert({ color: 0xffffff }), KOI));
@@ -1047,8 +1111,7 @@ export class SectWorld {
   private buildPetals(): void {
     const n = this.petalOrigins.length / 3;
     if (n === 0) return;
-    const tex = this.kit.track(makeRadialTexture([[0, 'rgba(255,255,255,1)'], [0.5, 'rgba(255,255,255,0.8)'], [1, 'rgba(255,255,255,0)']]));
-    const field = this.field(new ParticleField('petal', n, 14, tex, 0xffc2d6, false));
+    const field = this.field(new ParticleField('petal', n, 14, this.kit.track(makePetalTexture()), 0xffc9da, false));
     field.origins.set(this.petalOrigins);
     field.intensity.fill(1);
   }
@@ -1061,19 +1124,11 @@ export class SectWorld {
     const glowGeo = this.glow.build();
     if (glowGeo) this.add(new THREE.Mesh(k.track(glowGeo), this.matGlow));
 
-    if (this.halos.length > 0) {
-      const g = k.track(new THREE.BufferGeometry());
-      g.setAttribute('position', new THREE.Float32BufferAttribute(this.halos, 3));
-      const halos = this.add(new THREE.Points(g, k.track(new THREE.PointsMaterial({
-        map: this.glowTex, color: 0xffbf78, size: 1.5, sizeAttenuation: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      }))));
-      halos.renderOrder = 9;
-      halos.frustumCulled = false;
-    }
+    this.haloPoints(this.halos);
     const decal = k.track(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
     const m = new THREE.Matrix4();
     if (this.pools.length > 0) {
-      const poolTex = k.track(makeRadialTexture([[0, 'rgba(255,196,110,0.55)'], [0.5, 'rgba(255,170,80,0.18)'], [1, 'rgba(255,160,70,0)']]));
+      const poolTex = k.track(makeRadialTexture([[0, 'rgba(255,196,110,0.34)'], [0.5, 'rgba(255,170,80,0.11)'], [1, 'rgba(255,160,70,0)']]));
       const pools = k.track(new THREE.InstancedMesh(decal, this.basic({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), this.pools.length));
       this.pools.forEach(([x, y, z, s], i) => pools.setMatrixAt(i, m.makeScale(s, 1, s).setPosition(x, y, z)));
       pools.renderOrder = 3;

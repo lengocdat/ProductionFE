@@ -499,3 +499,95 @@ export function makeBeamTexture(): THREE.CanvasTexture {
   ctx.fillRect(0, 0, 16, 128);
   return finish(canvas, false);
 }
+
+/** Soft-edged ring on a transparent disc; radii are fractions of the texture's half-width. */
+export function makeRingTexture(inner: number, outer: number, soft: number): THREE.CanvasTexture {
+  const size = 256;
+  const { canvas, ctx } = makeCanvas(size);
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  const stop = (o: number, a: number): void => g.addColorStop(Math.min(1, Math.max(0, o)), `rgba(255,255,255,${a})`);
+  stop(0, 0);
+  stop(inner - soft * 2.5, 0);
+  stop(inner - soft, 0.12);
+  stop(inner, 1);
+  stop(outer, 1);
+  stop(outer + soft, 0.12);
+  stop(outer + soft * 1.6, 0);
+  stop(1, 0);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  return finish(canvas, false);
+}
+
+/** One peach petal: a pointed, slightly cupped oval, paler at the base, on a transparent square. */
+export function makePetalTexture(): THREE.CanvasTexture {
+  const size = 64;
+  const { canvas, ctx } = makeCanvas(size);
+  ctx.translate(size / 2, size / 2);
+  ctx.beginPath();
+  ctx.moveTo(0, -27);
+  ctx.bezierCurveTo(19, -17, 18, 13, 3, 26);
+  ctx.quadraticCurveTo(0, 21, -3, 26);
+  ctx.bezierCurveTo(-18, 13, -19, -17, 0, -27);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(0, -27, 0, 26);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.6, 'rgba(255,236,242,1)');
+  g.addColorStop(1, 'rgba(255,205,220,1)');
+  ctx.fillStyle = g;
+  ctx.shadowColor = 'rgba(255,255,255,0.5)';
+  ctx.shadowBlur = 3;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(214,150,172,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -20);
+  ctx.lineTo(0, 18);
+  ctx.stroke();
+  return finish(canvas, false);
+}
+
+/** Seated-aura fade: opaque (white) at the cushion, clear (black) toward the top; read as an alphaMap. */
+export function makeAuraFadeTexture(): THREE.CanvasTexture {
+  const { canvas, ctx } = makeCanvas(4, 128);
+  const g = ctx.createLinearGradient(0, 0, 0, 128);
+  g.addColorStop(0, '#000');
+  g.addColorStop(0.35, '#333');
+  g.addColorStop(0.8, '#bbb');
+  g.addColorStop(0.96, '#fff');
+  g.addColorStop(1, '#888');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 4, 128);
+  const tex = finish(canvas, false);
+  tex.colorSpace = THREE.NoColorSpace;
+  return tex;
+}
+
+/** Tileable wisps of rising qi for the seated aura; scrolled upward by the texture offset. */
+export function makeAuraStreakTexture(): THREE.CanvasTexture {
+  const w = 128;
+  const h = 256;
+  const { canvas, ctx } = makeCanvas(w, h);
+  ctx.fillStyle = 'rgb(120,120,120)';
+  ctx.fillRect(0, 0, w, h);
+  const rnd = mulberry32(77);
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * w;
+    const y = rnd() * h;
+    const len = 50 + rnd() * 110;
+    const wd = 2 + rnd() * 5;
+    const a = 0.25 + rnd() * 0.5;
+    // Drawn three times across the seams so the texture tiles both ways.
+    for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) {
+      const g = ctx.createLinearGradient(0, y + oy, 0, y + oy + len);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(0.5, `rgba(255,255,255,${a})`);
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x + ox - wd / 2, y + oy, wd, len);
+    }
+  }
+  return finish(canvas, true);
+}

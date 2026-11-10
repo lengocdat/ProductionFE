@@ -6,11 +6,22 @@ export type ParticleKind = 'smoke' | 'qi' | 'mote' | 'petal' | 'mist';
 const VERT = /* glsl */ `
 attribute float aSize;
 attribute float aAlpha;
+attribute float aSeed;
 uniform float uScale;
+uniform float uTime;
+uniform float uSpin;
+uniform float uNear;
 varying float vAlpha;
+varying vec3 vTurn;
 void main() {
   vAlpha = aAlpha;
+  // Tumbling sprites (petals): spin in the sprite plane and flip about one axis, like a leaf falling.
+  float a = aSeed * 6.2832 + uTime * uSpin * (0.6 + aSeed);
+  float flip = uSpin > 0.0 ? max(0.25, abs(cos(uTime * uSpin * 1.7 * (0.5 + aSeed) + aSeed * 40.0))) : 1.0;
+  vTurn = vec3(cos(a), sin(a), flip);
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  // A sprite drifting right up to the lens would fill the view as one flat disc: fade it out as it gets close.
+  vAlpha *= smoothstep(uNear, uNear * 2.5, -mv.z);
   gl_PointSize = aSize * uScale / max(0.001, -mv.z);
   gl_Position = projectionMatrix * mv;
 }`;
@@ -18,11 +29,19 @@ void main() {
 const FRAG = /* glsl */ `
 uniform vec3 uColor;
 uniform sampler2D uMap;
+uniform float uCore;
 varying float vAlpha;
+varying vec3 vTurn;
 void main() {
-  float a = texture2D(uMap, gl_PointCoord).a * vAlpha;
-  if (a < 0.01) discard;
-  gl_FragColor = vec4(uColor, a);
+  vec2 c = gl_PointCoord - 0.5;
+  c = vec2(c.x * vTurn.x - c.y * vTurn.y, c.x * vTurn.y + c.y * vTurn.x);
+  c.x /= vTurn.z;
+  if (abs(c.x) > 0.5 || abs(c.y) > 0.5) discard;
+  vec4 t = texture2D(uMap, c + 0.5);
+  // Additive sprites blend in linear light: squaring the falloff keeps a bright core with a soft rim instead of a flat disc.
+  float a = mix(t.a, t.a * t.a, uCore) * vAlpha;
+  if (a < 0.004) discard;
+  gl_FragColor = vec4(uColor * t.rgb, a);
   #include <colorspace_fragment>
 }`;
 
@@ -81,10 +100,18 @@ export class ParticleField {
     this.geometry.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
     this.geometry.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
     this.geometry.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
+    const seeds = new Float32Array(this.count);
+    for (let i = 0; i < this.count; i++) seeds[i] = hash(i * 7.3 + 2.1);
+    this.geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
 
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         uScale: { value: 600 },
+        uTime: { value: 0 },
+        uSpin: { value: kind === 'petal' ? 1.6 : 0 },
+        uCore: { value: additive ? 1 : 0 },
+        // Big soft sprites (mist, smoke) need more room to fade than pin-point ones.
+        uNear: { value: kind === 'mist' ? 5 : kind === 'smoke' ? 2 : 1.2 },
         uColor: { value: new THREE.Color(color) },
         uMap: { value: map },
       },
@@ -107,6 +134,8 @@ export class ParticleField {
 
   update(time: number): void {
     const { pos, size, alpha, life, phase, perEmitter, origins, intensity, kind } = this;
+    const uTime = this.material.uniforms.uTime;
+    if (uTime) uTime.value = time % 1000;
     for (let i = 0; i < this.count; i++) {
       const e = (i / perEmitter) | 0;
       const k = intensity[e] ?? 0;
@@ -132,8 +161,8 @@ export class ParticleField {
         pos[p] = ox + Math.cos(a) * rad;
         pos[p + 1] = oy + 0.1 + u * (1.2 + r2 * 0.7);
         pos[p + 2] = oz + Math.sin(a) * rad;
-        size[i] = 0.17 * (1 - 0.45 * u) * (0.7 + r2 * 0.6);
-        alpha[i] = fade * 0.95 * k;
+        size[i] = 0.19 * (1 - 0.5 * u) * (0.6 + r2 * 0.7);
+        alpha[i] = fade * 0.85 * k;
       } else if (kind === 'smoke') {
         const sway = Math.sin(time * 0.7 + r1 * 6.2832) * 0.16 * u;
         pos[p] = ox + sway + u * 0.18;
@@ -149,8 +178,8 @@ export class ParticleField {
         pos[p] = ox + Math.cos(a) * rad + u * 2.2 + Math.sin(time * 2.3 + i) * 0.18;
         pos[p + 1] = Math.max(0.03, oy - 0.4 + (r2 - 0.5) * 0.6 - fall * oy);
         pos[p + 2] = oz + Math.sin(a) * rad + u * 0.8 + Math.cos(time * 1.9 + i * 1.3) * 0.15;
-        size[i] = 0.08 + r2 * 0.05;
-        alpha[i] = Math.min(1, fade * 3) * 0.9 * k;
+        size[i] = 0.15 + r2 * 0.08;
+        alpha[i] = Math.min(1, fade * 3) * 0.95 * k;
       } else if (kind === 'mist') {
         const b = this.bounds;
         const w = b ? b.w : 20;
@@ -159,7 +188,7 @@ export class ParticleField {
         pos[p + 1] = oy + r2 * 0.5;
         pos[p + 2] = oz + (hash(i * 9.3 + cycle * 2.9) - 0.5) * d;
         size[i] = 3.2 + r2 * 2.6;
-        alpha[i] = fade * 0.13 * k;
+        alpha[i] = fade * 0.075 * k;
       } else {
         const b = this.bounds;
         const w = b ? b.w : 20;
@@ -167,8 +196,8 @@ export class ParticleField {
         pos[p] = r1 * w + Math.sin(time * 0.3 + i) * 0.7;
         pos[p + 1] = 0.5 + r2 * 2.2 + Math.sin(time * 0.5 + i * 2.1) * 0.25 + u * 0.4;
         pos[p + 2] = hash(i * 9.3 + cycle * 2.9) * d + Math.cos(time * 0.27 + i) * 0.7;
-        size[i] = 0.1 + r2 * 0.08;
-        alpha[i] = fade * (0.55 + 0.45 * Math.sin(time * 2.2 + i * 1.9)) * 0.8 * k;
+        size[i] = 0.12 + r2 * 0.1;
+        alpha[i] = fade * (0.55 + 0.45 * Math.sin(time * 2.2 + i * 1.9)) * 0.7 * k;
       }
     }
     const attrs = this.geometry.attributes;
@@ -194,17 +223,20 @@ void main() {
   vAlpha = aAlpha;
   vColor = aColor;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vAlpha *= smoothstep(1.2, 3.0, -mv.z);
   gl_PointSize = aSize * uScale / max(0.001, -mv.z);
   gl_Position = projectionMatrix * mv;
 }`;
 
 const BURST_FRAG = /* glsl */ `
 uniform sampler2D uMap;
+uniform float uCore;
 varying float vAlpha;
 varying vec3 vColor;
 void main() {
-  float a = texture2D(uMap, gl_PointCoord).a * vAlpha;
-  if (a < 0.01) discard;
+  float ta = texture2D(uMap, gl_PointCoord).a;
+  float a = mix(ta, ta * ta, uCore) * vAlpha;
+  if (a < 0.004) discard;
   gl_FragColor = vec4(vColor, a);
   #include <colorspace_fragment>
 }`;
@@ -243,7 +275,7 @@ export class BurstField {
     this.geometry.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
     this.geometry.setAttribute('aColor', new THREE.BufferAttribute(this.color, 3).setUsage(THREE.DynamicDrawUsage));
     this.material = new THREE.ShaderMaterial({
-      uniforms: { uScale: { value: 600 }, uMap: { value: map } },
+      uniforms: { uScale: { value: 600 }, uMap: { value: map }, uCore: { value: additive ? 1 : 0 } },
       vertexShader: BURST_VERT,
       fragmentShader: BURST_FRAG,
       transparent: true,

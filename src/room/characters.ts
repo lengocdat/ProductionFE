@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ROBE_LOOKS } from './looks';
 import type { TwistAnim } from './protocol';
+import { makeAuraFadeTexture, makeAuraStreakTexture, makeRingTexture } from './textures';
 
 /** Seconds each Thiên Cơ animation lasts. */
 const TWIST_SECONDS: Record<TwistAnim, number> = { jump: 1.2, spin: 1.4, flip: 1.1, faint: 2.6, bow: 2.4 };
@@ -132,12 +133,18 @@ export class CharacterAssets {
   readonly bootMat = new THREE.MeshLambertMaterial({ color: BOOT });
   readonly shadowMat: THREE.MeshBasicMaterial;
   /** Seated qi column, one per rank so the sect hierarchy reads from across the courtyard. */
+  /** Aura column: fades out toward the top (alphaMap) while wisps of qi scroll upward through it (map). */
+  private readonly auraFade = makeAuraFadeTexture();
+  private readonly auraStreaks = makeAuraStreakTexture();
+  private readonly youTex = makeRingTexture(0.8, 0.9, 0.06);
   readonly auraMats = RANK_AURA.map(([color, opacity]) => new THREE.MeshBasicMaterial({
-    color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide,
+    color, map: this.auraStreaks, alphaMap: this.auraFade, transparent: true, opacity,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
   }));
-  readonly auraBase: readonly number[] = RANK_AURA.map(([, opacity]) => opacity);
+  /** The streak texture averages about half brightness, so the base opacity is doubled to keep each rank's strength. */
+  readonly auraBase: readonly number[] = RANK_AURA.map(([, opacity]) => opacity * 3);
   readonly youMat = new THREE.MeshBasicMaterial({
-    color: GOLD, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false,
+    color: GOLD, map: this.youTex, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false,
   });
   readonly upper: THREE.BufferGeometry[] = [];
   readonly arm: THREE.BufferGeometry[] = [];
@@ -145,7 +152,7 @@ export class CharacterAssets {
   readonly leg: THREE.BufferGeometry;
   readonly shadowGeo = new THREE.PlaneGeometry(1.1, 1.1).rotateX(-Math.PI / 2);
   readonly auraGeo = new THREE.CylinderGeometry(0.62, 0.42, 1.5, 16, 1, true).translate(0, 0.75, 0);
-  readonly youGeo = new THREE.RingGeometry(0.5, 0.58, 32).rotateX(-Math.PI / 2);
+  readonly youGeo = new THREE.CircleGeometry(0.66, 40).rotateX(-Math.PI / 2);
   // Rank ornaments, positioned relative to the waist like the upper body.
   readonly headbandGeo = paint(new THREE.TorusGeometry(0.196, 0.024, 5, 18).rotateX(Math.PI / 2).translate(0, HEAD_Y + 0.07, 0), CLOTH);
   readonly jadeGuanGeo = merge([
@@ -162,7 +169,8 @@ export class CharacterAssets {
   readonly haloMat = new THREE.MeshBasicMaterial({ color: 0xffd77a, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   /** Imperial purple-gold column of the weekly Chưởng môn. */
   readonly masterAuraMat = new THREE.MeshBasicMaterial({
-    color: 0xd58cff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide,
+    color: 0xd58cff, map: this.auraStreaks, alphaMap: this.auraFade, transparent: true, opacity: 0.6,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
   });
   /** Puffy cloud a tier-2+ patron rides (cưỡi mây). Puffs reach past the 0.58 "you" ring so it reads as a cloud, not a disc. */
   readonly cloudGeo = merge([
@@ -183,12 +191,22 @@ export class CharacterAssets {
       this.skirt.push(buildSkirt(look.hex, look.trim));
     }
     this.leg = new THREE.CylinderGeometry(0.075, 0.06, 0.34, 7).translate(0, -0.17, 0);
+    this.auraStreaks.repeat.set(2, 0.6);
+  }
+
+  /** Per-frame shared animation: qi rises through every aura; the local ring dims while its owner sits on a lit cushion. */
+  update(time: number, pulse: number, localSit: number): void {
+    this.auraStreaks.offset.set((time * 0.03) % 1, (time * 0.22) % 1);
+    for (let i = 0; i < this.auraMats.length; i++) (this.auraMats[i] as THREE.MeshBasicMaterial).opacity = (this.auraBase[i] ?? 0.2) * (0.75 + 0.5 * pulse);
+    this.masterAuraMat.opacity = 0.5 + 0.25 * pulse;
+    this.youMat.opacity = (0.5 + 0.14 * pulse) * (1 - 0.75 * localSit);
   }
 
   dispose(): void {
     for (const g of [...this.upper, ...this.arm, ...this.skirt, this.leg, this.shadowGeo, this.auraGeo, this.youGeo,
       this.headbandGeo, this.jadeGuanGeo, this.goldGuanGeo, this.beardGeo, this.haloGeo, this.cloudGeo]) g.dispose();
     for (const m of [this.bodyMat, this.bootMat, this.shadowMat, ...this.auraMats, this.masterAuraMat, this.youMat, this.haloMat, this.cloudMat]) m.dispose();
+    for (const t of [this.auraFade, this.auraStreaks, this.youTex]) t.dispose();
   }
 }
 
